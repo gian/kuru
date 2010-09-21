@@ -1,0 +1,22 @@
+The Kuru Programming Language - http://www.kuru-lang.org
+Copyright (C) 2010 Gian Perrone <gian.perrone@gmail.com>
+===============================================================================
+
+Kuru is a modern "mostly functional" programming language in the style of SML.
+
+In this repository:
+
+bin/ - Output directory for binaries
+lib/ - Output directory for libraries
+include/ - Output directory for include files
+src/
+   kil/ - Crude bootstrap interpreter for Kuru written in SML
+   kuruc/ - Kuru compiler, written in Kuru
+   kulex - Lexer generator
+   kuyacc/ - Parser generator
+   tests/ - Automated test programs
+doc/ - Main documentation tree
+   examples/ - Example programs
+
+Running 'make' in the top level will attempt to build everything.
+
