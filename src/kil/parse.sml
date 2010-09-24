@@ -1,6 +1,7 @@
 structure KilParse =
 struct
    structure A = Ast
+   structure D = Debug
 
    val line = ref 1
    val position = ref 0
@@ -12,7 +13,7 @@ struct
    fun sadvance s = position := !position + size s
    fun next () = if length (!s) = 0 then Char.chr 0 else 
       let
-         val _ = print "NEXT\n"
+         val _ = D.print 7 "NEXT\n"
          val h = hd (!s)
          val _ = advance 1
       in
@@ -31,9 +32,9 @@ struct
 
    fun consume tok =
       let
-         val _ = print ("Consuming token: " ^ tok ^ "\n")
+         val _ = D.print 7 ("Consuming token: " ^ tok ^ "\n")
          fun c [] = []
-           | c (h::t) = if (let val k = next (); val _ = print ("chr: " ^ String.str k ^ "\n") in k end) = h then c t else error ("Expected '" ^ tok ^ "', instead got: '" ^ (String.implode (!s)) ^ "'" )
+           | c (h::t) = if (let val k = next (); val _ = D.print 7 ("chr: " ^ String.str k ^ "\n") in k end) = h then c t else error ("Expected '" ^ tok ^ "', instead got: '" ^ (String.implode (!s)) ^ "'" )
          val _ = sadvance tok
       in
          c (String.explode tok)
@@ -86,11 +87,29 @@ struct
    fun is_tyvar_list () = is_tyvar () orelse matches "('" 
    fun is_id () =
       let
+         val _ = ws ()
+         val _ = D.print 7 ("is_id(): " ^ (String.implode (!s)) ^ "\n")
          val h = peek()
          val c1 = Char.isLower h
-         val c2 = valid_id h
+         val c2 = valid_id h orelse matches "=="
+         val c3 = matches "fun" orelse
+                  matches "val" orelse
+                  matches "local" orelse
+                  matches "datatype" orelse
+                  matches "type" orelse
+                  matches "in\n" orelse
+                  matches "in " orelse
+                  matches "end" orelse
+                  matches "open" orelse
+                  matches "then" orelse
+                  matches "else"
+
+         fun b2s true = "true"
+           | b2s false = "false"
+
+         val _ = D.print 7 ("is_id: " ^ b2s c1 ^ " " ^ b2s c2 ^ " " ^ b2s c3 ^ "\n")
       in
-         c1 orelse c2
+         not (eof ()) andalso (not c3) andalso (c1 orelse c2)
       end
    fun is_con () = matches "#\"" orelse 
                    matches "~" orelse 
@@ -98,6 +117,7 @@ struct
                    matches "\"" 
    fun is_exp () = not (peek() = Char.chr 0) andalso (
                    is_con () orelse
+                   is_id () orelse
                    matches "op" orelse
                    matches "(" orelse
                    matches "[" orelse
@@ -111,74 +131,78 @@ struct
 
    (* Ast builders *)
 
-   fun mk_val vb = (print "mk_val vb\n"; A.ValDec vb)
-   fun mk_datatype d = (print "mk_datatype d\n"; A.DatatypeBind d)
-   fun mk_fun f = (print "mk_fun f\n"; A.FunBind f)
-   fun mk_open l = (print "mk_open l\n"; A.Open l)
-   fun mk_nonfix l = (print "mk_nonfix l\n"; A.Nonfix l)
-   fun mk_infix l = (print "mk_infix l\n"; A.Infix l)
-   fun mk_infixr l = (print "mk_infixr l\n"; A.Infixr l)
-   fun mk_excep e = (print "mk_excep e\n"; A.ExceptionBind e)
-   fun mk_local (a,b) = (print "mk_local l\n"; A.LocalDec (a,b))
-   fun mk_rec l = (print "mk_rec l\n"; A.ValRec l)
-   fun mk_funbind l = (print "mk_funbind l\n"; l)
-   fun mk_funmatch l = (print "mk_funmatch l\n"; A.FunMatch l)
-   fun mk_typedecl l = (print "mk_typebind l\n"; A.TypeDec l)
-   fun mk_typebind l = (print "mk_typebind l\n"; A.TypeBind l)
-   fun mk_conbind l = (print "mk_conbind l\n"; A.ConBind l)
-   fun mk_exnbind l = (print "mk_exnbind l\n"; A.ExnBind l)
-   fun mk_pat l = (print "mk_pat l\n"; A.Pat l)
-   fun mk_pat_wildcard x = (print "mk_pat_wildcard x\n"; A.WildcardPat)
-   fun mk_infix_pat l = (print "mk_infix_pat l\n"; A.InfixPat l)
-   fun mk_as_pat l = (print "mk_as_pat l\n"; A.AsPat l)
-   fun mk_id_pat i = (print "mk_id_pat i\n"; A.IdPat i)
-   fun mk_op_pat l = (print "mk_op_pat l\n"; A.OpPat l)
-   fun mk_tup_pat t = (print "mk_tup_pat t\n"; A.TuplePat t)
-   fun mk_list_pat t = (print "mk_list_pat t\n"; A.ListPat t)
-   fun mk_const_pat c = (print "mk_const_pat c\n"; A.ConstPat c)
-   fun mk_typ_pat c = (print "mk_typ_pat c\n"; A.TypePat c)
-   fun mk_fn_typ x = (print "mk_fn_typ x\n"; A.FnTyp x)
-   fun mk_pair_typ x = (print "mk_pair_typ x\n"; A.PairTyp x)
-   fun mk_cons_typ x = (print "mk_cons_typ x\n"; A.ConsTyp x)
-   fun mk_raise_exp x = (print "mk_raise_exp x\n"; A.RaiseExp x)
-   fun mk_andalso_exp x = (print "mk_andalso_exp x\n"; A.AndAlsoExp x)
-   fun mk_orelse_exp x = (print "mk_orelse_exp x\n"; A.OrElseExp x)
-   fun mk_infix_exp x = (print "mk_infix_exp x\n"; A.InfixExp x)
-   fun mk_app_exp x = (print "mk_app_exp x\n"; A.AppExp x)
-   fun mk_con_exp x = (print "mk_con_exp x\n"; A.ConstantExp x)
-   fun mk_tup_exp x = (print "mk_tup_exp x\n"; A.TupleExp x)
-   fun mk_seq_exp x = (print "mk_seq_exp x\n"; A.SeqExp x)
-   fun mk_list_exp x = (print "mk_list_exp x\n"; A.ListExp x)
-   fun mk_let_exp x = (print "mk_let_exp x\n"; A.LetExp x)
-   fun mk_if_exp x = (print "mk_if_exp x\n"; A.IfExp x)
-   fun mk_while_exp x = (print "mk_while_exp x\n"; A.WhileExp x)
-   fun mk_case_exp x = (print "mk_case_exp x\n"; A.CaseExp x)
-   fun mk_fn_exp x = (print "mk_fn_exp x\n"; A.FnExp x)
-   fun mk_lab_exp x = (print "mk_lab_exp x\n"; A.LabelExp x)
-   fun mk_handle_exp x = (print "mk_handle_exp x\n"; A.Null)
-   fun mk_match x = (print "mk_match x\n"; A.Match x)
-   fun mk_id x = (print "mk_id x\n"; A.Identifier x)
-   fun mk_tyclass x = (print "mk_tyclass x\n"; A.Null)
-   fun mk_tyvar x = (print "mk_tyvar x\n"; A.TyVar x)
-   fun mk_int x = (print "mk_int x\n"; A.Int x)
-   fun mk_char x = (print "mk_char x\n"; A.Null)
-   fun mk_num_lab x = (print "mk_num_lab x\n"; A.Null)
-   fun mk_id_lab x = (print "mk_id_lab x\n"; A.Null)
-   fun mk_type x = (print "mk_type x\n"; A.Type x)
-   fun mk_id_list x = (print "mk_id_list x\n"; x) 
-   fun mk_valbind x = (print "mk_valbind x\n"; A.ValBind x)
-   fun mk_op x = (print "mk_op x\n"; A.OpExp x )
-   fun mk_databind x = (print "mk_databind x\n"; A.Null)
+   fun mk_val vb = (D.print 7 "mk_val vb\n"; A.ValDec vb)
+   fun mk_datatype d = (D.print 7 "mk_datatype d\n"; A.DatatypeBind d)
+   fun mk_fun f = (D.print 7 "mk_fun f\n"; A.FunDec f)
+   fun mk_open l = (D.print 7 "mk_open l\n"; A.Open l)
+   fun mk_nonfix l = (D.print 7 "mk_nonfix l\n"; A.Nonfix l)
+   fun mk_infix l = (D.print 7 "mk_infix l\n"; A.Infix l)
+   fun mk_infixr l = (D.print 7 "mk_infixr l\n"; A.Infixr l)
+   fun mk_excep e = (D.print 7 "mk_excep e\n"; A.ExceptionBind e)
+   fun mk_local (a,b) = (D.print 7 "mk_local l\n"; A.LocalDec (a,b))
+   fun mk_rec l = (D.print 7 "mk_rec l\n"; A.ValRec l)
+   fun mk_funbind l = (D.print 7 "mk_funbind l\n"; A.FunBind l)
+   fun mk_funmatch l = (D.print 7 "mk_funmatch l\n"; A.FunMatch l)
+   fun mk_typedecl l = (D.print 7 "mk_typebind l\n"; A.TypeDec l)
+   fun mk_typebind l = (D.print 7 "mk_typebind l\n"; A.TypeBind l)
+   fun mk_conbind l = (D.print 7 "mk_conbind l\n"; A.ConBind l)
+   fun mk_exnbind l = (D.print 7 "mk_exnbind l\n"; A.ExnBind l)
+   fun mk_pat l = (D.print 7 "mk_pat l\n"; A.Pat l)
+   fun mk_pat_wildcard x = (D.print 7 "mk_pat_wildcard x\n"; A.WildcardPat)
+   fun mk_infix_pat l = (D.print 7 "mk_infix_pat l\n"; A.InfixPat l)
+   fun mk_as_pat l = (D.print 7 "mk_as_pat l\n"; A.AsPat l)
+   fun mk_id_pat i = (D.print 7 "mk_id_pat i\n"; A.IdPat i)
+   fun mk_op_pat l = (D.print 7 "mk_op_pat l\n"; A.OpPat l)
+   fun mk_tup_pat t = (D.print 7 "mk_tup_pat t\n"; A.TuplePat t)
+   fun mk_list_pat t = (D.print 7 "mk_list_pat t\n"; A.ListPat t)
+   fun mk_const_pat c = (D.print 7 "mk_const_pat c\n"; A.ConstPat c)
+   fun mk_typ_pat c = (D.print 7 "mk_typ_pat c\n"; A.TypePat c)
+   fun mk_fn_typ x = (D.print 7 "mk_fn_typ x\n"; A.FnTyp x)
+   fun mk_pair_typ x = (D.print 7 "mk_pair_typ x\n"; A.PairTyp x)
+   fun mk_cons_typ x = (D.print 7 "mk_cons_typ x\n"; A.ConsTyp x)
+   fun mk_raise_exp x = (D.print 7 "mk_raise_exp x\n"; A.RaiseExp x)
+   fun mk_andalso_exp x = (D.print 7 "mk_andalso_exp x\n"; A.AndAlsoExp x)
+   fun mk_orelse_exp x = (D.print 7 "mk_orelse_exp x\n"; A.OrElseExp x)
+   fun mk_infix_exp x = (D.print 7 "mk_infix_exp x\n"; A.InfixExp x)
+   fun mk_app_exp x = (D.print 7 "mk_app_exp x\n"; A.AppExp x)
+   fun mk_con_exp x = (D.print 7 "mk_con_exp x\n"; A.ConstantExp x)
+   fun mk_tup_exp x = (D.print 7 "mk_tup_exp x\n"; A.TupleExp x)
+   fun mk_seq_exp x = (D.print 7 "mk_seq_exp x\n"; A.SeqExp x)
+   fun mk_list_exp x = (D.print 7 "mk_list_exp x\n"; A.ListExp x)
+   fun mk_let_exp x = (D.print 7 "mk_let_exp x\n"; A.LetExp x)
+   fun mk_if_exp x = (D.print 7 "mk_if_exp x\n"; A.IfExp x)
+   fun mk_while_exp x = (D.print 7 "mk_while_exp x\n"; A.WhileExp x)
+   fun mk_case_exp x = (D.print 7 "mk_case_exp x\n"; A.CaseExp x)
+   fun mk_fn_exp x = (D.print 7 "mk_fn_exp x\n"; A.FnExp x)
+   fun mk_lab_exp x = (D.print 7 "mk_lab_exp x\n"; A.LabelExp x)
+   fun mk_handle_exp x = (D.print 7 "mk_handle_exp x\n"; A.Null)
+   fun mk_match x = (D.print 7 "mk_match x\n"; A.Match x)
+   fun mk_id x = (D.print 7 "mk_id x\n"; A.Identifier x)
+   fun mk_tyclass x = (D.print 7 "mk_tyclass x\n"; A.Null)
+   fun mk_tyvar x = (D.print 7 "mk_tyvar x\n"; A.TyVar x)
+   fun mk_int x = (D.print 7 "mk_int x\n"; A.Int x)
+   fun mk_string x = (D.print 7 "mk_string x\n"; A.String x)
+   fun mk_char x = (D.print 7 "mk_char x\n"; A.Null)
+   fun mk_num_lab x = (D.print 7 "mk_num_lab x\n"; A.Null)
+   fun mk_id_lab x = (D.print 7 "mk_id_lab x\n"; A.Null)
+   fun mk_type x = (D.print 7 "mk_type x\n"; A.Type x)
+   fun mk_id_list x = (D.print 7 "mk_id_list x\n"; x) 
+   fun mk_valbind x = (D.print 7 "mk_valbind x\n"; A.ValBind x)
+   fun mk_op x = (D.print 7 "mk_op x\n"; A.OpExp x )
+   fun mk_databind x = (D.print 7 "mk_databind x\n"; A.Null)
+   fun mk_unit_pat x = (D.print 7 "mk_unit_pat x\n"; A.Unit)
+   fun mk_unit_exp x = (D.print 7 "mk_unit_pat x\n"; A.Unit)
 
    fun id () =
       let
+         val _ = D.print 7 ("id: pre-drop: " ^ (String.implode (!s)) ^ "\n")
          val h = next()
 
-         val _ = if not (Char.isLower h) andalso not (valid_id h) then 
+         val _ = if not (Char.isLower h) andalso not (valid_id h) andalso not (matches "=") then 
             error "invalid identifier" else ()
 
          fun f [] = []
-           | f (h::t) = if Char.isAlphaNum h orelse h = #"'" then 
+           | f (h::t) = if Char.isAlphaNum h orelse h = #"'" orelse h = #"=" then 
                            h :: f t else []
 
          val vn = h :: f (!s)
@@ -186,10 +210,9 @@ struct
 
          val _ = sadvance vn'
 
-         val _ = print ("id: pre-drop: " ^ (String.implode (!s)) ^ "\n")
 
          val _ = s := List.drop (!s,size vn'-1)
-         val _ = print ("id: post-drop: " ^ (String.implode (!s)) ^ "\n")
+         val _ = D.print 7 ("id: post-drop: " ^ (String.implode (!s)) ^ "\n")
       in
          mk_id vn'
       end
@@ -207,7 +230,7 @@ struct
       let
          val _ = ws ()
 
-         val _ = print "num\n"
+         val _ = D.print 7 "num\n"
 
          fun f [] = []
            | f (h::t) = if Char.isDigit h then h :: f t else []
@@ -219,7 +242,26 @@ struct
          vn'
       end
 
-   fun con_string () = error "Strings aren't implemented"
+   fun con_string () = 
+      let
+         val _ = ws ()
+         val _ = consume "\""
+
+         fun f [] = error "Unterminated string constant"
+           | f ((#"\\")::(#"\"")::t) = #"\"" :: f t
+           | f ((#"\"") :: t) = []
+           | f (h::t) = h :: f t
+         (* " fix vim syntax highlighting. sigh. *)
+
+         val str = String.implode (f (!s))
+
+         val _ = s := List.drop (!s,size str)
+         val _ = consume "\""
+      in
+         mk_string str
+      end
+
+
 
    fun hex () = raise Fail "Hex literals not implemented"
 
@@ -308,7 +350,7 @@ struct
 
    and exp () =
       let
-         val _ = print ("exp: " ^ String.implode (!s) ^ "\n")
+         val _ = D.print 7 ("exp: " ^ String.implode (!s) ^ "\n")
          val _ = ws ()
       in
          if eof() then A.Null else
@@ -327,7 +369,7 @@ struct
       end
    and exp_el () =
       let
-         val _ = print ("exp_el: " ^ String.implode (!s) ^ "\n")
+         val _ = D.print 7 ("exp_el: " ^ String.implode (!s) ^ "\n")
          val _ = ws ()
          
          fun e_par () =
@@ -336,14 +378,16 @@ struct
                val e = exp ()
                val _ = ws ()
             in
-               if matches ")" then e else
+               if matches ")" then (wconsume ")"; e) else
                if matches "," then 
                   let
+                     val _ = wconsume ","
                      val el = exp_list ()
                      val _ = wconsume ")"
                   in mk_tup_exp ( e :: el ) end else
                if matches ";" then
                   let
+                     val _ = wconsume ";"
                      val es = exp_seq ()
                      val _ = wconsume ")"
                   in mk_seq_exp (e :: es) end
@@ -352,13 +396,15 @@ struct
 
          fun e_sq () =
             let
+               val _ = D.print 7 "e_sq\n"
                val _ = wconsume "["
                val e = exp ()
                val _ = ws ()
             in
-               if matches "]" then mk_list_exp [e] else
+               if matches "]" then (wconsume "]"; mk_list_exp [e]) else
                if matches "," then 
                   let
+                     val _ = wconsume ","
                      val el = exp_list ()
                      val _ = wconsume "]"
                   in mk_list_exp ( e :: el ) end 
@@ -430,8 +476,10 @@ struct
          if eof() then A.Null else
          if is_con() then mk_con_exp (con ()) else
          if matches "op" then (consume "op"; mk_op (longid())) else
+         if matches "()" then (consume "()"; mk_unit_exp ()) else
          if matches "(" then e_par () else
          if matches "#" then mk_lab_exp (lab ()) else
+         if matches "[]" then (consume "[]"; mk_list_exp []) else
          if matches "[" then e_sq () else
          if matches "let" then e_let() else
          if matches "if" then e_if() else
@@ -475,6 +523,7 @@ struct
 
    and pat () =
       let
+         val _ = D.print 7 ("pat: " ^ (String.implode (!s)) ^ "\n")
          val p = pat_el ()
          val _ = ws ()
       in
@@ -484,6 +533,7 @@ struct
 
    and pat_el () =
       let
+         val _ = D.print 7 ("pat_el: " ^ (String.implode (!s)) ^ "\n")
          val _ = ws ()
 
          fun p_op () =
@@ -498,32 +548,39 @@ struct
                val _ = wconsume "("
                val p = pat ()
                val _ = ws ()
+
+               fun patlist () = (ws (); if peek () = #")" then [] else 
+                                   (wconsume ","; pat() :: patlist()))
             in
                if matches "," then 
                   let
-                     val _ = consume ","
-                     val p' = mk_tup_pat (p :: pattern_list ())
-                     val _ = wconsume "]"
+                     val p' = mk_tup_pat (p :: patlist ())
+                     val _ = wconsume ")"
                   in p' end
                else (wconsume ")"; p)
             end
 
          fun p_sq () =
             let
+               val _ = D.print 7 ("p_sq: " ^ (String.implode (!s)) ^ "\n")
                val _ = wconsume "["
                val p = pat ()
                val _ = ws ()
+
+               fun patlist () = (ws (); if peek () = #"]" then [] else 
+                                   (wconsume ","; pat() :: patlist()))
             in
                if matches "," then 
                   let
-                     val _ = consume ","
-                     val p' = mk_list_pat (p :: pattern_list ())
+                     val p' = mk_list_pat (p :: patlist ())
                   in (wconsume "]"; p') end
                else (consume "]"; mk_list_pat [p])
             end
       in
-         if matches "_" then mk_pat_wildcard () else
+         if matches "_" then (wconsume "_"; mk_pat_wildcard ()) else
          if matches "op" then p_op () else
+         if matches "()" then (consume "()"; mk_unit_pat ()) else
+         if matches "[]" then (consume "[]"; mk_list_pat []) else
          if matches "(" then p_par () else
          if matches "[" then p_sq () else
          if is_id () then mk_id_pat (id ()) else
@@ -579,7 +636,7 @@ struct
 
    and typebind () =
       let
-         val _ = print "typebind\n" 
+         val _ = D.print 7 "typebind\n" 
          val tv = tyvar_list_opt ()
          val i = id ()
          val _ = wconsume "="
@@ -590,12 +647,20 @@ struct
          else [mk_typebind (tv,i,t)]
       end
 
-   and pattern_list () = [pat ()] (* FIXME *)
+   and pattern_list () =
+      let
+         val _ = ws ()
+         val p = pat ()
+         val _ = ws ()
+      in
+         if peek () = #"=" orelse peek() = #":" then [] else p :: pattern_list ()
+      end
 
    and funmatch () =
       let
          val _ = ws ()
-
+         val _ = D.print 7 "funmatch\n"
+   
          fun fmop () =
             let
                val _ = wconsume "op"
@@ -632,6 +697,7 @@ struct
 
          fun fmnf () =
             let
+               val _ = D.print 7 "funmatch:fmnf\n"
                val i = id ()
                val pl = pattern_list ()
                val t = tyann_opt ()
@@ -645,14 +711,14 @@ struct
             end
       in
          if matches "op" then fmop () else
-         if matches "("  then fminfix () else
+         (* if matches "("  then fminfix () else *)
          fmnf ()
          (* FIXME: pattern id pattern ... missing *)
       end
 
    and funbind () =
       let
-         val _ = print "funbind\n" 
+         val _ = D.print 7 "funbind\n" 
          val _ = ws ()
          val fm = funmatch ()
          val _ = ws ()
@@ -664,7 +730,7 @@ struct
 
    and valbind () =
       let
-         val _ = print "valbind\n" 
+         val _ = D.print 7 "valbind\n" 
          val _ = ws ()
       in
          if matches "rec" then (consume "rec"; [mk_rec (valbind ())]) else
@@ -682,7 +748,7 @@ struct
 
    and tyann_opt () = 
       let
-         val _ = print "tyann_opt\n"
+         val _ = D.print 7 "tyann_opt\n"
          val _ = ws ()
       in
          if matches ":" then (consume ":"; SOME (mk_type (typ ()))) else NONE
@@ -691,7 +757,7 @@ struct
    (* FIXME: missing withtype and datatype assignment *)
    and decl () =
       let
-         val _ = print "decl\n"
+         val _ = D.print 7 "decl\n"
          val _ = ws () in
       if matches "val"        then (consume "val"; mk_val (valbind())) else
       if matches "type"       then (consume "type"; mk_typedecl (typebind())) else
@@ -717,7 +783,8 @@ struct
          in
             mk_local (dec1, dec2)
          end
-      else error "Expected declaration"
+      else if eof () then A.Null
+      else error ("Expected declaration, got: " ^ (String.implode (!s)))
    end
 
    and decl_list () =
@@ -725,9 +792,15 @@ struct
          val _ = ws ()
          val d = decl ()
          val _ = ws ()
+
+         fun dl () = (ws ();
+            if matches ";" then (wconsume ";"; decl () :: dl ()) else
+            if not (matches "in") andalso
+               not (matches "end") andalso
+               not (eof()) then (decl () :: dl ()) else [])
       in
-         if matches ";" then (wconsume ";"; d :: decl_list()) else [d]
-      end (* FIXME: Requires semicolons always *)
+         d :: dl()
+      end
 
    fun program_el () = 
       (* FIXME: Add structure/sig/functor rules *)
