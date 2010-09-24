@@ -25,7 +25,7 @@ struct
             val t = TextIO.input f
             val _ = TextIO.closeIn f
             val a = KilParse.parse t
-            val _ = print ("AST:\n" ^ (Ast.pp_l "\n" a) ^ "\n================\n")
+            val _ = Debug.print 3 ("AST:\n" ^ (Ast.pp_l "\n" a) ^ "\n================\n")
          in
             Interpret.interpret a
          end
