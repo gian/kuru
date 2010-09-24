@@ -162,6 +162,34 @@ struct
       in
          VBool (not (is_equal (l,r)))
       end
+      | builtin env ("<",t) =
+      let
+         val (VTuple [l,r]) = t
+      in
+         case (l,r) of (VInt i, VInt j) => VBool (i < j)
+                     | _ => raise Fail "applying < to invalid operands"
+      end
+      | builtin env ("<=",t) =
+      let
+         val (VTuple [l,r]) = t
+      in
+         case (l,r) of (VInt i, VInt j) => VBool (i <= j)
+                     | _ => raise Fail "applying <= to invalid operands"
+      end
+      | builtin env (">",t) =
+      let
+         val (VTuple [l,r]) = t
+      in
+         case (l,r) of (VInt i, VInt j) => VBool (i > j)
+                     | _ => raise Fail "applying > to invalid operands"
+      end
+      | builtin env (">=",t) =
+      let
+         val (VTuple [l,r]) = t
+      in
+         case (l,r) of (VInt i, VInt j) => VBool (i >= j)
+                     | _ => raise Fail "applying >= to invalid operands"
+      end
       | builtin env _ = raise NotImplemented "builtin"
 
    and pat_match env (A.WildcardPat, _) = (env, true)
