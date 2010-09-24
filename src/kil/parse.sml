@@ -322,6 +322,7 @@ struct
 
    fun match () =
       let
+         val _ = D.print 7 "match ()"
          val _ = ws ()
          val p = pat ()
          val _ = wconsume "=>"
@@ -534,7 +535,7 @@ struct
          val _ = ws ()
       in
          if matches "as" then (wconsume "as"; mk_as_pat (p,pat ())) else
-         if is_id () then mk_infix_pat (p,id (),pat()) else mk_pat p
+        (* if is_id () then mk_infix_pat (p,id (),pat()) else *) mk_pat p
       end
 
    and pat_el () =
@@ -655,11 +656,12 @@ struct
 
    and pattern_list () =
       let
+         val _ = D.print 7 ("pattern_list: " ^ (String.implode (!s)) ^ "\n")
          val _ = ws ()
          val p = pat ()
          val _ = ws ()
       in
-         if peek () = #"=" orelse peek() = #":" then [] else p :: pattern_list ()
+         if peek () = #"=" orelse peek() = #":" then [p] else p :: pattern_list ()
       end
 
    and funmatch () =

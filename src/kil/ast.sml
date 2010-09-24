@@ -97,7 +97,7 @@ struct
      | pp (ListExp l) = "[" ^ pp_l ", " l ^ "]"
      | pp (LetExp (d,e)) = "let\n" ^ pp_l "\n" d ^ "\nin\n" ^ pp e ^ "\nend"
      | pp (IfExp (a,b,c)) = "if " ^ pp a ^ " then " ^ pp b ^ " else " ^ pp c
-     | pp (FnExp c) = "fn " ^ pp_l "\n | " c
+     | pp (FnExp c) = "(fn " ^ pp_l "\n | " c ^ ")"
      | pp (Identifier s) = s
      | pp (TyVar a) = "'" ^ pp a
      | pp (Int (true,i)) = "~" ^ Int.toString i

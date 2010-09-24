@@ -1,6 +1,8 @@
-05d9eb7ffd46260f1f76928c1cf4f7d3  anonfn.k.out
-f11074937d007f0ea8e2791f02520066  arithmetic.k.out
-b166eddfc93bce60b4fb0450efb123e8  bank.k.out
-a7966bf58e23583c9a5a4059383ff850  hello.k.out
-d41d8cd98f00b204e9800998ecf8427e  list.k.out
-d742222fd33e59b2b21399d7eefef629  print.k.out
+aee36693256d999c2f1bbb17ffe46192  anonfn.k.out
+3779826c6ddaafca32351eac49983b6f  arithmetic.k.out
+02fec4420c09a685219bd530eabecc0a  bank.k.out
+c35b5e09025c37e8651b0c5036bcb0c4  fnapp.k.out
+05848428ddd3ce611263f97ccdfd7c7b  hello.k.out
+c34697c07863a974fc90df52f9f7cb01  lift.k.out
+e27bd4276440b52088d45bfa1c69f5db  list.k.out
+ecdf22b10579e78be812b1aeca6aa348  print.k.out

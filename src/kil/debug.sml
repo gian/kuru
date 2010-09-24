@@ -14,6 +14,7 @@ struct
      | lName 2 = "warning"
      | lName 3 = "info"
      | lName 4 = "verbose"
+     | lName 6 = "interp"
      | lName 7 = "debug7"
      | lName _ = "?"
 
