@@ -24,8 +24,10 @@ struct
             val f = TextIO.openIn (hd args')
             val t = TextIO.input f
             val _ = TextIO.closeIn f
+            val a = KilParse.parse t
+            val _ = print ("AST:\n" ^ (Ast.pp_l "\n" a) ^ "\n================\n")
          in
-            print (Ast.pp_l "\n" (KilParse.parse t))
+            Interpret.interpret a
          end
       end
 

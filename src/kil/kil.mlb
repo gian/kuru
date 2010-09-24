@@ -3,4 +3,5 @@ $(SML_LIB)/smlnj-lib/Util/smlnj-lib.mlb
 debug.sml
 ast.sml
 parse.sml
+interpret.sml
 kil.sml

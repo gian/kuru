@@ -107,6 +107,7 @@ struct
      | pp (OpExp l) = "op " ^ pp_l "." l
      | pp (Match (a,b)) = pp a ^ " => " ^ pp b
      | pp Unit = "()"
+     | pp Null = ""
      | pp _ = "???" 
   and pp_l d a = String.concatWith d (map pp a)
 

@@ -363,7 +363,13 @@ struct
                (consume "andalso"; mk_andalso_exp (e,exp())) else
             if matches "orelse" then 
                (consume "orelse"; mk_orelse_exp (e,exp())) else
-            if is_id() then mk_infix_exp (e,id(),exp()) else
+            if is_id() then 
+               let
+                  val i = id ()
+                  val _ = ws ()
+               in
+                  if is_exp () then mk_infix_exp (e,i,exp()) else mk_app_exp(e,i) 
+               end else
             if is_exp() then mk_app_exp (e,exp()) else e
          end
       end
