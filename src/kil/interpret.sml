@@ -27,7 +27,13 @@ struct
                   ("+",       VBuiltIn "+"),
                   ("-",       VBuiltIn "-"),
                   ("*",       VBuiltIn "*"),
-                  ("/",       VBuiltIn "/")
+                  ("/",       VBuiltIn "/"),
+                  ("==",      VBuiltIn "=="),
+                  ("!=",      VBuiltIn "!="),
+                  ("<=",      VBuiltIn "<="),
+                  (">=",      VBuiltIn ">="),
+                  ("<",       VBuiltIn "<"),
+                  (">",       VBuiltIn ">")
                  ] : (string * value) list 
 
    fun bind env (k,v) = (D.print 5 ("bind " ^ k ^ "\n"); (k,v) :: env)
@@ -143,6 +149,18 @@ struct
       in
          case (l,r) of (VInt i, VInt j) => VInt (i*j)
                      | _ => raise Fail "applying * to invalid operands"
+      end
+      | builtin env ("==",t) =
+      let
+         val (VTuple [l,r]) = t
+      in
+         VBool (is_equal (l,r))
+      end
+      | builtin env ("!=",t) =
+      let
+         val (VTuple [l,r]) = t
+      in
+         VBool (not (is_equal (l,r)))
       end
       | builtin env _ = raise NotImplemented "builtin"
 
@@ -266,6 +284,12 @@ struct
          interp env (A.AppExp (opr,A.TupleExp [l,r])))
      | interp env (A.FnExp l) = (env, VFn 
          (map (fn (A.Match (m1,m2)) => (m1,m2,mk_env (m1,m2,env))) l))
+     | interp env (A.IfExp (c,t,f)) =
+       let
+          val (_,VBool c') = interp env c
+       in
+          if c' then interp env t else interp env f
+       end
      | interp env (A.Null) = (env,VUnit)
      | interp env e = raise NotImplemented (A.pp e)
 
