@@ -2,5 +2,5 @@ BIN=../../bin
 
 all: $(BIN)/kuruc
 
-$(BIN)/kulex:
+$(BIN)/kuruc:
 	true
