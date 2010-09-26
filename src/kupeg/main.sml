@@ -44,6 +44,15 @@ fun main () =
             ()
          end
 
+      fun genNontermSymbols () =
+        let
+           fun f [] = ""
+             | f ((n,d)::t) = "type kupeg_result_" ^ n ^ " = " ^ d ^ "\n"
+                                ^ f t
+        in
+            f (!nontermTypes)
+        end
+
       fun readLines fp = 
          let
             val l = TextIO.inputLine fp
@@ -88,10 +97,10 @@ fun main () =
 			
       val fo = TextIO.openOut (filename ^ ".k")
       val _ = TextIO.output (fo, "(* Generated from " ^ filename ^ " *)\n\n")
-      val _ = TextIO.output (fo, !resultTy)
       val _ = TextIO.output (fo, "type 'a st = { pos : int, " ^
                                  "va : 'a option }\n")
       val _ = TextIO.output (fo, "val $ = valOf\n") 
+      val _ = TextIO.output (fo, genNontermSymbols ())
       val _ = TextIO.output (fo,
         "fun push (stack, s : 'a st option) = stack := s :: (!stack)"
      ^  "\n\n" 

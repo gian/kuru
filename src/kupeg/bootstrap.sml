@@ -1,8 +1,26 @@
 (* Generated from kupeg.kpg *)
 
-type kupeg_result = string
 type 'a st = { pos : int, va : 'a option }
 val $ = valOf
+type kupeg_result_sp = string
+type kupeg_result__ = string
+type kupeg_result_rule = string
+type kupeg_result_sentence = string
+type kupeg_result_meta = string
+type kupeg_result_name = string
+type kupeg_result_namechar = string
+type kupeg_result_term = string
+type kupeg_result_nonterminal = string
+type kupeg_result_labeled = string
+type kupeg_result_sequence = string
+type kupeg_result_string = string
+type kupeg_result_stringcontents = string
+type kupeg_result_choice = string
+type kupeg_result_negation = string
+type kupeg_result_result_expression = string
+type kupeg_result_expr = string
+type kupeg_result_exprcontents = string
+type kupeg_result_parenthesized = string
 fun push (stack, s : 'a st option) = stack := s :: (!stack)
 
 fun pop stack =
@@ -32,26 +50,6 @@ fun kupeg_make_stack () = ref [] : 'a st option list ref
 
 fun kupeg_join l = String.concatWith "" l
 
-
-type kupeg_result_sp = string
-type kupeg_result__ = string
-type kupeg_result_rule = string
-type kupeg_result_sentence = string
-type kupeg_result_meta = string
-type kupeg_result_name = string
-type kupeg_result_namechar = string
-type kupeg_result_term = string
-type kupeg_result_nonterminal = string
-type kupeg_result_labeled = string
-type kupeg_result_sequence = string
-type kupeg_result_string = string
-type kupeg_result_stringcontents = string
-type kupeg_result_choice = string
-type kupeg_result_negation = string
-type kupeg_result_result_expression = string
-type kupeg_result_expr = string
-type kupeg_result_exprcontents = string
-type kupeg_result_parenthesized = string
 
 
 
@@ -692,6 +690,15 @@ fun main () =
             ()
          end
 
+      fun genNontermSymbols () =
+        let
+           fun f [] = ""
+             | f ((n,d)::t) = "type kupeg_result_" ^ n ^ " = " ^ d ^ "\n"
+                                ^ f t
+        in
+            f (!nontermTypes)
+        end
+
       fun readLines fp = 
          let
             val l = TextIO.inputLine fp
@@ -736,10 +743,10 @@ fun main () =
 			
       val fo = TextIO.openOut (filename ^ ".k")
       val _ = TextIO.output (fo, "(* Generated from " ^ filename ^ " *)\n\n")
-      val _ = TextIO.output (fo, !resultTy)
       val _ = TextIO.output (fo, "type 'a st = { pos : int, " ^
                                  "va : 'a option }\n")
       val _ = TextIO.output (fo, "val $ = valOf\n") 
+      val _ = TextIO.output (fo, genNontermSymbols ())
       val _ = TextIO.output (fo,
         "fun push (stack, s : 'a st option) = stack := s :: (!stack)"
      ^  "\n\n" 

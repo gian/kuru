@@ -9,26 +9,6 @@ fun kupeg_join l = String.concatWith "" l
 %empty "\"\""
 %result string
 
-type kupeg_result_sp = string
-type kupeg_result__ = string
-type kupeg_result_rule = string
-type kupeg_result_sentence = string
-type kupeg_result_meta = string
-type kupeg_result_name = string
-type kupeg_result_namechar = string
-type kupeg_result_term = string
-type kupeg_result_nonterminal = string
-type kupeg_result_labeled = string
-type kupeg_result_sequence = string
-type kupeg_result_string = string
-type kupeg_result_stringcontents = string
-type kupeg_result_choice = string
-type kupeg_result_negation = string
-type kupeg_result_result_expression = string
-type kupeg_result_expr = string
-type kupeg_result_exprcontents = string
-type kupeg_result_parenthesized = string
-
 %nonterm sp of string
 %nonterm _ of string
 %nonterm rule of string
