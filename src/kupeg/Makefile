@@ -1,11 +1,16 @@
 BIN=../../bin
 COMPILER=mlton
 
-$(BIN)/kupeg: kupeg.sml
-	$(COMPILER) -output $(BIN)/kupeg kupeg.sml
+$(BIN)/kupeg: kupeg.kpg.sml main.sml kupeg.mlb kupeg.selfhosted
+	./kupeg.selfhosted kupeg.kpg
+	cp kupeg.kpg.k kupeg.kpg.sml
+	$(COMPILER) -output $(BIN)/kupeg kupeg.mlb
 
-kupeg.sml: kupeg.kpg.k end.k preample.k
-	cat preample.k kupeg.kpg.k end.k > kupeg.sml
+kupeg.selfhosted: kupeg.kpg.sml main.sml kupeg.mlb
+	$(COMPILER) -output kupeg.selfhosted kupeg.mlb
+
+kupeg.kpg.sml: kupeg.kpg.k 
+	cp kupeg.kpg.k kupeg.kpg.sml
 
 kupeg.kpg.k: kupeg.bootstrap kupeg.kpg
 	./kupeg.bootstrap kupeg.kpg
@@ -14,4 +19,4 @@ kupeg.bootstrap: bootstrap.sml
 	$(COMPILER) -output kupeg.bootstrap bootstrap.sml
 
 clean:
-	rm -f $(BIN)/kupeg kupeg.bootstrap kupeg.kpg.k kupeg.sml
+	rm -f $(BIN)/kupeg kupeg.bootstrap kupeg.selfhosted kupeg.kpg.sml kupeg.kpg.k kupeg.sml
