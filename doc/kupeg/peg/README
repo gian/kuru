@@ -1,0 +1,19 @@
+The kupeg bootstrap.sml was created using Kragen Javier Sitaker's very cool Javascript-based
+PEG generator, found here:
+
+http://github.com/kragen/peg-bootstrap
+
+The kupeg.peg is the file I used as input to his "output.js" to generate SML.
+The resultant SML code was not actually valid SML - it took a considerable amount of
+hand-tweaking to make something that was both valid Javascript and valid SML.
+
+The process went something like this:
+
+Apply output.js to kupeg.peg --> kupeg.js
+Apply kupeg.js to kupeg.peg --> kupeg.sml
+Apply kupeg.sml to kupeg.kpg --> bootstrap.sml
+
+The bootstrap.sml file is the one found in src/kupeg. 
+
+Thanks a bunch to Kragen for implementing his PEG compiler-compiler in the first instance,
+and for his help in getting it running for my purposes!
