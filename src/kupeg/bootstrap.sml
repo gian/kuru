@@ -1,3 +1,5 @@
+(* Generated from kupeg.kpg *)
+
 type st = { pos : int, va : string option }
 
 fun push (stack, s : st option) = stack := s :: (!stack)
@@ -134,7 +136,7 @@ let
   val _ = state := parse_rule(input, pos_ state)
   val r = if (notnone state) then va_ state else ""
   val _ = if (notnone state) then (let
-  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (kupeg_join(["\n",
+  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (kupeg_join([r,"\n",
                  "and parse_char(input, pos) = \n",
                  "  (if (pos >= size input) then NONE else\n",
                  "  SOME {pos = pos + 1, va = SOME (String.str (String.sub(input,pos)))})\n",
@@ -605,7 +607,6 @@ let
 in
    !state
 end
-
 and parse_char(input, pos) = 
   (if (pos >= size input) then NONE else
   SOME {pos = pos + 1, va = SOME (String.str (String.sub(input,pos)))})
@@ -614,7 +615,7 @@ and literal(input, pos, str) =
   (if (String.substring(input, pos, size str) = str) then
     SOME { pos = pos + size str, va = SOME str }
   else NONE) handle Subscript => NONE
- 
+
 fun main () = 
 	let
       val args = CommandLine.arguments ()

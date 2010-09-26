@@ -9,7 +9,7 @@ rule    <- n: name _ "<-"_ body: choice "."_ ->
                 ]))
            .
 sentence <- _ r: rule g: sentence -> (kupeg_join([r,"\n",g]))
-          / _ r: rule -> (kupeg_join(["\n",
+          / _ r: rule -> (kupeg_join([r,"\n",
                  "and parse_char(input, pos) = \n",
                  "  (if (pos >= size input) then NONE else\n",
                  "  SOME {pos = pos + 1, va = SOME (String.str (String.sub(input,pos)))})\n",
@@ -63,6 +63,4 @@ expr         <- "("_ e: exprcontents ")" -> (kupeg_join(["(",e,")"])).
 exprcontents <- c: (!"(" !")" char / expr)  e: exprcontents -> (kupeg_join([c,e]))
               / -> ("").
 parenthesized <- "("_ body: choice ")"_ -> (body).
-
-dummy <- "§" -> ("").
 
