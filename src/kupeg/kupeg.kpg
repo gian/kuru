@@ -29,11 +29,17 @@ fun kupeg_join l = String.concatWith "" l
 %nonterm exprcontents of string
 %nonterm parenthesized of string
 
+val kplineNum = ref 1
+val kpfileName = ref "__dummy__"
+
 %%
-sp <- " " / "\n" / "\t".
+sp <- " " / "\n" -> ((kplineNum := 1 + !kplineNum); "\n") / "\t".
 _  <- sp _ / .
 rule    <- n: name _ "<-"_ body: choice "."_ ->
-               (kupeg_join(["and parse_", $n, "(input, pos) = \nlet\n",
+               (kupeg_join([
+                   "(*#line ", Int.toString (!kplineNum), ".1 \"",
+                   !kpfileName, "\" *)",
+                   "and parse_", $n, "(input, pos) = \nlet\n",
                    "  val state = ref (SOME {pos = pos, ",
                    " va = NONE : kupeg_result_", $n," option})\n",
                    "  val stack = kupeg_make_stack ()\n",
