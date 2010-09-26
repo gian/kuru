@@ -3,7 +3,8 @@
 (* Ported to Kuru by Gian Perrone *)
 (* http://www.kuru-lang.org *)
 
-type st = { pos : int, va : string option }
+type kupeg_result = string
+type st = { pos : int, va : kupeg_result option }
 
 fun push (stack, s : st option) = stack := s :: (!stack)
 
@@ -36,7 +37,12 @@ fun kupeg_make_stack () = ref [] : st option list ref
 
 fun kupeg_join l = String.concatWith "" l
 
+val kupeg_empty = "\"\""
+
+
 %start sentence
+%empty "\"\""
+%result string
 
 %%
 sp <- " " / "\n" / "\t".
@@ -70,7 +76,8 @@ nonterminal <- n: name _ ->
 labeled <- label: name _ ":"_ value: term ->
                (kupeg_join([value,
 			     "  val ", label, " = ",
-			     "if (notnone state) then va_ state else \"\"\n"]))
+			     "if (notnone state) then va_ state else ", kupeg_empty, 
+                 "\n"]))
            .
 sequence <- foo: term  bar: sequence -> 
                    (kupeg_join([foo, "  val _ = if (notnone state) then (let\n", bar, " in () end) else ()\n"]))

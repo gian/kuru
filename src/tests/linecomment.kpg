@@ -1,3 +1,12 @@
-# this is a comment
+(* From Kragen's arithmetic.peg example *)
+(* http://github.com/kragen/peg-bootstrap/blob/master/peg.md *)
 
-sentence <- 'a'.
+%start sentence
+%result string
+%empty "\"\""
+
+%%
+
+% this is a comment
+
+sentence <- "a".

@@ -14,8 +14,14 @@ fun main () =
       val filename = hd args'        
  
       val startFn = ref ""
+      val resultTy = ref ""
+      val emptyVal = ref ""
 
       fun startSymbol s = startFn := ("fun kupeg_start s = parse_" ^ s ^ "(s,0)\n")
+
+      fun resultSymbol s = resultTy := ("type kupeg_result = " ^ s ^ "\n")
+
+      fun emptySymbol s = emptyVal := ("val kupeg_empty = " ^ s ^ "\n")
 
       fun readLines fp = 
          let
@@ -28,6 +34,14 @@ fun main () =
                           (startSymbol 
                              (String.substring(l',7,size l' - 8)); 
                                 readLines fp) else 
+                       if String.isPrefix "%empty " l' then 
+                          (emptySymbol 
+                             (String.substring(l',7,size l' - 7)); 
+                                readLines fp) else
+                       if String.isPrefix "%result " l' then 
+                          (resultSymbol 
+                             (String.substring(l',8,size l' - 9)); 
+                                readLines fp) else
                        if String.isPrefix "%" l' then readLines fp else
                        if l' = "" then "" else
                        l' ^ readLines fp
@@ -41,6 +55,8 @@ fun main () =
 		
       val _ = if buf = "" then raise Fail "Empty body.  Possibly missing %%?" else ()
       val _ = if (!startFn) = "" then raise Fail "Empty start symbol. Missing %start?" else ()
+      val _ = if (!resultTy) = "" then raise Fail "Empty result type. Missing %result?" else ()
+      val _ = if (!emptyVal) = "" then raise Fail "Empty empty value. Missing %empty?" else ()
 
       val p = kupeg_start buf 
 
@@ -50,7 +66,9 @@ fun main () =
 			
       val fo = TextIO.openOut (filename ^ ".k")
       val _ = TextIO.output (fo, "(* Generated from " ^ filename ^ " *)\n\n")
+      val _ = TextIO.output (fo, !resultTy)
       val _ = TextIO.output (fo, verbatim ^ "\n")
+      val _ = TextIO.output (fo, !emptyVal)
       val _ = TextIO.output (fo, !startFn)
       val _ = TextIO.output (fo, p')
       val _ = TextIO.closeOut fo

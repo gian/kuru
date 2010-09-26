@@ -1,3 +1,12 @@
+(* From Kragen's csv.peg example *)
+(* http://github.com/kragen/peg-bootstrap/blob/master/peg.md *)
+
+%start sentence
+%result string
+%empty "\"\""
+
+%%
+
 sentence           <- d: (f: field "," r: sentence -> ("") 
                     / f: field               -> (f)) ("\n" / !char)
                    -> (d).
