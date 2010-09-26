@@ -1,0 +1,68 @@
+sp <- " " / "\n" / "\t".
+_  <- sp _ / .
+rule    <- n: name _ "<-"_ body: choice "."_ ->
+               (kupeg_join(["and parse_", n, "(input, pos) = \nlet\n",
+                   "  val state = ref (SOME {pos = pos, va = NONE})\n",
+                   "  val stack = kupeg_make_stack ()\n",
+                   body, 
+                   "in\n   !state\nend"
+                ]))
+           .
+sentence <- _ r: rule g: sentence -> (kupeg_join([r,"\n",g]))
+          / _ r: rule -> (kupeg_join(["\n",
+                 "and parse_char(input, pos) = \n",
+                 "  (if (pos >= size input) then NONE else\n",
+                 "  SOME {pos = pos + 1, va = SOME (String.str (String.sub(input,pos)))})\n",
+				 "  handle Subscript => NONE\n",
+                 "and literal(input, pos, str) = \n",
+                 "  (if (String.substring(input, pos, size str) = str) then\n",
+                 "    SOME { pos = pos + size str, va = SOME str }\n",
+                 "  else NONE) handle Subscript => NONE\n"])
+            ).
+meta     <- "!" / "\"" / "<-" / "/" / "." / "(" / ")" / ":" / "->".
+name     <- c: namechar n: name -> (kupeg_join([c,n])) / namechar.
+namechar <- !meta !sp char.
+term <- labeled / nonterminal / string / negation / parenthesized.
+nonterminal <- n: name _ ->
+                   (kupeg_join(["  val _ = state := parse_", n, "(input, pos_ state)\n"]))
+               .
+labeled <- label: name _ ":"_ value: term ->
+               (kupeg_join([value,
+			     "  val ", label, " = ",
+			     "if (notnone state) then va_ state else \"\"\n"]))
+           .
+sequence <- foo: term  bar: sequence -> 
+                   (kupeg_join([foo, "  val _ = if (notnone state) then (let\n", bar, " in () end) else ()\n"]))
+               / result_expression / -> ("").
+string <- "\"" s: stringcontents "\""_ ->
+             (kupeg_join(["  val _ = state := literal(input, pos_ state, \"", s, "\")\n"]))
+          .
+stringcontents <-   !"\\" !"\"" c: char  s: stringcontents -> (kupeg_join([c, s]))
+                / b: "\\"       c: char  s: stringcontents -> (kupeg_join([b, c, s]))
+                / -> ("").
+choice <- a: sequence "/"_  b: choice ->
+                  (kupeg_join(["  val _ = push(stack,!state)\n",
+                    a,
+                    "  val _ = (if not (notnone state) then let\n",
+                    "    val _ = state := pop stack\n",
+                    b,
+                    "  in () end else ignore (pop stack))\n"]))
+              / sequence.
+negation <- "!"_ t: term ->
+                (kupeg_join(["  val _ = push(stack,!state)\n",
+                  t,
+                  "  val _ = if notnone state then (",
+                  "pop stack;",
+                  "state := NONE)\n",
+                  "  else state := pop stack\n"]))
+            .
+result_expression <- "->"_ result: expr _ ->
+                         (kupeg_join(["  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME ", result, "} else ()\n"]))
+                     .
+expr         <- "("_ e: exprcontents ")" -> (kupeg_join(["(",e,")"])).
+exprcontents <- c: (!"(" !")" char / expr)  e: exprcontents -> (kupeg_join([c,e]))
+              / -> ("").
+parenthesized <- "("_ body: choice ")"_ -> (body).
+
+dummy <- "§" -> ("").
+

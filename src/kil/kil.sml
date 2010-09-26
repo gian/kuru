@@ -1,7 +1,41 @@
 structure Kil =
 struct
 
-   fun repl () = (print "REPL not implemented!  Specify an input file\n")
+   fun repl () = 
+      let
+         fun prompt () = print " - "
+
+         val ib = ref [] : char list ref
+
+         val c = ref (SOME (Char.chr 0)) 
+
+         val env = ref Interpret.top_level_env
+
+         fun dstop NONE = false
+           | dstop (SOME #";") = false
+           | dstop _ = true
+
+         fun readInput () = (while dstop (!c) do
+                                (ib := !ib @ [valOf (!c)]; 
+                                 c := TextIO.input1 TextIO.stdIn); 
+                                 String.implode (!ib))
+         fun replLoop () =
+            let
+               val _ = prompt ()
+               val _ = c := (TextIO.input1 TextIO.stdIn)
+               val i = readInput ()
+               val _ = if i = "" then Unix.exit 0w0 else ()
+               val p = KilParse.parse i 
+               val env' = Interpret.interpret_h (!env) p
+               val _ = env := env'
+               val _ = ib := []
+            in
+               replLoop ()
+            end
+      in
+         replLoop ()
+      end
+   
 
    fun main () =
       let

@@ -321,16 +321,16 @@ struct
      | interp env (A.Null) = (env,VUnit)
      | interp env e = raise NotImplemented (A.pp e)
 
-   fun interpret_h env [] = ()
+   fun interpret_h env [] = env 
      | interpret_h env (h::t) = 
        let 
           val (env',r) = interp env h
        in
           interpret_h env' t
        end handle (NotImplemented m) => 
-                       (D.print 1 ("Not Implemented: " ^ m ^ "\n"); ())
+                       (D.print 1 ("Not Implemented: " ^ m ^ "\n"); env)
 
-   fun interpret l = interpret_h top_level_env l
+   fun interpret l = ignore (interpret_h top_level_env l)
 end
 
 
