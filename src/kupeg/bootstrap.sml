@@ -70,7 +70,7 @@ val kupeg_empty = "\"\""
 
 val kupeg_empty = "\"\""
 
-fun kupeg_start s = parse_sentence(s,0)
+fun kupeg_start s = valOf (#va (valOf (parse_sentence(s,0))))
 and parse_sp(input, pos) = 
 let
   val state = ref (SOME {pos = pos, va = NONE})
@@ -671,7 +671,9 @@ fun main () =
       val resultTy = ref ""
       val emptyVal = ref ""
 
-      fun startSymbol s = startFn := ("fun kupeg_start s = parse_" ^ s ^ "(s,0)\n")
+     fun startSymbol s = startFn := 
+	          ("fun kupeg_start s = valOf (#va (valOf (parse_" ^ s ^ "(s,0)))) " ^
+		             "handle Option => raise Fail \"Parse failed.\"\n")
 
       fun resultSymbol s = resultTy := ("type kupeg_result = " ^ s ^ "\n")
 
@@ -712,9 +714,7 @@ fun main () =
       val _ = if (!resultTy) = "" then raise Fail "Empty result type. Missing %result?" else ()
       val _ = if (!emptyVal) = "" then raise Fail "Empty empty value. Missing %empty?" else ()
 
-      val p = kupeg_start buf 
-
-      val p' = valOf (#va (valOf p))
+      val p' = kupeg_start buf 
 
       (* Generate the output file *)
 			
