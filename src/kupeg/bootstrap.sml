@@ -1,11 +1,36 @@
 (* Generated from kupeg.kpg *)
 
+type kupeg_result = string
+type st = { pos : int, va : kupeg_result option }
+fun push (stack, s : st option) = stack := s :: (!stack)
+
+fun pop stack =
+let
+   val s = !stack
+   val _ = stack := tl s
+in hd s end
+
+fun pos_ (s : st option ref) =
+let
+   val s' = valOf (!s)
+in #pos s' end
+
+fun va_ (s : st option ref) =
+let
+   val s' = valOf (!s)
+in valOf (#va s') end
+
+fun notnone s = case (!s) of NONE => false
+                           | SOME x => true
+
+fun kupeg_make_stack () = ref [] : st option list ref
 (* Based on peg-bootstrap by Kragen Javier Sitaker *)
 (* http://github.com/kragen/peg-bootstrap *)
 (* Ported to Kuru by Gian Perrone *)
 (* http://www.kuru-lang.org *)
 
-type st = { pos : int, va : string option }
+type kupeg_result = string
+type st = { pos : int, va : kupeg_result option }
 
 fun push (stack, s : st option) = stack := s :: (!stack)
 
@@ -38,7 +63,12 @@ fun kupeg_make_stack () = ref [] : st option list ref
 
 fun kupeg_join l = String.concatWith "" l
 
+val kupeg_empty = "\"\""
 
+
+
+
+val kupeg_empty = "\"\""
 
 fun kupeg_start s = parse_sentence(s,0)
 and parse_sp(input, pos) = 
@@ -340,7 +370,8 @@ let
   val _ = if (notnone state) then (let
   val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (kupeg_join([value,
 			     "  val ", label, " = ",
-			     "if (notnone state) then va_ state else \"\"\n"]))} else ()
+			     "if (notnone state) then va_ state else ", kupeg_empty, 
+                 "\n"]))} else ()
  in () end) else ()
  in () end) else ()
  in () end) else ()
@@ -637,8 +668,14 @@ fun main () =
       val filename = hd args'        
  
       val startFn = ref ""
+      val resultTy = ref ""
+      val emptyVal = ref ""
 
       fun startSymbol s = startFn := ("fun kupeg_start s = parse_" ^ s ^ "(s,0)\n")
+
+      fun resultSymbol s = resultTy := ("type kupeg_result = " ^ s ^ "\n")
+
+      fun emptySymbol s = emptyVal := ("val kupeg_empty = " ^ s ^ "\n")
 
       fun readLines fp = 
          let
@@ -651,6 +688,14 @@ fun main () =
                           (startSymbol 
                              (String.substring(l',7,size l' - 8)); 
                                 readLines fp) else 
+                       if String.isPrefix "%empty " l' then 
+                          (emptySymbol 
+                             (String.substring(l',7,size l' - 7)); 
+                                readLines fp) else
+                       if String.isPrefix "%result " l' then 
+                          (resultSymbol 
+                             (String.substring(l',8,size l' - 9)); 
+                                readLines fp) else
                        if String.isPrefix "%" l' then readLines fp else
                        if l' = "" then "" else
                        l' ^ readLines fp
@@ -664,6 +709,8 @@ fun main () =
 		
       val _ = if buf = "" then raise Fail "Empty body.  Possibly missing %%?" else ()
       val _ = if (!startFn) = "" then raise Fail "Empty start symbol. Missing %start?" else ()
+      val _ = if (!resultTy) = "" then raise Fail "Empty result type. Missing %result?" else ()
+      val _ = if (!emptyVal) = "" then raise Fail "Empty empty value. Missing %empty?" else ()
 
       val p = kupeg_start buf 
 
@@ -673,7 +720,37 @@ fun main () =
 			
       val fo = TextIO.openOut (filename ^ ".k")
       val _ = TextIO.output (fo, "(* Generated from " ^ filename ^ " *)\n\n")
+      val _ = TextIO.output (fo, !resultTy)
+      val _ = TextIO.output (fo, "type st = { pos : int, " ^
+                                 "va : kupeg_result option }\n")
+      
+      val _ = TextIO.output (fo,
+        "fun push (stack, s : st option) = stack := s :: (!stack)"
+     ^  "\n\n" 
+     ^  "fun pop stack =\n" 
+     ^  "let\n"
+     ^  "   val s = !stack\n"
+     ^  "   val _ = stack := tl s\n"
+     ^  "in hd s end\n\n"
+
+     ^  "fun pos_ (s : st option ref) =\n"
+     ^  "let\n"
+     ^  "   val s' = valOf (!s)\n"
+     ^  "in #pos s' end\n\n" 
+
+     ^  "fun va_ (s : st option ref) =\n"
+     ^  "let\n"
+     ^  "   val s' = valOf (!s)\n"
+     ^  "in valOf (#va s') end\n\n"
+
+     ^  "fun notnone s = case (!s) of NONE => false\n"
+     ^  "                           | SOME x => true\n\n"
+
+     ^  "fun kupeg_make_stack () = ref [] : st option list ref\n")
+
+      
       val _ = TextIO.output (fo, verbatim ^ "\n")
+      val _ = TextIO.output (fo, !emptyVal)
       val _ = TextIO.output (fo, !startFn)
       val _ = TextIO.output (fo, p')
       val _ = TextIO.closeOut fo

@@ -67,6 +67,34 @@ fun main () =
       val fo = TextIO.openOut (filename ^ ".k")
       val _ = TextIO.output (fo, "(* Generated from " ^ filename ^ " *)\n\n")
       val _ = TextIO.output (fo, !resultTy)
+      val _ = TextIO.output (fo, "type st = { pos : int, " ^
+                                 "va : kupeg_result option }\n")
+      
+      val _ = TextIO.output (fo,
+        "fun push (stack, s : st option) = stack := s :: (!stack)"
+     ^  "\n\n" 
+     ^  "fun pop stack =\n" 
+     ^  "let\n"
+     ^  "   val s = !stack\n"
+     ^  "   val _ = stack := tl s\n"
+     ^  "in hd s end\n\n"
+
+     ^  "fun pos_ (s : st option ref) =\n"
+     ^  "let\n"
+     ^  "   val s' = valOf (!s)\n"
+     ^  "in #pos s' end\n\n" 
+
+     ^  "fun va_ (s : st option ref) =\n"
+     ^  "let\n"
+     ^  "   val s' = valOf (!s)\n"
+     ^  "in valOf (#va s') end\n\n"
+
+     ^  "fun notnone s = case (!s) of NONE => false\n"
+     ^  "                           | SOME x => true\n\n"
+
+     ^  "fun kupeg_make_stack () = ref [] : st option list ref\n")
+
+      
       val _ = TextIO.output (fo, verbatim ^ "\n")
       val _ = TextIO.output (fo, !emptyVal)
       val _ = TextIO.output (fo, !startFn)
