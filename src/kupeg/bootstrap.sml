@@ -1,8 +1,9 @@
 (* Generated from kupeg.kpg *)
 
 type kupeg_result = string
-type st = { pos : int, va : kupeg_result option }
-fun push (stack, s : st option) = stack := s :: (!stack)
+type 'a st = { pos : int, va : 'a option }
+val $ = valOf
+fun push (stack, s : 'a st option) = stack := s :: (!stack)
 
 fun pop stack =
 let
@@ -10,70 +11,54 @@ let
    val _ = stack := tl s
 in hd s end
 
-fun pos_ (s : st option ref) =
+fun pos_ (s : 'a st option ref) =
 let
    val s' = valOf (!s)
 in #pos s' end
 
-fun va_ (s : st option ref) =
+fun va_ (s : 'a st option ref) =
 let
    val s' = valOf (!s)
-in valOf (#va s') end
+in #va s' end
 
 fun notnone s = case (!s) of NONE => false
                            | SOME x => true
 
-fun kupeg_make_stack () = ref [] : st option list ref
+fun kupeg_make_stack () = ref [] : 'a st option list ref
 (* Based on peg-bootstrap by Kragen Javier Sitaker *)
 (* http://github.com/kragen/peg-bootstrap *)
 (* Ported to Kuru by Gian Perrone *)
 (* http://www.kuru-lang.org *)
 
-type kupeg_result = string
-type st = { pos : int, va : kupeg_result option }
-
-fun push (stack, s : st option) = stack := s :: (!stack)
-
-fun pop stack =
-   let
-      val s = !stack
-      val _ = stack := tl s
-   in
-      hd s
-   end
-
-fun pos_ (s : st option ref) =
-   let
-      val s' = valOf (!s)
-   in
-      #pos s'
-   end
-
-fun va_ (s : st option ref) =
-   let
-      val s' = valOf (!s)
-   in
-      valOf (#va s')
-   end
-
-fun notnone s = case (!s) of NONE => false
-                           | SOME x => true
-
-fun kupeg_make_stack () = ref [] : st option list ref
-
 fun kupeg_join l = String.concatWith "" l
 
-val kupeg_empty = "\"\""
+
+type kupeg_result_sp = string
+type kupeg_result__ = string
+type kupeg_result_rule = string
+type kupeg_result_sentence = string
+type kupeg_result_meta = string
+type kupeg_result_name = string
+type kupeg_result_namechar = string
+type kupeg_result_term = string
+type kupeg_result_nonterminal = string
+type kupeg_result_labeled = string
+type kupeg_result_sequence = string
+type kupeg_result_string = string
+type kupeg_result_stringcontents = string
+type kupeg_result_choice = string
+type kupeg_result_negation = string
+type kupeg_result_result_expression = string
+type kupeg_result_expr = string
+type kupeg_result_exprcontents = string
+type kupeg_result_parenthesized = string
 
 
 
-
-val kupeg_empty = "\"\""
-
-fun kupeg_start s = valOf (#va (valOf (parse_sentence(s,0))))
+fun kupeg_start s = (valOf (#va (valOf (parse_sentence(s,0))))) handle Option => raise Fail "Parse failed."
 and parse_sp(input, pos) = 
 let
-  val state = ref (SOME {pos = pos, va = NONE})
+  val state = ref (SOME {pos = pos,  va = NONE : kupeg_result_sp option})
   val stack = kupeg_make_stack ()
   val _ = push(stack,!state)
   val _ = state := literal(input, pos_ state, " ")
@@ -97,7 +82,7 @@ in
 end
 and parse__(input, pos) = 
 let
-  val state = ref (SOME {pos = pos, va = NONE})
+  val state = ref (SOME {pos = pos,  va = NONE : kupeg_result__ option})
   val stack = kupeg_make_stack ()
   val _ = push(stack,!state)
   val _ = state := parse_sp(input, pos_ state)
@@ -114,10 +99,10 @@ in
 end
 and parse_rule(input, pos) = 
 let
-  val state = ref (SOME {pos = pos, va = NONE})
+  val state = ref (SOME {pos = pos,  va = NONE : kupeg_result_rule option})
   val stack = kupeg_make_stack ()
   val _ = state := parse_name(input, pos_ state)
-  val n = if (notnone state) then va_ state else ""
+  val n = if (notnone state) then  (va_ state) else NONE
   val _ = if (notnone state) then (let
   val _ = state := parse__(input, pos_ state)
   val _ = if (notnone state) then (let
@@ -126,18 +111,19 @@ let
   val _ = state := parse__(input, pos_ state)
   val _ = if (notnone state) then (let
   val _ = state := parse_choice(input, pos_ state)
-  val body = if (notnone state) then va_ state else ""
+  val body = if (notnone state) then  (va_ state) else NONE
   val _ = if (notnone state) then (let
   val _ = state := literal(input, pos_ state, ".")
   val _ = if (notnone state) then (let
   val _ = state := parse__(input, pos_ state)
   val _ = if (notnone state) then (let
-  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (kupeg_join(["and parse_", n, "(input, pos) = \nlet\n",
-                   "  val state = ref (SOME {pos = pos, va = NONE})\n",
+  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (((kupeg_join(["and parse_", $n, "(input, pos) = \nlet\n",
+                   "  val state = ref (SOME {pos = pos, ",
+                   " va = NONE : kupeg_result_", $n," option})\n",
                    "  val stack = kupeg_make_stack ()\n",
-                   body, 
+                   $body, 
                    "in\n   !state\nend"
-                ]))} else ()
+                ]))))} else ()
  in () end) else ()
  in () end) else ()
  in () end) else ()
@@ -150,18 +136,18 @@ in
 end
 and parse_sentence(input, pos) = 
 let
-  val state = ref (SOME {pos = pos, va = NONE})
+  val state = ref (SOME {pos = pos,  va = NONE : kupeg_result_sentence option})
   val stack = kupeg_make_stack ()
   val _ = push(stack,!state)
   val _ = state := parse__(input, pos_ state)
   val _ = if (notnone state) then (let
   val _ = state := parse_rule(input, pos_ state)
-  val r = if (notnone state) then va_ state else ""
+  val r = if (notnone state) then  (va_ state) else NONE
   val _ = if (notnone state) then (let
   val _ = state := parse_sentence(input, pos_ state)
-  val g = if (notnone state) then va_ state else ""
+  val g = if (notnone state) then  (va_ state) else NONE
   val _ = if (notnone state) then (let
-  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (kupeg_join([r,"\n",g]))} else ()
+  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (((kupeg_join([$r,"\n",$g]))))} else ()
  in () end) else ()
  in () end) else ()
  in () end) else ()
@@ -170,9 +156,9 @@ let
   val _ = state := parse__(input, pos_ state)
   val _ = if (notnone state) then (let
   val _ = state := parse_rule(input, pos_ state)
-  val r = if (notnone state) then va_ state else ""
+  val r = if (notnone state) then  (va_ state) else NONE
   val _ = if (notnone state) then (let
-  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (kupeg_join([r,"\n",
+  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (((kupeg_join([$r,"\n",
                  "and parse_char(input, pos) = \n",
                  "  (if (pos >= size input) then NONE else\n",
                  "  SOME {pos = pos + 1, va = SOME (String.str (String.sub(input,pos)))})\n",
@@ -181,7 +167,7 @@ let
                  "  (if (String.substring(input, pos, size str) = str) then\n",
                  "    SOME { pos = pos + size str, va = SOME str }\n",
                  "  else NONE) handle Subscript => NONE\n"])
-            )} else ()
+            )))} else ()
  in () end) else ()
  in () end) else ()
   in () end else ignore (pop stack))
@@ -190,7 +176,7 @@ in
 end
 and parse_meta(input, pos) = 
 let
-  val state = ref (SOME {pos = pos, va = NONE})
+  val state = ref (SOME {pos = pos,  va = NONE : kupeg_result_meta option})
   val stack = kupeg_make_stack ()
   val _ = push(stack,!state)
   val _ = state := literal(input, pos_ state, "!")
@@ -256,16 +242,16 @@ in
 end
 and parse_name(input, pos) = 
 let
-  val state = ref (SOME {pos = pos, va = NONE})
+  val state = ref (SOME {pos = pos,  va = NONE : kupeg_result_name option})
   val stack = kupeg_make_stack ()
   val _ = push(stack,!state)
   val _ = state := parse_namechar(input, pos_ state)
-  val c = if (notnone state) then va_ state else ""
+  val c = if (notnone state) then  (va_ state) else NONE
   val _ = if (notnone state) then (let
   val _ = state := parse_name(input, pos_ state)
-  val n = if (notnone state) then va_ state else ""
+  val n = if (notnone state) then  (va_ state) else NONE
   val _ = if (notnone state) then (let
-  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (kupeg_join([c,n]))} else ()
+  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (((kupeg_join([$c,$n]))))} else ()
  in () end) else ()
  in () end) else ()
   val _ = (if not (notnone state) then let
@@ -279,7 +265,7 @@ in
 end
 and parse_namechar(input, pos) = 
 let
-  val state = ref (SOME {pos = pos, va = NONE})
+  val state = ref (SOME {pos = pos,  va = NONE : kupeg_result_namechar option})
   val stack = kupeg_make_stack ()
   val _ = push(stack,!state)
   val _ = state := parse_meta(input, pos_ state)
@@ -301,7 +287,7 @@ in
 end
 and parse_term(input, pos) = 
 let
-  val state = ref (SOME {pos = pos, va = NONE})
+  val state = ref (SOME {pos = pos,  va = NONE : kupeg_result_term option})
   val stack = kupeg_make_stack ()
   val _ = push(stack,!state)
   val _ = state := parse_labeled(input, pos_ state)
@@ -339,14 +325,15 @@ in
 end
 and parse_nonterminal(input, pos) = 
 let
-  val state = ref (SOME {pos = pos, va = NONE})
+  val state = ref (SOME {pos = pos,  va = NONE : kupeg_result_nonterminal option})
   val stack = kupeg_make_stack ()
   val _ = state := parse_name(input, pos_ state)
-  val n = if (notnone state) then va_ state else ""
+  val n = if (notnone state) then  (va_ state) else NONE
   val _ = if (notnone state) then (let
   val _ = state := parse__(input, pos_ state)
   val _ = if (notnone state) then (let
-  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (kupeg_join(["  val _ = state := parse_", n, "(input, pos_ state)\n"]))} else ()
+  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (((kupeg_join(["  val _ = state := parse_", $n, 
+                                "(input, pos_ state)\n"]))))} else ()
  in () end) else ()
  in () end) else ()
 in
@@ -354,10 +341,10 @@ in
 end
 and parse_labeled(input, pos) = 
 let
-  val state = ref (SOME {pos = pos, va = NONE})
+  val state = ref (SOME {pos = pos,  va = NONE : kupeg_result_labeled option})
   val stack = kupeg_make_stack ()
   val _ = state := parse_name(input, pos_ state)
-  val label = if (notnone state) then va_ state else ""
+  val label = if (notnone state) then  (va_ state) else NONE
   val _ = if (notnone state) then (let
   val _ = state := parse__(input, pos_ state)
   val _ = if (notnone state) then (let
@@ -366,12 +353,13 @@ let
   val _ = state := parse__(input, pos_ state)
   val _ = if (notnone state) then (let
   val _ = state := parse_term(input, pos_ state)
-  val value = if (notnone state) then va_ state else ""
+  val value = if (notnone state) then  (va_ state) else NONE
   val _ = if (notnone state) then (let
-  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (kupeg_join([value,
-			     "  val ", label, " = ",
-			     "if (notnone state) then va_ state else ", kupeg_empty, 
-                 "\n"]))} else ()
+  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (((kupeg_join([$value,
+			     "  val ", $label, " = ",
+			     "if (notnone state) then ",
+                 " (va_ state)",
+                 " else NONE\n"]))))} else ()
  in () end) else ()
  in () end) else ()
  in () end) else ()
@@ -382,16 +370,17 @@ in
 end
 and parse_sequence(input, pos) = 
 let
-  val state = ref (SOME {pos = pos, va = NONE})
+  val state = ref (SOME {pos = pos,  va = NONE : kupeg_result_sequence option})
   val stack = kupeg_make_stack ()
   val _ = push(stack,!state)
   val _ = state := parse_term(input, pos_ state)
-  val foo = if (notnone state) then va_ state else ""
+  val foo = if (notnone state) then  (va_ state) else NONE
   val _ = if (notnone state) then (let
   val _ = state := parse_sequence(input, pos_ state)
-  val bar = if (notnone state) then va_ state else ""
+  val bar = if (notnone state) then  (va_ state) else NONE
   val _ = if (notnone state) then (let
-  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (kupeg_join([foo, "  val _ = if (notnone state) then (let\n", bar, " in () end) else ()\n"]))} else ()
+  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (((kupeg_join([$foo, "  val _ = if (notnone state) then ",
+                                "(let\n", $bar, " in () end) else ()\n"]))))} else ()
  in () end) else ()
  in () end) else ()
   val _ = (if not (notnone state) then let
@@ -402,7 +391,7 @@ let
  in () end) else ()
   val _ = (if not (notnone state) then let
     val _ = state := pop stack
-  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME ("")} else ()
+  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME ((("")))} else ()
   in () end else ignore (pop stack))
   in () end else ignore (pop stack))
 in
@@ -410,18 +399,19 @@ in
 end
 and parse_string(input, pos) = 
 let
-  val state = ref (SOME {pos = pos, va = NONE})
+  val state = ref (SOME {pos = pos,  va = NONE : kupeg_result_string option})
   val stack = kupeg_make_stack ()
   val _ = state := literal(input, pos_ state, "\"")
   val _ = if (notnone state) then (let
   val _ = state := parse_stringcontents(input, pos_ state)
-  val s = if (notnone state) then va_ state else ""
+  val s = if (notnone state) then  (va_ state) else NONE
   val _ = if (notnone state) then (let
   val _ = state := literal(input, pos_ state, "\"")
   val _ = if (notnone state) then (let
   val _ = state := parse__(input, pos_ state)
   val _ = if (notnone state) then (let
-  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (kupeg_join(["  val _ = state := literal(input, pos_ state, \"", s, "\")\n"]))} else ()
+  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (((kupeg_join(["  val _ = state := ",
+                          "literal(input, pos_ state, \"", $s, "\")\n"]))))} else ()
  in () end) else ()
  in () end) else ()
  in () end) else ()
@@ -431,7 +421,7 @@ in
 end
 and parse_stringcontents(input, pos) = 
 let
-  val state = ref (SOME {pos = pos, va = NONE})
+  val state = ref (SOME {pos = pos,  va = NONE : kupeg_result_stringcontents option})
   val stack = kupeg_make_stack ()
   val _ = push(stack,!state)
   val _ = push(stack,!state)
@@ -445,12 +435,12 @@ let
   else state := pop stack
   val _ = if (notnone state) then (let
   val _ = state := parse_char(input, pos_ state)
-  val c = if (notnone state) then va_ state else ""
+  val c = if (notnone state) then  (va_ state) else NONE
   val _ = if (notnone state) then (let
   val _ = state := parse_stringcontents(input, pos_ state)
-  val s = if (notnone state) then va_ state else ""
+  val s = if (notnone state) then  (va_ state) else NONE
   val _ = if (notnone state) then (let
-  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (kupeg_join([c, s]))} else ()
+  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (((kupeg_join([$c, $s]))))} else ()
  in () end) else ()
  in () end) else ()
  in () end) else ()
@@ -459,21 +449,21 @@ let
     val _ = state := pop stack
   val _ = push(stack,!state)
   val _ = state := literal(input, pos_ state, "\\")
-  val b = if (notnone state) then va_ state else ""
+  val b = if (notnone state) then  (va_ state) else NONE
   val _ = if (notnone state) then (let
   val _ = state := parse_char(input, pos_ state)
-  val c = if (notnone state) then va_ state else ""
+  val c = if (notnone state) then  (va_ state) else NONE
   val _ = if (notnone state) then (let
   val _ = state := parse_stringcontents(input, pos_ state)
-  val s = if (notnone state) then va_ state else ""
+  val s = if (notnone state) then  (va_ state) else NONE
   val _ = if (notnone state) then (let
-  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (kupeg_join([b, c, s]))} else ()
+  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (((kupeg_join([$b, $c, $s]))))} else ()
  in () end) else ()
  in () end) else ()
  in () end) else ()
   val _ = (if not (notnone state) then let
     val _ = state := pop stack
-  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME ("")} else ()
+  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME ((("")))} else ()
   in () end else ignore (pop stack))
   in () end else ignore (pop stack))
 in
@@ -481,25 +471,25 @@ in
 end
 and parse_choice(input, pos) = 
 let
-  val state = ref (SOME {pos = pos, va = NONE})
+  val state = ref (SOME {pos = pos,  va = NONE : kupeg_result_choice option})
   val stack = kupeg_make_stack ()
   val _ = push(stack,!state)
   val _ = state := parse_sequence(input, pos_ state)
-  val a = if (notnone state) then va_ state else ""
+  val a = if (notnone state) then  (va_ state) else NONE
   val _ = if (notnone state) then (let
   val _ = state := literal(input, pos_ state, "/")
   val _ = if (notnone state) then (let
   val _ = state := parse__(input, pos_ state)
   val _ = if (notnone state) then (let
   val _ = state := parse_choice(input, pos_ state)
-  val b = if (notnone state) then va_ state else ""
+  val b = if (notnone state) then  (va_ state) else NONE
   val _ = if (notnone state) then (let
-  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (kupeg_join(["  val _ = push(stack,!state)\n",
-                    a,
+  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (((kupeg_join(["  val _ = push(stack,!state)\n",
+                    $a,
                     "  val _ = (if not (notnone state) then let\n",
                     "    val _ = state := pop stack\n",
-                    b,
-                    "  in () end else ignore (pop stack))\n"]))} else ()
+                    $b,
+                    "  in () end else ignore (pop stack))\n"]))))} else ()
  in () end) else ()
  in () end) else ()
  in () end) else ()
@@ -515,21 +505,21 @@ in
 end
 and parse_negation(input, pos) = 
 let
-  val state = ref (SOME {pos = pos, va = NONE})
+  val state = ref (SOME {pos = pos,  va = NONE : kupeg_result_negation option})
   val stack = kupeg_make_stack ()
   val _ = state := literal(input, pos_ state, "!")
   val _ = if (notnone state) then (let
   val _ = state := parse__(input, pos_ state)
   val _ = if (notnone state) then (let
   val _ = state := parse_term(input, pos_ state)
-  val t = if (notnone state) then va_ state else ""
+  val t = if (notnone state) then  (va_ state) else NONE
   val _ = if (notnone state) then (let
-  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (kupeg_join(["  val _ = push(stack,!state)\n",
-                  t,
+  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (((kupeg_join(["  val _ = push(stack,!state)\n",
+                  $t,
                   "  val _ = if notnone state then (",
                   "pop stack;",
                   "state := NONE)\n",
-                  "  else state := pop stack\n"]))} else ()
+                  "  else state := pop stack\n"]))))} else ()
  in () end) else ()
  in () end) else ()
  in () end) else ()
@@ -538,18 +528,22 @@ in
 end
 and parse_result_expression(input, pos) = 
 let
-  val state = ref (SOME {pos = pos, va = NONE})
+  val state = ref (SOME {pos = pos,  va = NONE : kupeg_result_result_expression option})
   val stack = kupeg_make_stack ()
   val _ = state := literal(input, pos_ state, "->")
   val _ = if (notnone state) then (let
   val _ = state := parse__(input, pos_ state)
   val _ = if (notnone state) then (let
   val _ = state := parse_expr(input, pos_ state)
-  val result = if (notnone state) then va_ state else ""
+  val result = if (notnone state) then  (va_ state) else NONE
   val _ = if (notnone state) then (let
   val _ = state := parse__(input, pos_ state)
   val _ = if (notnone state) then (let
-  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (kupeg_join(["  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME ", result, "} else ()\n"]))} else ()
+  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (((kupeg_join([
+                                      "  val _ = if (notnone state) then ",
+                                      "state := SOME {pos = pos_ state, ",
+                                      "va = SOME ((", $result, "))}",
+                                      " else ()\n"]))))} else ()
  in () end) else ()
  in () end) else ()
  in () end) else ()
@@ -559,18 +553,18 @@ in
 end
 and parse_expr(input, pos) = 
 let
-  val state = ref (SOME {pos = pos, va = NONE})
+  val state = ref (SOME {pos = pos,  va = NONE : kupeg_result_expr option})
   val stack = kupeg_make_stack ()
   val _ = state := literal(input, pos_ state, "(")
   val _ = if (notnone state) then (let
   val _ = state := parse__(input, pos_ state)
   val _ = if (notnone state) then (let
   val _ = state := parse_exprcontents(input, pos_ state)
-  val e = if (notnone state) then va_ state else ""
+  val e = if (notnone state) then  (va_ state) else NONE
   val _ = if (notnone state) then (let
   val _ = state := literal(input, pos_ state, ")")
   val _ = if (notnone state) then (let
-  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (kupeg_join(["(",e,")"]))} else ()
+  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (((kupeg_join(["(",$e,")"]))))} else ()
  in () end) else ()
  in () end) else ()
  in () end) else ()
@@ -580,7 +574,7 @@ in
 end
 and parse_exprcontents(input, pos) = 
 let
-  val state = ref (SOME {pos = pos, va = NONE})
+  val state = ref (SOME {pos = pos,  va = NONE : kupeg_result_exprcontents option})
   val stack = kupeg_make_stack ()
   val _ = push(stack,!state)
   val _ = push(stack,!state)
@@ -605,37 +599,37 @@ let
   val _ = if (notnone state) then (let
  in () end) else ()
   in () end else ignore (pop stack))
-  val c = if (notnone state) then va_ state else ""
+  val c = if (notnone state) then  (va_ state) else NONE
   val _ = if (notnone state) then (let
   val _ = state := parse_exprcontents(input, pos_ state)
-  val e = if (notnone state) then va_ state else ""
+  val e = if (notnone state) then  (va_ state) else NONE
   val _ = if (notnone state) then (let
-  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (kupeg_join([c,e]))} else ()
+  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (((kupeg_join([$c,$e]))))} else ()
  in () end) else ()
  in () end) else ()
   val _ = (if not (notnone state) then let
     val _ = state := pop stack
-  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME ("")} else ()
+  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME ((("")))} else ()
   in () end else ignore (pop stack))
 in
    !state
 end
 and parse_parenthesized(input, pos) = 
 let
-  val state = ref (SOME {pos = pos, va = NONE})
+  val state = ref (SOME {pos = pos,  va = NONE : kupeg_result_parenthesized option})
   val stack = kupeg_make_stack ()
   val _ = state := literal(input, pos_ state, "(")
   val _ = if (notnone state) then (let
   val _ = state := parse__(input, pos_ state)
   val _ = if (notnone state) then (let
   val _ = state := parse_choice(input, pos_ state)
-  val body = if (notnone state) then va_ state else ""
+  val body = if (notnone state) then  (va_ state) else NONE
   val _ = if (notnone state) then (let
   val _ = state := literal(input, pos_ state, ")")
   val _ = if (notnone state) then (let
   val _ = state := parse__(input, pos_ state)
   val _ = if (notnone state) then (let
-  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME (body)} else ()
+  val _ = if (notnone state) then state := SOME {pos = pos_ state, va = SOME ((($body)))} else ()
  in () end) else ()
  in () end) else ()
  in () end) else ()
@@ -670,14 +664,33 @@ fun main () =
       val startFn = ref ""
       val resultTy = ref ""
       val emptyVal = ref ""
+      val nontermTypes = ref [] : (string * string) list ref
 
-     fun startSymbol s = startFn := 
-	          ("fun kupeg_start s = valOf (#va (valOf (parse_" ^ s ^ "(s,0)))) " ^
-		             "handle Option => raise Fail \"Parse failed.\"\n")
+      fun startSymbol s = startFn := 
+        ("fun kupeg_start s = " ^
+            "(valOf (#va (valOf (parse_" ^ s ^ "(s,0))))) " ^
+            "handle Option => raise Fail \"Parse failed.\"\n")
 
       fun resultSymbol s = resultTy := ("type kupeg_result = " ^ s ^ "\n")
 
-      fun emptySymbol s = emptyVal := ("val kupeg_empty = " ^ s ^ "\n")
+      fun emptySymbol s = ()
+
+      fun genNontermType line =
+        let
+            val l' = String.explode line
+            fun fof [] = []
+              | fof ((#" ")::(#"o")::(#"f")::(#" ")::t) = []
+              | fof (h::t) = h :: fof t
+            val ntname = String.implode (fof l')
+            val nttype = String.implode (List.drop (l',4 + size ntname))
+            val _ = if ntname = "" then raise Fail (
+                "missing name in %nonterm declaration") else ()
+            val _ = if nttype = "" then raise Fail (
+                "missing 'of' in %nonterm " ^ ntname) else ()
+            val _ = nontermTypes := !nontermTypes @ [(ntname,nttype)]
+         in
+            ()
+         end
 
       fun readLines fp = 
          let
@@ -698,6 +711,10 @@ fun main () =
                           (resultSymbol 
                              (String.substring(l',8,size l' - 9)); 
                                 readLines fp) else
+                       if String.isPrefix "%nonterm " l' then 
+                          (genNontermType
+                             (String.substring(l',9,size l' - 10)); 
+                                readLines fp) else
                        if String.isPrefix "%" l' then readLines fp else
                        if l' = "" then "" else
                        l' ^ readLines fp
@@ -712,7 +729,6 @@ fun main () =
       val _ = if buf = "" then raise Fail "Empty body.  Possibly missing %%?" else ()
       val _ = if (!startFn) = "" then raise Fail "Empty start symbol. Missing %start?" else ()
       val _ = if (!resultTy) = "" then raise Fail "Empty result type. Missing %result?" else ()
-      val _ = if (!emptyVal) = "" then raise Fail "Empty empty value. Missing %empty?" else ()
 
       val p' = kupeg_start buf 
 
@@ -721,11 +737,11 @@ fun main () =
       val fo = TextIO.openOut (filename ^ ".k")
       val _ = TextIO.output (fo, "(* Generated from " ^ filename ^ " *)\n\n")
       val _ = TextIO.output (fo, !resultTy)
-      val _ = TextIO.output (fo, "type st = { pos : int, " ^
-                                 "va : kupeg_result option }\n")
-      
+      val _ = TextIO.output (fo, "type 'a st = { pos : int, " ^
+                                 "va : 'a option }\n")
+      val _ = TextIO.output (fo, "val $ = valOf\n") 
       val _ = TextIO.output (fo,
-        "fun push (stack, s : st option) = stack := s :: (!stack)"
+        "fun push (stack, s : 'a st option) = stack := s :: (!stack)"
      ^  "\n\n" 
      ^  "fun pop stack =\n" 
      ^  "let\n"
@@ -733,24 +749,23 @@ fun main () =
      ^  "   val _ = stack := tl s\n"
      ^  "in hd s end\n\n"
 
-     ^  "fun pos_ (s : st option ref) =\n"
+     ^  "fun pos_ (s : 'a st option ref) =\n"
      ^  "let\n"
      ^  "   val s' = valOf (!s)\n"
      ^  "in #pos s' end\n\n" 
 
-     ^  "fun va_ (s : st option ref) =\n"
+     ^  "fun va_ (s : 'a st option ref) =\n"
      ^  "let\n"
      ^  "   val s' = valOf (!s)\n"
-     ^  "in valOf (#va s') end\n\n"
+     ^  "in #va s' end\n\n"
 
      ^  "fun notnone s = case (!s) of NONE => false\n"
      ^  "                           | SOME x => true\n\n"
 
-     ^  "fun kupeg_make_stack () = ref [] : st option list ref\n")
+     ^  "fun kupeg_make_stack () = ref [] : 'a st option list ref\n")
 
       
       val _ = TextIO.output (fo, verbatim ^ "\n")
-      val _ = TextIO.output (fo, !emptyVal)
       val _ = TextIO.output (fo, !startFn)
       val _ = TextIO.output (fo, p')
       val _ = TextIO.closeOut fo

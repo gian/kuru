@@ -16,14 +16,33 @@ fun main () =
       val startFn = ref ""
       val resultTy = ref ""
       val emptyVal = ref ""
+      val nontermTypes = ref [] : (string * string) list ref
 
       fun startSymbol s = startFn := 
-        ("fun kupeg_start s = valOf (#va (valOf (parse_" ^ s ^ "(s,0)))) " ^
+        ("fun kupeg_start s = " ^
+            "(valOf (#va (valOf (parse_" ^ s ^ "(s,0))))) " ^
             "handle Option => raise Fail \"Parse failed.\"\n")
 
       fun resultSymbol s = resultTy := ("type kupeg_result = " ^ s ^ "\n")
 
-      fun emptySymbol s = emptyVal := ("val kupeg_empty = " ^ s ^ "\n")
+      fun emptySymbol s = ()
+
+      fun genNontermType line =
+        let
+            val l' = String.explode line
+            fun fof [] = []
+              | fof ((#" ")::(#"o")::(#"f")::(#" ")::t) = []
+              | fof (h::t) = h :: fof t
+            val ntname = String.implode (fof l')
+            val nttype = String.implode (List.drop (l',4 + size ntname))
+            val _ = if ntname = "" then raise Fail (
+                "missing name in %nonterm declaration") else ()
+            val _ = if nttype = "" then raise Fail (
+                "missing 'of' in %nonterm " ^ ntname) else ()
+            val _ = nontermTypes := !nontermTypes @ [(ntname,nttype)]
+         in
+            ()
+         end
 
       fun readLines fp = 
          let
@@ -44,6 +63,10 @@ fun main () =
                           (resultSymbol 
                              (String.substring(l',8,size l' - 9)); 
                                 readLines fp) else
+                       if String.isPrefix "%nonterm " l' then 
+                          (genNontermType
+                             (String.substring(l',9,size l' - 10)); 
+                                readLines fp) else
                        if String.isPrefix "%" l' then readLines fp else
                        if l' = "" then "" else
                        l' ^ readLines fp
@@ -58,7 +81,6 @@ fun main () =
       val _ = if buf = "" then raise Fail "Empty body.  Possibly missing %%?" else ()
       val _ = if (!startFn) = "" then raise Fail "Empty start symbol. Missing %start?" else ()
       val _ = if (!resultTy) = "" then raise Fail "Empty result type. Missing %result?" else ()
-      val _ = if (!emptyVal) = "" then raise Fail "Empty empty value. Missing %empty?" else ()
 
       val p' = kupeg_start buf 
 
@@ -67,11 +89,11 @@ fun main () =
       val fo = TextIO.openOut (filename ^ ".k")
       val _ = TextIO.output (fo, "(* Generated from " ^ filename ^ " *)\n\n")
       val _ = TextIO.output (fo, !resultTy)
-      val _ = TextIO.output (fo, "type st = { pos : int, " ^
-                                 "va : kupeg_result option }\n")
-      
+      val _ = TextIO.output (fo, "type 'a st = { pos : int, " ^
+                                 "va : 'a option }\n")
+      val _ = TextIO.output (fo, "val $ = valOf\n") 
       val _ = TextIO.output (fo,
-        "fun push (stack, s : st option) = stack := s :: (!stack)"
+        "fun push (stack, s : 'a st option) = stack := s :: (!stack)"
      ^  "\n\n" 
      ^  "fun pop stack =\n" 
      ^  "let\n"
@@ -79,24 +101,23 @@ fun main () =
      ^  "   val _ = stack := tl s\n"
      ^  "in hd s end\n\n"
 
-     ^  "fun pos_ (s : st option ref) =\n"
+     ^  "fun pos_ (s : 'a st option ref) =\n"
      ^  "let\n"
      ^  "   val s' = valOf (!s)\n"
      ^  "in #pos s' end\n\n" 
 
-     ^  "fun va_ (s : st option ref) =\n"
+     ^  "fun va_ (s : 'a st option ref) =\n"
      ^  "let\n"
      ^  "   val s' = valOf (!s)\n"
-     ^  "in valOf (#va s') end\n\n"
+     ^  "in #va s' end\n\n"
 
      ^  "fun notnone s = case (!s) of NONE => false\n"
      ^  "                           | SOME x => true\n\n"
 
-     ^  "fun kupeg_make_stack () = ref [] : st option list ref\n")
+     ^  "fun kupeg_make_stack () = ref [] : 'a st option list ref\n")
 
       
       val _ = TextIO.output (fo, verbatim ^ "\n")
-      val _ = TextIO.output (fo, !emptyVal)
       val _ = TextIO.output (fo, !startFn)
       val _ = TextIO.output (fo, p')
       val _ = TextIO.closeOut fo
