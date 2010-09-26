@@ -29,7 +29,7 @@ fun kupeg_join l = String.concatWith "" l
 %nonterm exprcontents of string
 %nonterm parenthesized of string
 
-val kplineNum = ref 1
+val kplineNum = ref 0 
 val kpfileName = ref "__dummy__"
 
 %%

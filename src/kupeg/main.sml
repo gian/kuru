@@ -57,6 +57,7 @@ fun main () =
       fun readLines fp = 
          let
             val l = TextIO.inputLine fp
+            val _ = kplineNum := 1 + !kplineNum
          in
             case l of NONE => ""
                     | SOME l' =>
@@ -84,7 +85,9 @@ fun main () =
 
       val f = TextIO.openIn filename
       val verbatim = readLines f
+      val kpl = !kplineNum
       val buf = readLines f
+      val _ = kplineNum := kpl
 
       val _ = TextIO.closeIn f
 		
