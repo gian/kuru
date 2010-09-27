@@ -10,6 +10,11 @@ $(BIN)/kupeg: kupeg.kpg.sml main.sml kupeg.mlb kupeg.selfhosted
 	cp kupeg.kpg.k kupeg.kpg.sml
 	$(COMPILER) -output $(BIN)/kupeg kupeg.mlb
 
+self:
+	$(BIN)/kupeg kupeg.kpg
+	cp kupeg.kpg.k kupeg.kpg.sml
+	$(COMPILER) -output $(BIN)/kupeg kupeg.mlb
+
 kupeg.selfhosted: kupeg.kpg.sml main.sml kupeg.mlb
 	$(COMPILER) -output kupeg.selfhosted kupeg.mlb
 

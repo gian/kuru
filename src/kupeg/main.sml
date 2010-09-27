@@ -17,11 +17,13 @@ fun main () =
       val startFn = ref ""
       val resultTy = ref ""
       val emptyVal = ref ""
-      val nontermTypes = ref [] : (string * string) list ref
+      val nontermTypes = ref [("char","string"),
+                              ("literal","string")] 
+                                : (string * string) list ref
 
       fun startSymbol s = startFn := 
-        ("fun kupeg_start s = " ^
-            "(valOf (#va (valOf (parse_" ^ s ^ "(s,0))))) " ^
+        ("fun kupeg_start s = (unbox_kupeg_" ^ s ^ " " ^ 
+            "(#va (valOf (parse_" ^ s ^ "(s,0))))) () " ^
             "handle Option => raise Fail \"Parse failed.\"\n")
 
       fun resultSymbol s = resultTy := ("type kupeg_result = " ^ s ^ "\n")
@@ -50,8 +52,36 @@ fun main () =
            fun f [] = ""
              | f ((n,d)::t) = "type kupeg_result_" ^ n ^ " = " ^ d ^ "\n"
                                 ^ f t
+
+           fun g [] = ""
+             | g ((n,d)::t) = 
+                " | Kupeg_r_" ^ n ^ 
+                    " of unit -> kupeg_result_" ^ n ^ "\n" ^
+                        g t
+
+           fun g' [] = ""
+             | g' ((n,d)::t) =
+                "  | kupp (Kupeg_r_" ^ n ^ " _) = \"" ^ n ^ "\"\n" ^
+                    g' t
+
+           fun h [] = ""
+             | h ((n,d)::t) = 
+                "fun unbox_kupeg_" ^ n ^ " (Kupeg_r_" ^ n ^ 
+                    " f) = f\n  | unbox_kupeg_" ^ n ^
+                    " x = raise Fail (\"unbox failed ("^ n ^")\" ^ kupp x)\n" ^
+                        h t
+           fun i [] = ""
+             | i ((n,d)::t) = 
+                "fun box_kupeg_" ^ n ^   
+                    " f = Kupeg_r_" ^ n ^ " (fn () => f)\n" ^
+                        i t
+           
         in
-            f (!nontermTypes)
+            f (!nontermTypes) ^ "\ndatatype kupeg_r = " ^
+                "Kupeg_empty\n" ^ g (!nontermTypes) ^ 
+                "fun kupp Kupeg_empty = \"empty\"\n" ^ g' (!nontermTypes) ^
+                "\n" ^ h (!nontermTypes) ^ "\n" ^ i (!nontermTypes) ^
+                "\n"
         end
 
       fun readLines fp = 
@@ -103,7 +133,7 @@ fun main () =
       val _ = TextIO.output (fo, "(* Generated from " ^ filename ^ " *)\n\n")
       val _ = TextIO.output (fo, "type 'a st = { pos : int, " ^
                                  "va : 'a option }\n")
-      val _ = TextIO.output (fo, "val $ = valOf\n") 
+      val _ = TextIO.output (fo, "fun $ f = (valOf f) ()\n") 
       val _ = TextIO.output (fo, genNontermSymbols ())
       val _ = TextIO.output (fo,
         "fun push (stack, s : 'a st option) = stack := s :: (!stack)"
