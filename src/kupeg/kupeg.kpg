@@ -9,239 +9,121 @@ fun kupeg_join l = String.concatWith "" l
 %empty "\"\""
 %result string
 
+datatype ast = 
+   Rule of string * ast
+ | Choice of ast * ast
+ | Sequence of ast * ast
+ | Literal of string
+ | Nonterm of string
+ | Negation of ast
+ | Result of string
+ | Label of string * ast
+ | Star of ast
+ | Plus of ast
+ | Null
+
+(*type res_rule = ast option 
+type res_sp = string option 
+type res__ = string option 
+type res_sentence = ast list option 
+type res_meta = string option 
+type res_name = string option 
+type res_namechar = string option 
+type res_termfrag = ast option 
+type res_term = ast option 
+type res_nonterminal = ast option 
+type res_labeled = ast option 
+type res_sequence = ast option 
+type res_string = ast option 
+type res_stringcontents = string option 
+type res_choice = ast option 
+type res_negation = ast option 
+type res_result_expression = ast option 
+type res_expr = string option 
+type res_exprcontents = string option 
+type res_parenthesized = ast option
+fun notNone (NONE : 'a option) = false | notNone (SOME _) = true
+fun $ f = valOf f*)
+
 %nonterm sp of string
 %nonterm _ of string
-%nonterm rule of string
-%nonterm sentence of string
+%nonterm rule of ast
+%nonterm sentence of ast list
 %nonterm meta of string
 %nonterm name of string
 %nonterm namechar of string
-%nonterm termfrag of string
-%nonterm term of string
-%nonterm nonterminal of string
-%nonterm labeled of string
-%nonterm sequence of string
-%nonterm string of string
+%nonterm termfrag of ast
+%nonterm term of ast
+%nonterm nonterminal of ast
+%nonterm labeled of ast
+%nonterm sequence of ast
+%nonterm string of ast
 %nonterm stringcontents of string
-%nonterm choice of string
-%nonterm negation of string
-%nonterm result_expression of string
+%nonterm choice of ast
+%nonterm negation of ast
+%nonterm result_expression of ast
 %nonterm expr of string
 %nonterm exprcontents of string
-%nonterm parenthesized of string
+%nonterm parenthesized of ast
 
 val kplineNum = ref 0 
 val kpfileName = ref "__dummy__"
 
-val ntName = ref ""
-
-fun unbox_kupeg_char (SOME (Kupeg_r_char f)) = f
-  | unbox_kupeg_char (SOME (Kupeg_r_stringcontents f)) = f
-  | unbox_kupeg_char (SOME x) = raise Fail ("unbox failed (char)" ^ kupp x)
-fun unbox_kupeg_literal (SOME (Kupeg_r_literal f)) = f
-  | unbox_kupeg_literal (SOME x) = raise Fail ("unbox failed (literal)" ^ kupp x)
-fun unbox_kupeg_sp (SOME (Kupeg_r_sp f)) = f
-  | unbox_kupeg_sp (SOME x) = raise Fail ("unbox failed (sp)" ^ kupp x)
-fun unbox_kupeg__ (SOME (Kupeg_r__ f)) = f
-  | unbox_kupeg__ (SOME x) = raise Fail ("unbox failed (_)" ^ kupp x)
-fun unbox_kupeg_rule (SOME (Kupeg_r_rule f)) = f
-  | unbox_kupeg_rule (SOME x) = raise Fail ("unbox failed (rule)" ^ kupp x)
-fun unbox_kupeg_sentence (SOME (Kupeg_r_sentence f)) = f
-  | unbox_kupeg_sentence (SOME x) = raise Fail ("unbox failed (sentence)" ^ kupp x)
-fun unbox_kupeg_meta (SOME (Kupeg_r_meta f)) = f
-  | unbox_kupeg_meta (SOME (Kupeg_r_literal f)) = f
-  | unbox_kupeg_meta (SOME x) = raise Fail ("unbox failed (meta)" ^ kupp x)
-fun unbox_kupeg_name (SOME (Kupeg_r_name f)) = f
-  | unbox_kupeg_name (SOME x) = raise Fail ("unbox failed (name)" ^ kupp x)
-fun unbox_kupeg_namechar (SOME (Kupeg_r_namechar f)) = f
-  | unbox_kupeg_namechar (SOME (Kupeg_r_name f)) = f
-  | unbox_kupeg_namechar (SOME x) = raise Fail ("unbox failed (namechar)" ^ kupp x)
-fun unbox_kupeg_termfrag (SOME (Kupeg_r_termfrag f)) = f
-  | unbox_kupeg_termfrag (SOME x) = raise Fail ("unbox failed (termfrag)" ^ kupp x)
-fun unbox_kupeg_term (SOME (Kupeg_r_term f)) = f
-  | unbox_kupeg_term (SOME x) = raise Fail ("unbox failed (term)" ^ kupp x)
-fun unbox_kupeg_nonterminal (SOME (Kupeg_r_nonterminal f)) = f
-  | unbox_kupeg_nonterminal (SOME x) = raise Fail ("unbox failed (nonterminal)" ^ kupp x)
-fun unbox_kupeg_labeled (SOME (Kupeg_r_labeled f)) = f
-  | unbox_kupeg_labeled (SOME x) = raise Fail ("unbox failed (labeled)" ^ kupp x)
-fun unbox_kupeg_sequence (SOME (Kupeg_r_sequence f)) = f
-  | unbox_kupeg_sequence (SOME x) = raise Fail ("unbox failed (sequence)" ^ kupp x)
-fun unbox_kupeg_string (SOME (Kupeg_r_string f)) = f
-  | unbox_kupeg_string (SOME x) = raise Fail ("unbox failed (string)" ^ kupp x)
-fun unbox_kupeg_stringcontents (SOME (Kupeg_r_stringcontents f)) = f
-  | unbox_kupeg_stringcontents (SOME (Kupeg_r_literal f)) = f
-  | unbox_kupeg_stringcontents (SOME x) = raise Fail ("unbox failed (stringcontents)" ^ kupp x)
-fun unbox_kupeg_choice (SOME (Kupeg_r_choice f)) = f
-  | unbox_kupeg_choice (SOME x) = raise Fail ("unbox failed (choice)" ^ kupp x)
-fun unbox_kupeg_negation (SOME (Kupeg_r_negation f)) = f
-  | unbox_kupeg_negation (SOME x) = raise Fail ("unbox failed (negation)" ^ kupp x)
-fun unbox_kupeg_result_expression (SOME (Kupeg_r_result_expression f)) = f
-  | unbox_kupeg_result_expression (SOME x) = raise Fail ("unbox failed (result_expression)" ^ kupp x)
-fun unbox_kupeg_expr (SOME (Kupeg_r_expr f)) = f
-  | unbox_kupeg_expr (SOME (Kupeg_r_char f)) = f
-  | unbox_kupeg_expr (SOME x) = raise Fail ("unbox failed (expr)" ^ kupp x)
-fun unbox_kupeg_exprcontents (SOME (Kupeg_r_exprcontents f)) = f
-  | unbox_kupeg_exprcontents (SOME x) = raise Fail ("unbox failed (exprcontents)" ^ kupp x)
-fun unbox_kupeg_parenthesized (SOME (Kupeg_r_parenthesized f)) = f
-  | unbox_kupeg_parenthesized (SOME x) = raise Fail ("unbox failed (parenthesized)" ^ kupp x)
-
-fun kupeg_coerce_namechar (Kupeg_r_char s) = Kupeg_r_namechar s
-  | kupeg_coerce_namechar _ = raise Fail "type violation!"
-
-fun kupeg_coerce_sp (Kupeg_r_sp s) = Kupeg_r_sp s
-  | kupeg_coerce_sp (Kupeg_r__ s) = Kupeg_r_sp s
-  | kupeg_coerce_sp (Kupeg_r_literal s) = Kupeg_r_sp s
-  | kupeg_coerce_sp s = raise Fail ("type violate sp /= " ^ kupp s)
-(*  | kupeg_coerce_sp (Kupeg_r_rule s) = Kupeg_r_sp s 
-  | kupeg_coerce_sp (Kupeg_r_sentence s) = Kupeg_r_sp s 
-  | kupeg_coerce_sp (Kupeg_r_meta s) = Kupeg_r_sp s 
-  | kupeg_coerce_sp (Kupeg_r_choice s) = Kupeg_r_sp s 
-  | kupeg_coerce_sp (Kupeg_r_ s) = Kupeg_r_sp s 
-  | kupeg_coerce_sp (Kupeg_r__ s) = Kupeg_r_sp s 
-  | kupeg_coerce_sp (Kupeg_r__ s) = Kupeg_r_sp s 
-  | kupeg_coerce_sp (Kupeg_r__ s) = Kupeg_r_sp s 
-  | kupeg_coerce_sp (Kupeg_r__ s) = Kupeg_r_sp s 
-  | kupeg_coerce_sp (Kupeg_r__ s) = Kupeg_r_sp s 
-  | kupeg_coerce_sp (Kupeg_r__ s) = Kupeg_r_sp s *)
-fun kupeg_coerce__ _ = raise Fail "type violation _!"
-fun kupeg_coerce_rule _ = raise Fail "type violation rule!"
-fun kupeg_coerce_sentence _ = raise Fail "type violation sentence!"
-fun kupeg_coerce_meta (Kupeg_r_literal s) = Kupeg_r_meta s
-  | kupeg_coerce_meta _ = raise Fail "type violation meta!"
-fun kupeg_coerce_choice (Kupeg_r_sequence s) = Kupeg_r_choice s
-  | kupeg_coerce_choice x = raise Fail ("type violation choice!" ^ kupp x)
-
-fun kupeg_coerce_name (Kupeg_r_namechar s) = Kupeg_r_name s
-
-(*
-fun kupeg_coerce_name s = raise Fail ("type violate name /= " ^ kupp s)
-*)
-
-fun kupeg_coerce_termfrag (Kupeg_r_string s) = Kupeg_r_termfrag s
-  | kupeg_coerce_termfrag (Kupeg_r_nonterminal s) = Kupeg_r_termfrag s
-  | kupeg_coerce_termfrag (Kupeg_r_labeled s) = Kupeg_r_termfrag s
-  | kupeg_coerce_termfrag (Kupeg_r_sequence s) = Kupeg_r_termfrag s
-  | kupeg_coerce_termfrag (Kupeg_r_choice s) = Kupeg_r_termfrag s
-  | kupeg_coerce_termfrag (Kupeg_r_negation s) = Kupeg_r_termfrag s
-  | kupeg_coerce_termfrag (Kupeg_r_parenthesized s) = Kupeg_r_termfrag s
-  | kupeg_coerce_termfrag x = raise Fail ("type violation termfrag!" ^ kupp x)
-fun kupeg_coerce_term _ = raise Fail "type violation term!"
-fun kupeg_coerce_nonterminal _ = raise Fail "type violation nonterminal!"
-fun kupeg_coerce_labeled _ = raise Fail "type violation labeled!"
-fun kupeg_coerce_sequence (Kupeg_r_result_expression s) = Kupeg_r_sequence s
-  | kupeg_coerce_sequence _ = raise Fail "type violation sequence!"
-fun kupeg_coerce_string _ = raise Fail "type violation string!"
-fun kupeg_coerce_stringcontents (Kupeg_r_result_expression s) = Kupeg_r_stringcontents s
-  | kupeg_coerce_stringcontents _ = raise Fail "type violation stringcontents!"
-fun kupeg_coerce_negation _ = raise Fail "type violation negation!"
-fun kupeg_coerce_result_expression _ = raise Fail "type violation result_expression!"
-fun kupeg_coerce_expr _ = raise Fail "type violation expr!"
-fun kupeg_coerce_exprcontents _ = raise Fail "type violation exprcontents!"
-fun kupeg_coerce_parenthesized _ = raise Fail "type violation parenthesized!"
-
-
 %%
-sp <- " " / "\n" -> ((kplineNum := 1 + !kplineNum); "\n") / "\t".
+sp <- " " / "\n" / "\t".
 _  <- sp _ / .
+
 rule    <- n: name _ "<-"_ body: choice "."_ ->
-               (kupeg_join([
-                   "(*#line ", Int.toString (!kplineNum), ".1 \"",
-                   !kpfileName, "\" *)",
-                   "and parse_", $n, "(input, pos) = \nlet\n",
-                   "  val state = ref (SOME {pos = pos, ",
-                   " va = NONE : kupeg_r option})\n",
-                   "  val stack = kupeg_make_stack ()\n",
-                   "  val kupeg_box = box_kupeg_", $n, "\n",
-                   $body, 
-                   "in\n",
-                   "(fn NONE => NONE ",
-                   "| (s as (SOME {pos=_,va=SOME (Kupeg_r_",$n," _)})) => s ",
-                   "| (s as (SOME {pos=_,va=NONE})) => s ",
-                   "| (SOME {pos=pos,va=SOME va}) => SOME {",
-                   "pos=pos,va=SOME (kupeg_coerce_",$n," va)",
-                   "})\n",
-                   "(!state)\nend"
-                ]))
+               ((Rule($n,$body)))
            .
-sentence <- _ r: rule g: sentence -> (kupeg_join([$r,"\n",$g]))
-          / _ r: rule -> (kupeg_join([$r,"\n",
-                 "and parse_char(input, pos) = \n",
-                 "  (if (pos >= size input) then NONE else\n",
-                 "  SOME {pos = pos + 1, va = SOME (",
-                 "Kupeg_r_char (fn _ => String.str ",
-                 "(String.sub(input,pos))))})\n",
-				 "  handle Subscript => NONE\n",
-                 "and literal(input, pos, str) = \n",
-                 "  (if (String.substring(input, pos, size str) = str)",
-                 " then\n",
-                 "    SOME { pos = pos + size str, va = SOME ",
-                 " (Kupeg_r_literal (fn _ => str)) }\n",
-                 "  else NONE) handle Subscript => NONE\n"])
-            ).
+sentence <- _ r: rule g: sentence -> ($r :: $g)
+          / _ r: rule -> ($r :: [])
+          .
+
 meta     <- "!" / "\"" / "<-" / "/" / "." / "(" / ")" /
             ":" / "->" / "*" / "+".
-name     <- c: namechar n: name -> (kupeg_join([$c,$n])) / namechar.
+name     <- c: namechar n: name -> ($c ^ $n) / namechar.
 namechar <- !meta !sp char.
 termfrag <- labeled / nonterminal / string / negation / parenthesized.
 term <- t: termfrag 
-     ("*" -> (kupeg_join["(* repetition_start *)", 
-                         $t, 
-                         "(* repetition_end *)"])
-    / "+" -> ("")
+     ("*" -> (Star($t))
+    / "+" -> (Plus($t))
     / -> ($t)).
+
 nonterminal <- n: name _ ->
-                   (ntName := $n; kupeg_join(["  val _ = state := parse_", 
-                    $n, "(input, pos_ state)\n"]))
-               .
+                   (Nonterm ($n))
+             .
+
 labeled <- label: name _ ":"_ value: term ->
-               (kupeg_join([$value,
-                 "(* label: ", !ntName, " *)\n",
-			     "  val ", $label, " = ",
-			     "if (notnone state) then ",
-                 " SOME (unbox_kupeg_", !ntName, " (va_ state))",
-                 " else NONE\n"]))
-           .
+               (Label($label,$value))
+         .
+
 sequence <- foo: term  bar: sequence -> 
-                   (kupeg_join([$foo, "  val _ = if (notnone state) ",
-                                "then ",
-                                "(let\n", $bar, " in () end) else ()\n"]))
-          / result_expression / -> ("")
+                   (Sequence($foo, $bar))
+          / result_expression 
+          / -> (Null)
           .
 string <- "\"" s: stringcontents "\""_ ->
-             (kupeg_join(["  val _ = state := ",
-                          "literal(input, pos_ state, \"", $s, "\")\n"]))
-          .
+             (Literal ($s))
+        .
+
 stringcontents <-   !"\\" !"\"" c: char  s: stringcontents -> 
-                    (kupeg_join([$c, $s]))
+                    ($c ^ $s)
                 / b: "\\"       c: char  s: stringcontents -> 
-                    (kupeg_join([$b, $c, $s]))
+                    ($b ^ $c ^ $s)
                 / -> ("").
 choice <- a: sequence "/"_  b: choice ->
-                  (kupeg_join(["  val _ = push(stack,!state)\n",
-                    $a,
-                    "  val _ = (if not (notnone state) then let\n",
-                    "    val _ = state := pop stack\n",
-                    $b,
-                    "  in () end else ignore (pop stack))\n"]))
+                  (Choice($a,$b))
               / sequence.
 negation <- "!"_ t: term ->
-                (kupeg_join(["  val _ = push(stack,!state)\n",
-                  $t,
-                  "  val _ = if notnone state then (",
-                  "pop stack;",
-                  "state := NONE)\n",
-                  "  else state := pop stack\n"]))
-            .
+                (Negation ($t))
+          .
 result_expression <- "->"_ result: expr _ ->
-                         (kupeg_join([
-                                      "  val _ = if (notnone state) then",
-                                      " state := SOME {pos = pos_ state,",
-                                      " va = SOME (kupeg_box (", $result, "))}",
-                                      " else ()\n"]))
-                     .
-expr         <- "("_ e: exprcontents ")" -> (kupeg_join(["(",$e,")"])).
+                         (Result ($result))
+                   .
+expr         <- "("_ e: exprcontents ")" -> ("(" ^ $e ^ ")").
 exprcontents <- c: (!"(" !")" char / expr)  e: exprcontents -> 
-                                            (kupeg_join([$c,$e]))
+                                            ($c ^ $e)
               / -> ("").
-parenthesized <- "("_ body: choice ")"_ -> ($body).
+parenthesized <- "("_ body: choice ")"_ -> (($body)).
 
