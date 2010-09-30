@@ -6,8 +6,6 @@
 fun kupeg_join l = String.concatWith "" l
 
 %start sentence
-%empty "\"\""
-%result string
 
 datatype ast = 
    Rule of string * ast
@@ -21,29 +19,6 @@ datatype ast =
  | Star of ast
  | Plus of ast
  | Null
-
-(*type res_rule = ast option 
-type res_sp = string option 
-type res__ = string option 
-type res_sentence = ast list option 
-type res_meta = string option 
-type res_name = string option 
-type res_namechar = string option 
-type res_termfrag = ast option 
-type res_term = ast option 
-type res_nonterminal = ast option 
-type res_labeled = ast option 
-type res_sequence = ast option 
-type res_string = ast option 
-type res_stringcontents = string option 
-type res_choice = ast option 
-type res_negation = ast option 
-type res_result_expression = ast option 
-type res_expr = string option 
-type res_exprcontents = string option 
-type res_parenthesized = ast option
-fun notNone (NONE : 'a option) = false | notNone (SOME _) = true
-fun $ f = valOf f*)
 
 %nonterm sp of string
 %nonterm _ of string

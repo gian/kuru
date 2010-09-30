@@ -4,7 +4,7 @@ fun main () =
       val args = CommandLine.arguments ()
 
       fun parseArgs [] = []
-	    | parseArgs ("-v"::t) = parseArgs t
+	    | parseArgs ("-v"::t) = (debugVerbose := true; parseArgs t)
         | parseArgs (h::t) = h :: parseArgs t
       
       val args' = parseArgs args 
@@ -14,18 +14,12 @@ fun main () =
       val filename = hd args'    
  
       val startFn = ref ""
-      val resultTy = ref ""
-      val emptyVal = ref ""
       val nontermTypes = ref [("char","string"),
                               ("literal","string")] 
                                 : (string * string) list ref
 
       fun startSymbol s = startFn := 
         ("fun kupeg_start s = ()\n") 
-
-      fun resultSymbol s = resultTy := ("type kupeg_result = " ^ s ^ "\n")
-
-      fun emptySymbol s = ()
 
       fun genNontermType line =
         let
@@ -64,14 +58,6 @@ fun main () =
                           (startSymbol 
                              (String.substring(l',7,size l' - 8)); 
                                 readLines fp) else 
-                       if String.isPrefix "%empty " l' then 
-                          (emptySymbol 
-                             (String.substring(l',7,size l' - 7)); 
-                                readLines fp) else
-                       if String.isPrefix "%result " l' then 
-                          (resultSymbol 
-                             (String.substring(l',8,size l' - 9)); 
-                                readLines fp) else
                        if String.isPrefix "%nonterm " l' then 
                           (genNontermType
                              (String.substring(l',9,size l' - 10)); 
@@ -85,23 +71,17 @@ fun main () =
       val verbatim = readLines f
       val buf = readLines f
 
-		val _ = print "VERBATIM\n"
-		val _ = print verbatim
-		val _ = print "\nBUF\n"
-		val _ = print buf
-
       val _ = TextIO.closeIn f
 		
       val _ = if buf = "" then raise Fail "Empty body.  Possibly missing %%?" else ()
       val _ = if (!startFn) = "" then raise Fail "Empty start symbol. Missing %start?" else ()
-      val _ = if (!resultTy) = "" then raise Fail "Empty result type. Missing %result?" else ()
 
       val p' = kupeg_start buf 
 
    fun gen (Rule (l,b)) = 
       "and parse_" ^ l ^ "(input,pos) : res_" ^ l ^  " =\n" ^
       "   let\n" ^
-      "      val _ = print \"print_" ^ l ^ "\\n\"\n" ^ 
+      "      val _ = debug_print \"parse_" ^ l ^ "\\n\"\n" ^ 
       "      val stack = ref [] : int list ref\n" ^
       "   in\n" ^
       "      " ^ gen b ^ "\n" ^
@@ -147,6 +127,8 @@ fun main () =
 
       val chlitdefs = 
       "fun $ f = valOf f\n\n" ^
+      "val debugVerbose = ref false\n" ^ 
+      "fun debug_print s = if (!debugVerbose) then print s else ()\n" ^
       "fun notNone (NONE : 'a option) = false | notNone (SOME _) = true\n" ^
       "fun kupeg_start buf = valOf (parse_sentence (buf,ref 0))\n" ^
       "and parse_char(input, pos) = \n" ^

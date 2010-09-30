@@ -21,34 +21,39 @@ datatype ast =
  | Plus of ast
  | Null
 
-type res_rule = ast option 
-type res_sp = string option 
-type res__ = string option 
-type res_sentence = ast list option 
-type res_meta = string option 
-type res_name = string option 
-type res_namechar = string option 
-type res_termfrag = ast option 
-type res_term = ast option 
-type res_nonterminal = ast option 
-type res_labeled = ast option 
-type res_sequence = ast option 
-type res_string = ast option 
-type res_stringcontents = string option 
-type res_choice = ast option 
-type res_negation = ast option 
-type res_result_expression = ast option 
-type res_expr = string option 
-type res_exprcontents = string option 
-type res_parenthesized = ast option
-fun notNone (NONE : 'a option) = false | notNone (SOME _) = true
 
 val kplineNum = ref 0 
 val kpfileName = ref "__dummy__"
 
 
+type res_char = string option
+type res_literal = string option
+type res_sp = string option
+type res__ = string option
+type res_rule = ast option
+type res_sentence = ast list option
+type res_meta = string option
+type res_name = string option
+type res_namechar = string option
+type res_termfrag = ast option
+type res_term = ast option
+type res_nonterminal = ast option
+type res_labeled = ast option
+type res_sequence = ast option
+type res_string = ast option
+type res_stringcontents = string option
+type res_choice = ast option
+type res_negation = ast option
+type res_result_expression = ast option
+type res_expr = string option
+type res_exprcontents = string option
+type res_parenthesized = ast option
+
 fun $ f = valOf f
 
+val debugVerbose = ref false
+fun debug_print s = if (!debugVerbose) then print s else ()
+fun notNone (NONE : 'a option) = false | notNone (SOME _) = true
 fun kupeg_start buf = valOf (parse_sentence (buf,ref 0))
 and parse_char(input, pos) = 
   if (!pos >= size input) then NONE else
@@ -61,7 +66,7 @@ and literal(input, pos, str) =
 
 and parse_sp(input,pos) : res_sp =
    let
-      val _ = print "print_sp\n"
+      val _ = debug_print "parse_sp\n"
       val stack = ref [] : int list ref
    in
          let
@@ -84,7 +89,7 @@ and parse_sp(input,pos) : res_sp =
 
 and parse__(input,pos) : res__ =
    let
-      val _ = print "print__\n"
+      val _ = debug_print "parse__\n"
       val stack = ref [] : int list ref
    in
          let
@@ -106,7 +111,7 @@ and parse__(input,pos) : res__ =
 
 and parse_rule(input,pos) : res_rule =
    let
-      val _ = print "print_rule\n"
+      val _ = debug_print "parse_rule\n"
       val stack = ref [] : int list ref
    in
          let
@@ -157,7 +162,7 @@ and parse_rule(input,pos) : res_rule =
 
 and parse_sentence(input,pos) : res_sentence =
    let
-      val _ = print "print_sentence\n"
+      val _ = debug_print "parse_sentence\n"
       val stack = ref [] : int list ref
    in
          let
@@ -203,7 +208,7 @@ and parse_sentence(input,pos) : res_sentence =
 
 and parse_meta(input,pos) : res_meta =
    let
-      val _ = print "print_meta\n"
+      val _ = debug_print "parse_meta\n"
       val stack = ref [] : int list ref
    in
          let
@@ -282,7 +287,7 @@ and parse_meta(input,pos) : res_meta =
 
 and parse_name(input,pos) : res_name =
    let
-      val _ = print "print_name\n"
+      val _ = debug_print "parse_name\n"
       val stack = ref [] : int list ref
    in
          let
@@ -310,7 +315,7 @@ and parse_name(input,pos) : res_name =
 
 and parse_namechar(input,pos) : res_namechar =
    let
-      val _ = print "print_namechar\n"
+      val _ = debug_print "parse_namechar\n"
       val stack = ref [] : int list ref
    in
          let
@@ -345,7 +350,7 @@ and parse_namechar(input,pos) : res_namechar =
 
 and parse_termfrag(input,pos) : res_termfrag =
    let
-      val _ = print "print_termfrag\n"
+      val _ = debug_print "parse_termfrag\n"
       val stack = ref [] : int list ref
    in
          let
@@ -382,7 +387,7 @@ and parse_termfrag(input,pos) : res_termfrag =
 
 and parse_term(input,pos) : res_term =
    let
-      val _ = print "print_term\n"
+      val _ = debug_print "parse_term\n"
       val stack = ref [] : int list ref
    in
          let
@@ -423,7 +428,7 @@ and parse_term(input,pos) : res_term =
 
 and parse_nonterminal(input,pos) : res_nonterminal =
    let
-      val _ = print "print_nonterminal\n"
+      val _ = debug_print "parse_nonterminal\n"
       val stack = ref [] : int list ref
    in
          let
@@ -444,7 +449,7 @@ and parse_nonterminal(input,pos) : res_nonterminal =
 
 and parse_labeled(input,pos) : res_labeled =
    let
-      val _ = print "print_labeled\n"
+      val _ = debug_print "parse_labeled\n"
       val stack = ref [] : int list ref
    in
          let
@@ -483,7 +488,7 @@ and parse_labeled(input,pos) : res_labeled =
 
 and parse_sequence(input,pos) : res_sequence =
    let
-      val _ = print "print_sequence\n"
+      val _ = debug_print "parse_sequence\n"
       val stack = ref [] : int list ref
    in
          let
@@ -518,7 +523,7 @@ and parse_sequence(input,pos) : res_sequence =
 
 and parse_string(input,pos) : res_string =
    let
-      val _ = print "print_string\n"
+      val _ = debug_print "parse_string\n"
       val stack = ref [] : int list ref
    in
          let
@@ -551,7 +556,7 @@ and parse_string(input,pos) : res_string =
 
 and parse_stringcontents(input,pos) : res_stringcontents =
    let
-      val _ = print "print_stringcontents\n"
+      val _ = debug_print "parse_stringcontents\n"
       val stack = ref [] : int list ref
    in
          let
@@ -630,7 +635,7 @@ and parse_stringcontents(input,pos) : res_stringcontents =
 
 and parse_choice(input,pos) : res_choice =
    let
-      val _ = print "print_choice\n"
+      val _ = debug_print "parse_choice\n"
       val stack = ref [] : int list ref
    in
          let
@@ -670,7 +675,7 @@ and parse_choice(input,pos) : res_choice =
 
 and parse_negation(input,pos) : res_negation =
    let
-      val _ = print "print_negation\n"
+      val _ = debug_print "parse_negation\n"
       val stack = ref [] : int list ref
    in
          let
@@ -697,7 +702,7 @@ and parse_negation(input,pos) : res_negation =
 
 and parse_result_expression(input,pos) : res_result_expression =
    let
-      val _ = print "print_result_expression\n"
+      val _ = debug_print "parse_result_expression\n"
       val stack = ref [] : int list ref
    in
          let
@@ -730,7 +735,7 @@ and parse_result_expression(input,pos) : res_result_expression =
 
 and parse_expr(input,pos) : res_expr =
    let
-      val _ = print "print_expr\n"
+      val _ = debug_print "parse_expr\n"
       val stack = ref [] : int list ref
    in
          let
@@ -763,7 +768,7 @@ and parse_expr(input,pos) : res_expr =
 
 and parse_exprcontents(input,pos) : res_exprcontents =
    let
-      val _ = print "print_exprcontents\n"
+      val _ = debug_print "parse_exprcontents\n"
       val stack = ref [] : int list ref
    in
          let
@@ -824,7 +829,7 @@ and parse_exprcontents(input,pos) : res_exprcontents =
 
 and parse_parenthesized(input,pos) : res_parenthesized =
    let
-      val _ = print "print_parenthesized\n"
+      val _ = debug_print "parse_parenthesized\n"
       val stack = ref [] : int list ref
    in
          let
@@ -866,7 +871,7 @@ fun main () =
       val args = CommandLine.arguments ()
 
       fun parseArgs [] = []
-	    | parseArgs ("-v"::t) = parseArgs t
+	    | parseArgs ("-v"::t) = (debugVerbose := true; parseArgs t)
         | parseArgs (h::t) = h :: parseArgs t
       
       val args' = parseArgs args 
@@ -876,18 +881,12 @@ fun main () =
       val filename = hd args'    
  
       val startFn = ref ""
-      val resultTy = ref ""
-      val emptyVal = ref ""
       val nontermTypes = ref [("char","string"),
                               ("literal","string")] 
                                 : (string * string) list ref
 
       fun startSymbol s = startFn := 
         ("fun kupeg_start s = ()\n") 
-
-      fun resultSymbol s = resultTy := ("type kupeg_result = " ^ s ^ "\n")
-
-      fun emptySymbol s = ()
 
       fun genNontermType line =
         let
@@ -912,7 +911,7 @@ fun main () =
              | f ((n,d)::t) = "type res_" ^ n ^ " = " ^ d ^ " option\n"
                                 ^ f t
         in
-            f (!nontermTypes) ^ "\n"
+           f (!nontermTypes) ^ "\n"
         end
 
       fun readLines fp = 
@@ -926,14 +925,6 @@ fun main () =
                           (startSymbol 
                              (String.substring(l',7,size l' - 8)); 
                                 readLines fp) else 
-                       if String.isPrefix "%empty " l' then 
-                          (emptySymbol 
-                             (String.substring(l',7,size l' - 7)); 
-                                readLines fp) else
-                       if String.isPrefix "%result " l' then 
-                          (resultSymbol 
-                             (String.substring(l',8,size l' - 9)); 
-                                readLines fp) else
                        if String.isPrefix "%nonterm " l' then 
                           (genNontermType
                              (String.substring(l',9,size l' - 10)); 
@@ -947,23 +938,17 @@ fun main () =
       val verbatim = readLines f
       val buf = readLines f
 
-		val _ = print "VERBATIM\n"
-		val _ = print verbatim
-		val _ = print "\nBUF\n"
-		val _ = print buf
-
       val _ = TextIO.closeIn f
 		
       val _ = if buf = "" then raise Fail "Empty body.  Possibly missing %%?" else ()
       val _ = if (!startFn) = "" then raise Fail "Empty start symbol. Missing %start?" else ()
-      val _ = if (!resultTy) = "" then raise Fail "Empty result type. Missing %result?" else ()
 
       val p' = kupeg_start buf 
 
    fun gen (Rule (l,b)) = 
       "and parse_" ^ l ^ "(input,pos) : res_" ^ l ^  " =\n" ^
       "   let\n" ^
-      "      val _ = print \"print_" ^ l ^ "\\n\"\n" ^ 
+      "      val _ = debug_print \"parse_" ^ l ^ "\\n\"\n" ^ 
       "      val stack = ref [] : int list ref\n" ^
       "   in\n" ^
       "      " ^ gen b ^ "\n" ^
@@ -1009,6 +994,8 @@ fun main () =
 
       val chlitdefs = 
       "fun $ f = valOf f\n\n" ^
+      "val debugVerbose = ref false\n" ^ 
+      "fun debug_print s = if (!debugVerbose) then print s else ()\n" ^
       "fun notNone (NONE : 'a option) = false | notNone (SOME _) = true\n" ^
       "fun kupeg_start buf = valOf (parse_sentence (buf,ref 0))\n" ^
       "and parse_char(input, pos) = \n" ^
@@ -1028,7 +1015,7 @@ fun main () =
       val fo = TextIO.openOut (filename ^ ".k")
       val _ = TextIO.output (fo, "(* Generated from " ^ filename ^ " *)\n\n")
       val _ = TextIO.output (fo, verbatim ^ "\n")
-      val _ = TextIO.output (fo, genNontermSymbols())
+      val _ = TextIO.output (fo, genNontermSymbols  ())
       val _ = TextIO.output (fo, chlitdefs)
       val _ = TextIO.output (fo, p'')
       val _ = TextIO.closeOut fo
