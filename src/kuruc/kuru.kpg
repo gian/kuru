@@ -1,0 +1,89 @@
+(* Kuru grammar description file *)
+(* Gian Perrone, 26 September 2010 *)
+
+%name KuruParser
+%start program
+
+structure P = ParseTree
+
+%nonterm sp of string
+%nonterm _ of string
+%nonterm digit of string
+%nonterm num of string
+%nonterm numdig of string
+%nonterm int of P.pt
+%nonterm real of P.pt
+%nonterm negat of bool
+%nonterm charconst of P.pt
+%nonterm string of P.pt
+%nonterm stringcont of string
+%nonterm con of P.pt
+%nonterm lowercase of string
+%nonterm reserved of string
+%nonterm nonid of string
+%nonterm id of P.pt
+%nonterm idrest of string
+%nonterm var of P.pt
+%nonterm longid of P.pt
+%nonterm expr of P.pt
+%nonterm program of P.pt
+
+%%
+
+sp             <- " " / "\n" / "\t".
+_              <- sp _ / .
+
+% Constants
+digit          <- "0" / "1" / "2" / "3" / "4" / "5" / "6"
+                      / "7" / "8" / "9".
+num            <- d: numdig n: num -> ($d ^ $n) 
+                / n: numdig -> ($n).
+numdig         <- !sp d: digit -> ($d).
+
+int            <- n: negat d: num -> (P.Int ($n,$d)).
+
+real           <- n1: negat d1: num "." d2: num "e" n2: negat d3: num ->
+                  (P.Real ($n1,$d1,$d2,SOME ($n2,$d3)))
+                / n1: negat d1: num "." d2: num ->
+                  (P.Real ($n1,$d1,$d2,NONE)).
+
+negat          <- "~" -> (true)
+                /     -> (false).
+
+charconst      <- "#" "\"" c: char "\"" -> (P.Char ($c)).
+
+string         <- "\"" s: stringcont "\"" _ -> (P.String ($s)).
+
+stringcont     <- !"\\" !"\"" c: char s: stringcont -> ($c ^ $s)
+                / b: "\\" c: char s: stringcont -> ($b ^ $c ^ $s)
+                / -> ("").
+
+con            <- real / int / charconst / string.
+
+% Identifiers
+lowercase      <- "a" / "b" / "c" / "d" / "e" / "f" / "g" / "h" / "i" /
+                  "j" / "k" / "l" / "m" / "n" / "o" / "p" / "q" / "r" /
+                  "s" / "t" / "u" / "v" / "w" / "x" / "y" / "z".
+
+reserved       <- "!" / "%" / "&" / "$" / "#" / "+" / "-" /  "/" / ":" /
+                  "<" / "=" / ">" / "?" / "@" / "\\" / "~" / "`" / "^" /
+                  "|" / "*".
+nonid          <- "(" / ")" / "[" / "]" / "." / ";" / "," / "|".
+
+id             <- l: lowercase r: idrest -> (P.Ident($l ^ $r))
+                / r: reserved -> (P.Ident($r)).
+
+idrest         <- !sp !nonid !reserved c: char r: idrest -> ($c ^ $r)
+                / "_" r: idrest -> ("_" ^ $r)
+                / "'" r: idrest -> ("'" ^ $r)
+                / -> ("").
+
+var            <- "'" i: id -> (P.Var ($i)).
+
+longid         <- i: id "." l: longid -> (P.LongId ($i,$l))
+                / i: id -> ($i).
+
+expr           <- longid / con.
+
+program        <- _ n: expr _ p: program -> (P.Seq($n,$p))
+                / _ n: expr _            -> ($n).
