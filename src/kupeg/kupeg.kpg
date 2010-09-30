@@ -5,6 +5,7 @@
 
 fun kupeg_join l = String.concatWith "" l
 
+%name KupegParser
 %start sentence
 
 datatype ast = 
