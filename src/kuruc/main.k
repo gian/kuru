@@ -19,7 +19,7 @@ struct
    val _ = TextIO.closeIn f
 
    val p = KuruParser.kupeg_start buf
-   val pretty = ParseTree.prettyPrint p
+   val pretty = (String.concatWith "\n" (map ParseTree.prettyPrint p))
 
    fun main () = print (pretty ^ "\n")
 end   

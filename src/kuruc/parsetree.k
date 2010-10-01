@@ -9,7 +9,42 @@ struct
     | Ident of string
     | LongId of pt * pt
     | Var of pt
+    | Raise of pt
+    | AndAlso of pt * pt
+    | OrElse of pt * pt
     | Seq of pt * pt
+    | Infix of pt * pt * pt
+    | OpExp of pt
+    | App of pt * pt
+    | TupleExp of pt list
+    | SeqExp of pt list
+    | ListExp of pt list
+    | LetExp of pt list * pt
+    | IfExp of pt * pt * pt
+    | WhileExp of pt * pt
+    | CaseExp of pt * pt list
+    | FnExp of pt list
+    | HandleExp of pt * pt list
+    | Match of pt * pt
+    | AsPat of pt * pt
+    | InfixPat of pt * pt * pt
+    | WildcardPat
+    | TuplePat of pt list
+    | ListPat of pt list
+    | ConPat of pt
+    | IdPat of pt
+    | TyArrow of pt * pt
+    | TyPair of pt * pt
+    | TyCon of pt * pt
+    | TyName of pt
+    | ValDec of pt list
+    | TypeDec of pt list
+    | DatatypeAssign of pt * pt
+    | DatatypeDec of pt list
+    | FunDec of pt list list
+    | ValBind of pt * pt
+    | TypeBind of pt list * pt * pt
+    | FunMatch of pt * pt list * pt option * pt 
 
    fun pp (Int (b,s)) = "Int [" ^ (if b then "~" else "") ^ s ^ "]" 
      | pp (Real (b,s1,s2,NONE)) = 
@@ -21,9 +56,64 @@ struct
      | pp (String s) = "String [\"" ^ s ^ "\"]"
      | pp (Ident s) = "Ident [" ^ s ^ "]"
      | pp (Var p) = "Var [" ^ pp p ^ "]"
+     | pp (Raise p) = "Raise [" ^ pp p ^ "]"
      | pp (LongId (l1,l2)) = "LongId [" ^ pp l1 ^ "." ^ pp l2 ^ "]"
+     | pp (AndAlso (p1,p2)) = "AndAlso [" ^ pp p1 ^ ", " ^ pp p2 ^ "]"
+     | pp (OrElse (p1,p2)) = "OrElse [" ^ pp p1 ^ ", " ^ pp p2 ^ "]"
      | pp (Seq (p1, p2)) = pp p1 ^ "\n" ^ pp p2
-
+     | pp (Infix (a,b,c)) = "Infix [" ^ pp a ^ " " ^ pp b ^ " " ^ pp c ^ "]"
+     | pp (OpExp p) = "Op [" ^ pp p ^ "]"
+     | pp (App (p1,p2)) = "App [" ^ pp p1 ^ ", " ^ pp p2 ^ "]"
+     | pp (TupleExp l) = "Tuple [" ^ (String.concatWith ", " (map pp l)) ^ "]"
+     | pp (SeqExp l) = "Seq [" ^ (String.concatWith "; " (map pp l)) ^ "]"
+     | pp (ListExp l) = "List [" ^ (String.concatWith ", " (map pp l)) ^ "]"
+     | pp (LetExp (d,e)) = "Let [" ^ (String.concatWith "; " (map pp d)) ^ 
+                            " in " ^ pp e ^ " end]"
+     | pp (IfExp (e1,e2,e3)) = "If [" ^ pp e1 ^ " then " ^ pp e2 ^ " else " ^
+                                  pp e3 ^ "]"
+     | pp (WhileExp (e1,e2)) = "While [" ^ pp e1 ^ " do " ^ pp e2 ^ "]"
+     | pp (CaseExp (e1,m)) = "Case [" ^ pp e1 ^ " of " ^ 
+                                 (String.concatWith " | " (map pp m)) ^ "]"
+     | pp (FnExp m) = "Fn [" ^(String.concatWith " | " (map pp m)) ^ "]"
+     | pp (HandleExp (e,m)) = "Handle [" ^ pp e ^ ", " ^
+                                 (String.concatWith " | " (map pp m)) ^ "]"
+     | pp (AsPat (p1,p2)) = "AsPat [" ^ pp p1 ^ " as " ^ pp p2 ^ "]"
+     | pp (InfixPat (p1,p2,p3)) = "InfixPat [" ^ pp p1 ^ " " ^ pp p2 ^ 
+                                     " " ^ pp p3 ^ "]"
+     | pp (WildcardPat) = "WildcardPat []"
+     | pp (TuplePat l) = "TuplePat [" ^ 
+            (String.concatWith ", " (map pp l)) ^ "]"
+     | pp (ListPat l) = "ListPat [" ^ 
+            (String.concatWith ", " (map pp l)) ^ "]"
+     | pp (ConPat c) = "ConPat [" ^ pp c ^ "]"
+     | pp (IdPat c) = "IdPat [" ^ pp c ^ "]"
+     | pp (TyArrow (t1,t2)) = pp t1 ^ " -> " ^ pp t2
+     | pp (TyPair (t1,t2)) = pp t1 ^ " * " ^ pp t2
+     | pp (TyCon (t1,t2)) = pp t1 ^ " " ^ pp t2
+     | pp (TyName t1) = pp t1
+     | pp (Match (p,e)) = "Match [" ^ pp p ^ " => " ^ pp e ^ "]"
+     | pp (ValDec (b)) = 
+         "ValDec [" ^ (String.concatWith "\nand " (map pp b)) ^ "]"
+     | pp (TypeDec (b)) =
+         "TypeDec [" ^ (String.concatWith "\nand " (map pp b)) ^ "]"
+     | pp (DatatypeAssign (i1,i2)) = 
+                     "DatatypeAssign [" ^ pp i1 ^ " = " ^ pp i2 ^ "]"
+     | pp (DatatypeDec d) =
+         "DatatypeDec [" ^ (String.concatWith "\nand " (map pp d)) ^ "]"
+     | pp (FunDec d) = 
+         "FunDec [" ^ (String.concatWith "\nand " 
+            (map (fn l => String.concatWith "\n  | " (map pp l)) d)) ^ "]"
+     | pp (ValBind (p,e)) = "ValBind [" ^ pp p ^ " = " ^ pp e ^ "]"
+     | pp (TypeBind (v,p,e)) = "TypeBind [" ^ (String.concatWith "," 
+                                 (map pp v))
+                                ^ " " ^ pp p ^ " = " ^ pp e ^ "]"
+     | pp (FunMatch (i,l,NONE,e)) = "FunMatch [" ^ pp i ^ " " ^ 
+                                    (String.concatWith " " (map pp l)) ^ 
+                                    " = " ^ pp e ^ "]"
+     | pp (FunMatch (i,l,SOME t,e)) = "FunMatch [" ^ pp i ^ " " ^ 
+                                    (String.concatWith " " (map pp l)) ^ 
+                                    " : " ^ pp t ^
+                                    " = " ^ pp e ^ "]"
    fun prettyPrint p = pp p
 
 end
