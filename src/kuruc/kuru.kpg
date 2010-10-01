@@ -18,9 +18,10 @@ structure P = ParseTree
 %nonterm string of P.pt
 %nonterm stringcont of string
 %nonterm con of P.pt
-%nonterm lowercase of string
+%nonterm letter of string
 %nonterm reserved of string
 %nonterm nonid of string
+%nonterm keyword of string
 %nonterm id of P.pt
 %nonterm idrest of string
 %nonterm var of P.pt
@@ -45,11 +46,17 @@ structure P = ParseTree
 %nonterm typebind of P.pt list
 %nonterm funbind of P.pt list list
 %nonterm funmatch of P.pt list
+%nonterm databind of P.pt list
+%nonterm conbind of P.pt list
+%nonterm structdec of P.pt
+%nonterm programel of P.pt
 %nonterm program of P.pt list
+
+val srcFileLineNum = ref 1
 
 %%
 
-sp             <- " " / "\n" / "\t".
+sp             <- " " / "\n" -> ((srcFileLineNum := !srcFileLineNum + 1);"\n") / "\t".
 _              <- sp _ / .
 
 % Constants
@@ -80,27 +87,32 @@ stringcont     <- !"\\" !"\"" c: char s: stringcont -> ($c ^ $s)
 con            <- real / int / charconst / string.
 
 % Identifiers
-lowercase      <- "a" / "b" / "c" / "d" / "e" / "f" / "g" / "h" / "i" /
+letter         <- "a" / "b" / "c" / "d" / "e" / "f" / "g" / "h" / "i" /
                   "j" / "k" / "l" / "m" / "n" / "o" / "p" / "q" / "r" /
-                  "s" / "t" / "u" / "v" / "w" / "x" / "y" / "z".
+                  "s" / "t" / "u" / "v" / "w" / "x" / "y" / "z" /
+                  "A" / "B" / "C" / "D" / "E" / "F" / "G" / "H" / "I" /
+                  "J" / "K" / "L" / "M" / "N" / "O" / "P" / "Q" / "R" /
+                  "S" / "T" / "U" / "V" / "W" / "X" / "Y" / "Z".
 
 reserved       <- "!" / "%" / "&" / "$" / "+" / "-" /  "/" 
                 / "<" / ">" / "?" / "@" / "\\" / "`" 
                 / "^" / "*".
 
 nonid          <- "(" / ")" / "[" / "]" / "." / ";" / "," / "|" /
-                  "~" / "#" / ":" / "val" / "let" / "if" / "then"
-                / "else" / "datatype" / "type" / "fn" / "fun" /
-                  "=>" / "=" / "and" / "end" / "in".
+                  "~" / "#" / ":" / "=>" / "=". 
 
-id             <- !sp !nonid l: lowercase r: idrest -> 
-                  (P.Ident($l ^ $r))
-                / _ r: reserved _ -> (P.Ident($r)).
+keyword        <- "val" / "let" / "if" / "then" / "else" / "datatype"
+                / "type" / "fn" / "fun" / "and" / "end" / "in" /
+                  "structure" / "struct".
 
-idrest         <- !sp !nonid !reserved c: char r: idrest -> ($c ^ $r)
-                / "_" r: idrest -> ("_" ^ $r)
-                / "'" r: idrest -> ("'" ^ $r)
-                / -> ("").
+id             <-  r1: reserved r2: (reserved*) -> (P.Ident(String.concat($r1 :: $r2)))
+                / k: keyword i1: idrest i2: (idrest*) -> 
+                  (P.Ident($k ^ $i1 ^String.concat($i2)))
+                / !keyword l: letter r: (idrest*) -> 
+                  (P.Ident(String.concat ($l :: $r)))
+                . 
+
+idrest         <- !sp !nonid !reserved c: char -> ($c).
 
 var            <- "'" i: id -> (P.Var ($i)).
 
@@ -134,6 +146,7 @@ expel          <- "op" _ l: longid -> (P.OpExp ($l))
                 / "(" _ e1: exp _ ";" e2: expseq _ ")" ->
                   (P.SeqExp ($e1 :: $e2))
                 / "(" _ e: exp _ ")" -> ($e)
+                / "()" -> (P.UnitExp)
                 / "[" _ e1: exp _ "," _ e2: explist _ "]" ->
                   (P.ListExp ($e1 :: $e2))
                 / "[" _ e: exp _ "]" -> (P.ListExp [$e])
@@ -171,6 +184,7 @@ patel          <- "_" -> (P.WildcardPat)
                 / "(" _ p1: pat _ "," _ p2: patlist _ ")" ->
                   (P.TuplePat ($p1 :: $p2))
                 / "(" _ p: pat _ ")" -> ($p)
+                / "()" -> (P.UnitPat)
                 / "[" _ p: patlist _ "]" -> (P.ListPat ($p))
                 / c: con -> (P.ConPat ($c)) 
                 / i: id -> (P.IdPat ($i))
@@ -201,17 +215,15 @@ tyannopt       <- _ ":" _ t: typ -> (SOME ($t))
 
 % Declarations
 
-declist        <- _ d: dec _ ";" _ l: declist -> ($d :: $l)
-                / _ d: dec _ l: declist -> ($d :: $l)
-                / _ d: dec -> ([$d]).
+declist        <- dec*.
 
-dec            <- "val" _ v: valbind -> (P.ValDec($v))
-                / "type" _ v: typebind -> (P.TypeDec($v))
-%                / "datatype" _ i: id _"="_ "datatype"_ l: longid
-%                  -> (P.DatatypeAssign ($i,$l))
-%                / "datatype" _ d: databind -> 
-%                     (P.DatatypeDec ($d))
-                / "fun" _ f: funbind -> (P.FunDec ($f))
+dec            <- _ "val" _ v: valbind -> (P.ValDec($v))
+                / _ "type" _ v: typebind -> (P.TypeDec($v))
+                / _ "datatype" _ i: id _"="_ "datatype"_ l: longid
+                  -> (P.DatatypeAssign ($i,$l))
+                / _ "datatype" _ d: databind -> 
+                     (P.DatatypeDec ($d))
+                / _"fun" _ f: funbind -> (P.FunDec ($f))
                 .
 
 valbind        <- p: pat _"="_ e: exp _ "and" v: valbind ->
@@ -226,10 +238,10 @@ tyvars         <- _"("_ l: tyvarlist _ ")" -> ($l)
                 / _ v: var -> ([$v])
                 / -> ([]).
 
-typebind       <- _ i: id _"="_ t: typ _ "and" 
-                     l: typebind -> (P.TypeBind([],$i,$t) :: $l)
-                / _ i: id _"="_ t: typ ->
-                     ([P.TypeBind([],$i,$t)]).
+typebind       <- _ tv: tyvars _ i: id _"="_ t: typ _ "and" 
+                     l: typebind -> (P.TypeBind($tv,$i,$t) :: $l)
+                / _ tv: tyvars _ i: id _"="_ t: typ ->
+                     ([P.TypeBind($tv,$i,$t)]).
 
 funbind        <- _ f: funmatch _ "and" _ l: funbind ->
                  ($f :: $l)
@@ -246,4 +258,26 @@ funmatch       <- "op" _ i: id _ l: patapp _ t: tyannopt _"="_
                 / i: id l: patapp t: tyannopt _"="_ e: exp ->
                      ([P.FunMatch ($i,$l,$t,$e)]).
 
-program        <- _ n: declist _ -> ($n).
+databind       <- _ tv: tyvars _ i: id _ "=" _ c: conbind _ "and" d: databind
+                  -> (P.DataBind($tv,$i,$c) :: $d)
+                / _ tv: tyvars _ i: id _ "=" _ c: conbind
+                  -> ([P.DataBind($tv,$i,$c)]).
+
+conbind        <- _ i: id _ "of" _ t: typ _"|"_ c: conbind ->
+                  (P.ConBind($i,SOME ($t)) :: $c)
+                / _ i: id _ "of" _ t: typ ->
+                  ([P.ConBind($i,SOME ($t))])
+                / _ i: id _ "|" _ c: conbind ->
+                  (P.ConBind($i,NONE) :: $c)
+                / _ i: id ->
+                  ([P.ConBind($i,NONE)]).
+
+structdec      <- _ "structure" i: id _ "=" _ "struct"_ d: declist _ "end"
+                  -> (P.Structure($i,NONE,$d)).
+
+programel      <- _ dec
+                / _ structdec.
+
+program        <- p1: programel _ ";" _ p2: program -> ($p1 :: $p2)
+                / p1: programel _ p2: program -> ($p1 :: $p2)
+                / p: programel -> ([$p]).

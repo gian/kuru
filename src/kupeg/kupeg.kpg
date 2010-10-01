@@ -61,10 +61,9 @@ meta     <- "!" / "\"" / "<-" / "/" / "." / "(" / ")" /
 name     <- c: namechar n: name -> ($c ^ $n) / namechar.
 namechar <- !meta !sp char.
 termfrag <- labeled / nonterminal / string / negation / parenthesized.
-term <- t: termfrag 
-     ("*" -> (Star($t))
-    / "+" -> (Plus($t))
-    / -> ($t)).
+term <- t: termfrag "*" -> (Star($t))
+      / t: termfrag "+" -> (Plus($t))
+      / t: termfrag     -> ($t).
 
 nonterminal <- n: name _ ->
                    (Nonterm ($n))

@@ -17,7 +17,7 @@ parsetree.sml: parsetree.k
 	cp parsetree.k parsetree.sml
 
 kuru.kpg.k: kuru.kpg
-	$(KUPEG) -v kuru.kpg
+	$(KUPEG) kuru.kpg
 
 clean:
 	rm -f $(BIN)/kuruc main.sml kuru.kpg.sml kuru.kpg.k

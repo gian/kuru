@@ -91,14 +91,14 @@ fun main () =
 
       val p' = K.kupeg_start buf 
 
-   fun gen (K.Rule (l,b)) = 
+   fun gen (K.Rule (l,b)) = (print ("Processing rule '" ^ l ^ "'\n");
       "and parse_" ^ l ^ "(input,pos) : res_" ^ l ^  " =\n" ^
       "   let\n" ^
       "      val _ = debug_print \"parse_" ^ l ^ "\\n\"\n" ^ 
       "      val stack = ref [] : int list ref\n" ^
       "   in\n" ^
       "      " ^ gen b ^ "\n" ^
-      "   end\n\n"
+      "   end\n\n")
      | gen (K.Choice (s1,s2)) =
      "   let\n" ^
      "      val prestate = !pos\n" ^
@@ -136,6 +136,18 @@ fun main () =
      "   end\n"
      | gen (K.Result t) = "SOME (" ^ t ^ ")"
      | gen (K.Null) = "SOME \"\""
+     | gen (K.Star t) =  
+     "   let\n" ^
+     "      fun fx () = let\n" ^ 
+     "         val prestate = !pos\n" ^
+     "         val t = (" ^ gen t ^ ")\n" ^
+     "      in\n" ^
+     "        if notNone t then (valOf t) :: fx () else " ^
+     "(pos := prestate; [])\n" ^
+     "      end\n" ^
+     "   in\n" ^
+     "      SOME (fx())\n" ^
+     "   end\n"
      | gen _ = "*****Unimplemented!*******"
 
       val chlitdefs = 

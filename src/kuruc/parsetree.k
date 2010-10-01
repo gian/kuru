@@ -17,6 +17,7 @@ struct
     | OpExp of pt
     | App of pt * pt
     | TupleExp of pt list
+    | UnitExp
     | SeqExp of pt list
     | ListExp of pt list
     | LetExp of pt list * pt
@@ -27,6 +28,7 @@ struct
     | HandleExp of pt * pt list
     | Match of pt * pt
     | AsPat of pt * pt
+    | UnitPat
     | InfixPat of pt * pt * pt
     | WildcardPat
     | TuplePat of pt list
@@ -44,7 +46,10 @@ struct
     | FunDec of pt list list
     | ValBind of pt * pt
     | TypeBind of pt list * pt * pt
-    | FunMatch of pt * pt list * pt option * pt 
+    | FunMatch of pt * pt list * pt option * pt
+    | DataBind of pt list * pt * pt list
+    | ConBind of pt * pt option
+    | Structure of pt * pt option * pt list
 
    fun pp (Int (b,s)) = "Int [" ^ (if b then "~" else "") ^ s ^ "]" 
      | pp (Real (b,s1,s2,NONE)) = 
@@ -65,6 +70,7 @@ struct
      | pp (OpExp p) = "Op [" ^ pp p ^ "]"
      | pp (App (p1,p2)) = "App [" ^ pp p1 ^ ", " ^ pp p2 ^ "]"
      | pp (TupleExp l) = "Tuple [" ^ (String.concatWith ", " (map pp l)) ^ "]"
+     | pp (UnitExp) = "Unit []"
      | pp (SeqExp l) = "Seq [" ^ (String.concatWith "; " (map pp l)) ^ "]"
      | pp (ListExp l) = "List [" ^ (String.concatWith ", " (map pp l)) ^ "]"
      | pp (LetExp (d,e)) = "Let [" ^ (String.concatWith "; " (map pp d)) ^ 
@@ -83,6 +89,7 @@ struct
      | pp (WildcardPat) = "WildcardPat []"
      | pp (TuplePat l) = "TuplePat [" ^ 
             (String.concatWith ", " (map pp l)) ^ "]"
+     | pp (UnitPat) = "UnitPat []"
      | pp (ListPat l) = "ListPat [" ^ 
             (String.concatWith ", " (map pp l)) ^ "]"
      | pp (ConPat c) = "ConPat [" ^ pp c ^ "]"
@@ -114,6 +121,14 @@ struct
                                     (String.concatWith " " (map pp l)) ^ 
                                     " : " ^ pp t ^
                                     " = " ^ pp e ^ "]"
+     | pp (DataBind (tv,i,b)) = "DataBind [(" ^ (String.concatWith "," (map pp tv)) ^
+                                 ") " ^ pp i ^ " =\n   " ^ 
+                                 (String.concatWith "\n | " (map pp b)) ^ "]"
+     | pp (ConBind (i,NONE)) = "ConBind [" ^ pp i ^ "]"
+     | pp (ConBind (i,SOME t)) = "ConBind [" ^ pp i ^ " of " ^ pp t ^ "]"
+     | pp (Structure (i,si,dl)) = "Structure [" ^ pp i ^ " =\n" ^ 
+                                 (String.concatWith "\n" (map pp dl)) ^ "]"
+
    fun prettyPrint p = pp p
 
 end
