@@ -34,6 +34,7 @@ struct
     | TuplePat of pt list
     | ListPat of pt list
     | ConPat of pt
+    | ConstrPat of pt * pt option
     | IdPat of pt
     | TyArrow of pt * pt
     | TyPair of pt * pt
@@ -49,7 +50,9 @@ struct
     | FunMatch of pt * pt list * pt option * pt
     | DataBind of pt list * pt * pt list
     | ConBind of pt * pt option
-    | Structure of pt * pt option * pt list
+    | StructDec of pt list
+    | StructBind of pt * pt
+    | Structure of pt list
 
    fun pp (Int (b,s)) = "Int [" ^ (if b then "~" else "") ^ s ^ "]" 
      | pp (Real (b,s1,s2,NONE)) = 
@@ -93,6 +96,8 @@ struct
      | pp (ListPat l) = "ListPat [" ^ 
             (String.concatWith ", " (map pp l)) ^ "]"
      | pp (ConPat c) = "ConPat [" ^ pp c ^ "]"
+     | pp (ConstrPat (i,NONE)) = "ConstrPat [" ^ pp i ^ "]"
+     | pp (ConstrPat (i,SOME p)) = "ConstrPat ["^ pp i ^ " "^ pp p ^"]"
      | pp (IdPat c) = "IdPat [" ^ pp c ^ "]"
      | pp (TyArrow (t1,t2)) = pp t1 ^ " -> " ^ pp t2
      | pp (TyPair (t1,t2)) = pp t1 ^ " * " ^ pp t2
@@ -126,8 +131,11 @@ struct
                                  (String.concatWith "\n | " (map pp b)) ^ "]"
      | pp (ConBind (i,NONE)) = "ConBind [" ^ pp i ^ "]"
      | pp (ConBind (i,SOME t)) = "ConBind [" ^ pp i ^ " of " ^ pp t ^ "]"
-     | pp (Structure (i,si,dl)) = "Structure [" ^ pp i ^ " =\n" ^ 
-                                 (String.concatWith "\n" (map pp dl)) ^ "]"
+     | pp (StructDec l) = "Structure [" ^
+                  (String.concatWith "\nand " (map pp l)) ^ "]"
+     | pp (StructBind (i,b)) = "StructBind ["^ pp i ^" = "^ pp b ^ "]" 
+     | pp (Structure l) = "Struct [\n   " ^
+                  (String.concatWith "\n   " (map pp l)) ^ "]"
 
    fun prettyPrint p = pp p
 

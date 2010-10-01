@@ -2,11 +2,11 @@ BIN=../../bin
 COMPILER=mlton
 
 $(BIN)/kupeg: kupeg.kpg.sml main.sml kupeg.mlb kupeg.selfhosted
-	./kupeg.selfhosted kupeg.kpg
+	./kupeg.selfhosted -v kupeg.kpg
 	cp kupeg.kpg.k kupeg.kpg.sml
 	$(COMPILER) -output $(BIN)/kupeg kupeg.mlb
 	echo "KuPEG built... self-building final version"
-	$(BIN)/kupeg kupeg.kpg
+	$(BIN)/kupeg -v kupeg.kpg
 	cp kupeg.kpg.k kupeg.kpg.sml
 	$(COMPILER) -output $(BIN)/kupeg kupeg.mlb
 

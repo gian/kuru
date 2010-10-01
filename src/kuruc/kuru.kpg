@@ -48,7 +48,8 @@ structure P = ParseTree
 %nonterm funmatch of P.pt list
 %nonterm databind of P.pt list
 %nonterm conbind of P.pt list
-%nonterm structdec of P.pt
+%nonterm strbind of P.pt list
+%nonterm str of P.pt
 %nonterm programel of P.pt
 %nonterm program of P.pt list
 
@@ -178,6 +179,7 @@ match          <- _ p: pat _"=>"_ e: exp _ "|"_ m: match ->
 pat            <- _ p1: patel _"as"_ p2: pat -> (P.AsPat($p1,$p2))
                 / _ p1: patel _ i: id _ p2: pat ->
                   (P.InfixPat($p1,$i,$p2))
+                / i: longid _ p: pat -> (P.ConstrPat ($i,SOME ($p)))
                 / _ patel.
 
 patel          <- "_" -> (P.WildcardPat)
@@ -186,8 +188,8 @@ patel          <- "_" -> (P.WildcardPat)
                 / "(" _ p: pat _ ")" -> ($p)
                 / "()" -> (P.UnitPat)
                 / "[" _ p: patlist _ "]" -> (P.ListPat ($p))
-                / c: con -> (P.ConPat ($c)) 
-                / i: id -> (P.IdPat ($i))
+                / c: con -> (P.ConPat ($c))
+                / i: longid -> (P.IdPat ($i))
                 .
 
 patlist        <- _ p1: pat _ "," _ p2: patlist -> ($p1 :: $p2)
@@ -224,6 +226,7 @@ dec            <- _ "val" _ v: valbind -> (P.ValDec($v))
                 / _ "datatype" _ d: databind -> 
                      (P.DatatypeDec ($d))
                 / _"fun" _ f: funbind -> (P.FunDec ($f))
+                / _"structure" _ s: strbind -> (P.StructDec ($s))
                 .
 
 valbind        <- p: pat _"="_ e: exp _ "and" v: valbind ->
@@ -272,11 +275,16 @@ conbind        <- _ i: id _ "of" _ t: typ _"|"_ c: conbind ->
                 / _ i: id ->
                   ([P.ConBind($i,NONE)]).
 
-structdec      <- _ "structure" i: id _ "=" _ "struct"_ d: declist _ "end"
-                  -> (P.Structure($i,NONE,$d)).
+strbind        <- _ i: id _ "=" _ s: str _ "and" _ st: strbind ->
+                  (P.StructBind($i,$s) :: $st)
+                / _ i: id _ "=" _ s: str ->
+                  ([P.StructBind($i,$s)]).
 
-programel      <- _ dec
-                / _ structdec.
+str            <- _ "struct" _ d: declist _ "end"
+                  -> (P.Structure($d))
+                / longid.
+
+programel      <- _ dec.
 
 program        <- p1: programel _ ";" _ p2: program -> ($p1 :: $p2)
                 / p1: programel _ p2: program -> ($p1 :: $p2)

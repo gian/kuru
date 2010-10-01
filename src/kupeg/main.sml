@@ -23,6 +23,7 @@ fun main () =
       val nontermTypes = ref [("char","string"),
                               ("literal","string")] 
                                 : (string * string) list ref
+      val cacheNames = ref [] : string list ref
 
       fun startSymbol s = startFn := 
         ("fun kupeg_start s =  valOf (parse_"^s^" (s,ref 0))\n") 
@@ -54,6 +55,16 @@ fun main () =
         in
            f (!nontermTypes) ^ "\n"
         end
+
+      fun genCaches () =
+         let
+            fun f [] = ""
+              | f (h::t) = "val cache_" ^ h ^ 
+                           " = ref [] : (int * res_"^h^") list ref"
+                         ^ "\n" ^ f t
+         in
+            f (!cacheNames) ^ "\n"
+         end
 
       fun readLines fp = 
          let
@@ -91,14 +102,20 @@ fun main () =
 
       val p' = K.kupeg_start buf 
 
-   fun gen (K.Rule (l,b)) = (print ("Processing rule '" ^ l ^ "'\n");
-      "and parse_" ^ l ^ "(input,pos) : res_" ^ l ^  " =\n" ^
+   fun gen (K.Rule (l,b)) =
+      let
+         val _ = print ("Processing rule '" ^ l ^ "'\n")
+         val _ = cacheNames := l :: (!cacheNames)
+      in
+      "and parse_" ^ l ^ " (input,pos) : res_" ^ l ^ " =\n" ^
       "   let\n" ^
       "      val _ = debug_print \"parse_" ^ l ^ "\\n\"\n" ^ 
-      "      val stack = ref [] : int list ref\n" ^
+      "      val inppos = !pos\n" ^
+      "      val cacheGen = ("^ gen b ^")\n" ^
       "   in\n" ^
-      "      " ^ gen b ^ "\n" ^
-      "   end\n\n")
+      "      cacheGen\n" ^
+      "   end\n\n"
+      end
      | gen (K.Choice (s1,s2)) =
      "   let\n" ^
      "      val prestate = !pos\n" ^
@@ -155,6 +172,10 @@ fun main () =
       "val debugVerbose = ref false\n" ^ 
       "fun debug_print s = if (!debugVerbose) then print s else ()\n" ^
       "fun notNone (NONE : 'a option) = false | notNone (SOME _) = true\n" ^
+      "fun cachefind c p =\n" ^
+      "  (fn NONE => NONE | SOME (k,v) => SOME v)\n" ^
+      "   (List.find (fn (p',v) => p = p') (!c))\n" ^
+      "fun cacheupd c p v = c := (!c) @ [(p,v)]\n" ^
       (!startFn) ^ "\n" ^ 
       "and parse_char(input, pos) = \n" ^
       "  if (!pos >= size input) then NONE else\n" ^
@@ -175,6 +196,7 @@ fun main () =
       val _ = TextIO.output (fo, "structure " ^ !nameSy ^ " =\nstruct\n")
       val _ = TextIO.output (fo, verbatim ^ "\n")
       val _ = TextIO.output (fo, genNontermSymbols  ())
+      val _ = TextIO.output (fo, genCaches  ())
       val _ = TextIO.output (fo, chlitdefs)
       val _ = TextIO.output (fo, p'')
       val _ = TextIO.output (fo, "\nend\n")

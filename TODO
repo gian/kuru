@@ -1,0 +1,8 @@
+Todo:
+
+ * Add error reporting to KuPEG.  This should basically just involve
+   augmenting the type of each return value from t option to t parse_option
+   which is a datatype of 
+     {Value t, ParseError string * pos, Expected string * pos}
+
+
