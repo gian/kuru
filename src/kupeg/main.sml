@@ -187,7 +187,7 @@ fun main () =
       "fun cachefind c p =\n" ^
       "  (fn NONE => NONE | SOME (k,v) => SOME v)\n" ^
       "   (List.find (fn (p',v) => p = p') (!c))\n" ^
-      "fun cacheupd c p v = c := (!c) @ [(p,v)]\n" ^
+      "fun cacheupd c p v =  (if length (!c) > 500 then (c := List.drop (!c,250)) else (); c := (p,v) :: (!c)) " ^
       "fun error () = !errorPos\n" ^
       (!startFn) ^ "\n" ^ 
       "and parse_char(input, pos) = \n" ^
