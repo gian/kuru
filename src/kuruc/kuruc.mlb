@@ -1,8 +1,8 @@
 $(SML_LIB)/basis/basis.mlb
 $(SML_LIB)/smlnj-lib/Util/smlnj-lib.mlb
-lib/lib.mlb
 frontend/error.sml
-frontend/parsetree.sml
-frontend/kuru.kpg.sml
+lib/lib.mlb
+semant/semant.mlb
+frontend/frontend.mlb
 main.sml
 

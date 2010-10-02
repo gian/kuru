@@ -4,7 +4,7 @@ KUPEG=$(BIN)/kupeg
 
 all: $(BIN)/kuruc
 
-$(BIN)/kuruc: lib frontend kuruc.mlb main.sml
+$(BIN)/kuruc: lib semant frontend kuruc.mlb main.sml
 	$(COMPILER) -output $(BIN)/kuruc kuruc.mlb
 
 main.sml: main.k
@@ -15,6 +15,9 @@ frontend: force
 
 lib: force
 	make -C lib
+
+semant: force
+	make -C semant
 
 clean:
 	rm -f $(BIN)/kuruc main.sml

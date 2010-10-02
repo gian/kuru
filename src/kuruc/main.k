@@ -27,51 +27,70 @@ struct
 	  | parseArgs ("-v"::t) = (KuruParser.debugVerbose := true; 
                               parseArgs t)
      | parseArgs (h::t) = h :: parseArgs t
-      
-   val args' = parseArgs args 
+  
+   fun parseFile filename =
+   let
+      val p = ref 0
+      val linepositions = ref [] : int list ref
+      val _ = KuruParser.errorPos := 0
 
-   val _ = if length args' < 1 then 
+      fun readLines fp = 
+         let
+            val l = TextIO.inputLine fp
+         in
+            case l of NONE => ""
+                    | SOME l' => (
+                       linepositions := !linepositions @ [!p];
+                       p := !p + size l';
+                       l' ^ readLines fp)
+         end
+
+
+      val f = TextIO.openIn filename
+      val buf = readLines f
+      val _ = TextIO.closeIn f
+
+      val parseResult = 
+         KuruParser.kupeg_start buf handle Option => 
+            raise Fail ("kuruc: error near " ^ 
+                        (Error.resolveErrorPos(filename,
+                                               !linepositions,
+                                               KuruParser.error(),
+                                               buf)))
+
+      val _ = if KuruParser.error() + 20 < size buf then 
+                 print ("kuruc: maybe error near " ^ 
+                     (Error.resolveErrorPos(filename,
+                                            !linepositions,
+                                            KuruParser.error(),
+                                            buf)) ^ "\n") else ()
+
+   in
+      map ParseTree.sanitise parseResult
+   end
+
+
+   fun main () =
+   let
+      val args' = parseArgs args 
+
+      val _ = if length args' < 1 then 
             raise Fail "Usage: kuruc [-v] filename.k" else ()
 	
-   val linepositions = ref [] : int list ref
-   val p = ref 0
-
-   fun readLines fp = 
-      let
-         val l = TextIO.inputLine fp
-      in
-         case l of NONE => ""
-                 | SOME l' => (
-                    linepositions := !linepositions @ [!p];
-                    p := !p + size l';
-                    l' ^ readLines fp)
-      end
-
-
-   val filename = hd args'
-
-   val f = TextIO.openIn filename
-   val buf = readLines f
-   val _ = TextIO.closeIn f
-
-   val p = KuruParser.kupeg_start buf handle Option => 
-      raise Fail ("kuruc: error near " ^ 
-                  (Error.resolveErrorPos(filename,
-                                         !linepositions,
-                                         KuruParser.error(),
-                                         buf)))
-
-   val _ = if KuruParser.error() + 20 < size buf then 
-      print ("kuruc: maybe error near " ^ 
-                  (Error.resolveErrorPos(filename,
-                                         !linepositions,
-                                         KuruParser.error(),
-                                         buf)) ^ "\n") else ()
-
-
-   val pretty = (String.concatWith "\n" (map ParseTree.prettyPrint p))
-
-   fun main () = print (pretty ^ "\n")
+      
+      fun parseEach [] = ()
+        | parseEach (h::t) = 
+          let
+             val _ = print ("File " ^ h ^ "\n")
+             val p = parseFile h
+             val pretty = (String.concatWith "\n" (map ParseTree.prettyPrint p))
+             val _ = print (pretty ^ "\n")
+          in
+            parseEach t
+          end
+   in
+      parseEach args'
+   end
 end   
    
 val _ = Main.main ()
