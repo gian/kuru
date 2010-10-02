@@ -1,6 +1,7 @@
 (* From Kragen's arithmetic.peg example *)
 (* http://github.com/kragen/peg-bootstrap/blob/master/peg.md *)
 
+%name LineCommentParser
 %start sentence
 
 %nonterm sentence of string

@@ -17,7 +17,7 @@ echo "KuPEG tests:"
 for i in *.kpg
 do
 	printf "%25s: " "$i"
-	../../bin/kupeg $i
+	../../bin/kupeg $i > /dev/null
    mv "$i.k" "$i.k.out"
    OUT=`md5sum $i.k.out`
 	EXP=`grep "$i.k.out" expected.dat`

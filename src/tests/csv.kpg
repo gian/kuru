@@ -2,6 +2,7 @@
 (* http://github.com/kragen/peg-bootstrap/blob/master/peg.md *)
 
 %start sentence
+%name CsvParser
 
 %nonterm sentence of string
 %nonterm field of string
