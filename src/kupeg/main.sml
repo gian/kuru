@@ -192,7 +192,7 @@ fun main () =
       (!startFn) ^ "\n" ^ 
       "and parse_char(input, pos) = \n" ^
       "  if (!pos >= size input) then NONE else\n" ^
-      "  (pos := !pos + 1; SOME (String.str (String.sub(input,(!pos - 1)))))\n" ^
+      "  (pos := !pos + 1; setErrPos (!pos); SOME (String.str (String.sub(input,(!pos - 1)))))\n" ^
       "  handle Subscript => NONE\n" ^
       "and parse_alpha (input, pos) =\n" ^
       "  if (!pos >= size input) then NONE else\n" ^
@@ -200,6 +200,14 @@ fun main () =
       "     val c = String.sub(input,(!pos))\n" ^
       "  in\n" ^
       "     if Char.isAlpha c then " ^
+      "SOME (pos := 1 + !pos; String.str c) else NONE\n"^
+      "  end\n" ^
+      "and parse_digit (input, pos) =\n" ^
+      "  if (!pos >= size input) then NONE else\n" ^
+      "  let\n" ^
+      "     val c = String.sub(input,(!pos))\n" ^
+      "  in\n" ^
+      "     if Char.isDigit c then " ^
       "SOME (pos := 1 + !pos; String.str c) else NONE\n"^
       "  end\n" ^
       "and literal(input, pos, str) = \n" ^

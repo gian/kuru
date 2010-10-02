@@ -1,5 +1,5 @@
 BIN=../../bin
-COMPILER=mlton
+COMPILER=mlton -profile time
 KUPEG=$(BIN)/kupeg
 
 all: $(BIN)/kuruc

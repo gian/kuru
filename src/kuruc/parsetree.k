@@ -16,6 +16,7 @@ struct
     | Infix of pt * pt * pt
     | OpExp of pt
     | App of pt * pt
+    | TyAnn of pt * pt
     | TupleExp of pt list
     | UnitExp
     | SeqExp of pt list
@@ -35,6 +36,7 @@ struct
     | ListPat of pt list
     | ConPat of pt
     | ConstrPat of pt * pt option
+    | TyAnnPat of pt * pt
     | IdPat of pt
     | TyArrow of pt * pt
     | TyPair of pt * pt
@@ -72,6 +74,7 @@ struct
      | pp (Infix (a,b,c)) = "Infix [" ^ pp a ^ " " ^ pp b ^ " " ^ pp c ^ "]"
      | pp (OpExp p) = "Op [" ^ pp p ^ "]"
      | pp (App (p1,p2)) = "App [" ^ pp p1 ^ ", " ^ pp p2 ^ "]"
+     | pp (TyAnn (p1,p2)) = "TyAnn [" ^ pp p1 ^ " : " ^ pp p2 ^ "]"
      | pp (TupleExp l) = "Tuple [" ^ (String.concatWith ", " (map pp l)) ^ "]"
      | pp (UnitExp) = "Unit []"
      | pp (SeqExp l) = "Seq [" ^ (String.concatWith "; " (map pp l)) ^ "]"
@@ -98,6 +101,7 @@ struct
      | pp (ConPat c) = "ConPat [" ^ pp c ^ "]"
      | pp (ConstrPat (i,NONE)) = "ConstrPat [" ^ pp i ^ "]"
      | pp (ConstrPat (i,SOME p)) = "ConstrPat ["^ pp i ^ " "^ pp p ^"]"
+     | pp (TyAnnPat (i,p)) = "TyAnnPat ["^ pp i ^ " : "^ pp p ^"]"
      | pp (IdPat c) = "IdPat [" ^ pp c ^ "]"
      | pp (TyArrow (t1,t2)) = pp t1 ^ " -> " ^ pp t2
      | pp (TyPair (t1,t2)) = pp t1 ^ " * " ^ pp t2

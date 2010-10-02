@@ -8,7 +8,8 @@ structure P = ParseTree
 
 %nonterm sp of string
 %nonterm _ of string
-%nonterm digit of string
+%nonterm comment of string
+%nonterm commentc of string
 %nonterm num of string
 %nonterm numdig of string
 %nonterm int of P.pt
@@ -57,14 +58,15 @@ val srcFileLineNum = ref 1
 %%
 
 sp             <- " " / "\n" -> ((srcFileLineNum := !srcFileLineNum + 1);"\n") / "\t".
-_              <- sp _ / .
+_              <- sp _ / comment _ / .
+
+comment        <- "(*" commentc "*)" -> ("").
+
+commentc       <- !"*)" char commentc
+                / .
 
 % Constants
-digit          <- "0" / "1" / "2" / "3" / "4" / "5" / "6"
-                      / "7" / "8" / "9".
-num            <- d: numdig n: num -> ($d ^ $n) 
-                / n: numdig -> ($n).
-numdig         <- !sp d: digit -> ($d).
+num            <- d: digit n: (digit*) -> (String.concat($d :: $n)). 
 
 int            <- n: negat d: num -> (P.Int ($n,$d)).
 
@@ -98,7 +100,8 @@ nonid          <- "(" / ")" / "[" / "]" / "." / ";" / "," / "|" /
 
 keyword        <- "val" / "let" / "if" / "then" / "else" / "datatype"
                 / "type" / "fn" / "fun" / "and" / "end" / "in" /
-                  "structure" / "struct".
+                  "structure" / "struct" / "of" / "case" /
+                  "handle" / "raise".
 
 id             <-  r1: reserved r2: (reserved*) -> (P.Ident(String.concat($r1 :: $r2)))
                 / k: keyword i1: idrest i2: (idrest*) -> 
@@ -127,6 +130,10 @@ exp            <- _ "raise" _ e: exp -> (P.Raise ($e))
                   (P.Infix($e1,$i,$e2))
                 / _ e1: expel _ e2: exp -> 
                   (P.App($e1,$e2))
+                / _ e: expel _ ":" _ t: typ ->
+                  (P.TyAnn ($e,$t))
+                / _ e1: expel _ "=" _ e2: exp ->
+                  (P.Infix($e1,P.Ident "=",$e2))
                 / _ e: expel _ -> ($e).
                 
 expel          <- "op" _ l: longid -> (P.OpExp ($l))
@@ -175,6 +182,7 @@ pat            <- _ p1: patel _"as"_ p2: pat -> (P.AsPat($p1,$p2))
                 / _ p1: patel _ i: id _ p2: pat ->
                   (P.InfixPat($p1,$i,$p2))
                 / i: longid _ p: pat -> (P.ConstrPat ($i,SOME ($p)))
+                / _ p: patel _ ":"_ t: typ -> (P.TyAnnPat ($p,$t))
                 / _ patel.
 
 patel          <- "_" -> (P.WildcardPat)
@@ -206,7 +214,7 @@ typ            <- _ t1: typel _ "->" _ t2: typ ->
 
 typel          <- v: var -> ($v)
                 / "(" _ t: typ _ ")" -> ($t)
-                / i: id -> (P.TyName ($i)).
+                / i: longid -> (P.TyName ($i)).
 
 tyannopt       <- _ ":" _ t: typ -> (SOME ($t))
                 / -> (NONE).
