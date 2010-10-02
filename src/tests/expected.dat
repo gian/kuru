@@ -10,3 +10,12 @@ c34697c07863a974fc90df52f9f7cb01  lift.k.out
 b55737dc71f931f2c023e516f577f8ab  linecomment.kpg.k.out
 e27bd4276440b52088d45bfa1c69f5db  list.k.out
 ecdf22b10579e78be812b1aeca6aa348  print.k.out
+a921b4cece57cc138bb908afaae5e355  anonfn.k.kuruout
+0fd3eda6d3ec48776fe5a462e3c45c49  arithmetic.k.kuruout
+a00206fb7c89b31ddac444f6b1f1a4b7  bank.k.kuruout
+f28e52ab3bbc651fbc0ce0f5b9dc9459  fnapp.k.kuruout
+08d1ebe2f93f4d551fa7c81fb38b3363  hello.k.kuruout
+871995a0244bce63372512be4a92f57d  if.k.kuruout
+a39dd863927aef15b87314bf9266a54a  lift.k.kuruout
+392b7130198280e42a18dfa3cf63874d  list.k.kuruout
+c744f065b613b5e79320639e13c5107d  print.k.kuruout

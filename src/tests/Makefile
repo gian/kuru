@@ -5,5 +5,5 @@ clean:
 	rm *.k.out
 
 canonical:
-	md5sum *.k.out > expected.dat
+	md5sum *.k.out *.k.kuruout > expected.dat
 
