@@ -370,7 +370,7 @@ and parse_int (input,pos) : res_int =
       val prestate = !pos
       val d = parse_num(input,pos)
    in
-      if notNone d then (SOME ((P.Int ($n,$d)))) else (pos := prestate;NONE)
+      if notNone d then (SOME ((P.Int ($n,$d,!pos)))) else (pos := prestate;NONE)
    end
 ) else (pos := prestate;NONE)
    end
@@ -423,7 +423,7 @@ and parse_real (input,pos) : res_real =
       val prestate = !pos
       val d3 = parse_num(input,pos)
    in
-      if notNone d3 then (SOME ((P.Real ($n1,$d1,$d2,SOME ($n2,$d3))))) else (pos := prestate;NONE)
+      if notNone d3 then (SOME ((P.Real ($n1,$d1,$d2,SOME ($n2,$d3),!pos)))) else (pos := prestate;NONE)
    end
 ) else (pos := prestate;NONE)
    end
@@ -456,7 +456,7 @@ and parse_real (input,pos) : res_real =
       val prestate = !pos
       val d2 = parse_num(input,pos)
    in
-      if notNone d2 then (SOME ((P.Real ($n1,$d1,$d2,NONE)))) else (pos := prestate;NONE)
+      if notNone d2 then (SOME ((P.Real ($n1,$d1,$d2,NONE,!pos)))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -533,7 +533,7 @@ and parse_charconst (input,pos) : res_charconst =
       val prestate = !pos
       val s1' = literal(input,pos,"\"")
    in
-      if notNone s1' then SOME ((P.Char ($c)))   else (pos := prestate; NONE)
+      if notNone s1' then SOME ((P.Char ($c,!pos)))   else (pos := prestate; NONE)
    end
 ) else (pos := prestate;NONE)
    end
@@ -576,7 +576,7 @@ and parse_string (input,pos) : res_string =
       val prestate = !pos
       val s1' = parse__(input,pos)
    in
-      if notNone s1' then SOME ((P.String ($s)))   else (pos := prestate; NONE)
+      if notNone s1' then SOME ((P.String ($s,!pos)))   else (pos := prestate; NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -1138,7 +1138,7 @@ and parse_id (input,pos) : res_id =
    end
 
    in
-      if notNone r2 then (SOME ((P.Ident(String.concat($r1 :: $r2))))) else (pos := prestate;NONE)
+      if notNone r2 then (SOME ((P.Ident(String.concat($r1 :: $r2),!pos)))) else (pos := prestate;NONE)
    end
 ) else (pos := prestate;NONE)
    end
@@ -1169,7 +1169,7 @@ and parse_id (input,pos) : res_id =
    end
 
    in
-      if notNone i2 then (SOME ((P.Ident($k ^ $i1 ^String.concat($i2))))) else (pos := prestate;NONE)
+      if notNone i2 then (SOME ((P.Ident($k ^ $i1 ^String.concat($i2),!pos)))) else (pos := prestate;NONE)
    end
 ) else (pos := prestate;NONE)
    end
@@ -1207,7 +1207,7 @@ and parse_id (input,pos) : res_id =
    end
 
    in
-      if notNone r then (SOME ((P.Ident(String.concat ($l :: $r))))) else (pos := prestate;NONE)
+      if notNone r then (SOME ((P.Ident(String.concat ($l :: $r),!pos)))) else (pos := prestate;NONE)
    end
 ) else (pos := prestate;NONE)
    end
@@ -1308,7 +1308,7 @@ and parse_var (input,pos) : res_var =
       val prestate = !pos
       val i = parse_id(input,pos)
    in
-      if notNone i then (SOME ((P.Var ($i)))) else (pos := prestate;NONE)
+      if notNone i then (SOME ((P.Var ($i,!pos)))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -1345,7 +1345,7 @@ and parse_longid (input,pos) : res_longid =
       val prestate = !pos
       val l = parse_longid(input,pos)
    in
-      if notNone l then (SOME ((P.LongId ($i,$l)))) else (pos := prestate;NONE)
+      if notNone l then (SOME ((P.LongId ($i,$l,!pos)))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -1399,7 +1399,7 @@ and parse_exp (input,pos) : res_exp =
       val prestate = !pos
       val e = parse_exp(input,pos)
    in
-      if notNone e then (SOME ((P.Raise ($e)))) else (pos := prestate;NONE)
+      if notNone e then (SOME ((P.Raise ($e,!pos)))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -1436,7 +1436,7 @@ and parse_exp (input,pos) : res_exp =
       val prestate = !pos
       val e2 = parse_exp(input,pos)
    in
-      if notNone e2 then (SOME ((P.AndAlso($e1,$e2)))) else (pos := prestate;NONE)
+      if notNone e2 then (SOME ((P.AndAlso($e1,$e2,!pos)))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -1477,7 +1477,7 @@ and parse_exp (input,pos) : res_exp =
       val prestate = !pos
       val e2 = parse_exp(input,pos)
    in
-      if notNone e2 then (SOME ((P.OrElse($e1,$e2)))) else (pos := prestate;NONE)
+      if notNone e2 then (SOME ((P.OrElse($e1,$e2,!pos)))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -1518,7 +1518,7 @@ and parse_exp (input,pos) : res_exp =
       val prestate = !pos
       val m = parse_match(input,pos)
    in
-      if notNone m then (SOME ((P.HandleExp($e,$m)))) else (pos := prestate;NONE)
+      if notNone m then (SOME ((P.HandleExp($e,$m,!pos)))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -1559,7 +1559,7 @@ and parse_exp (input,pos) : res_exp =
       val prestate = !pos
       val e2 = parse_exp(input,pos)
    in
-      if notNone e2 then (SOME ((P.Infix($e1,$i,$e2)))) else (pos := prestate;NONE)
+      if notNone e2 then (SOME ((P.Infix($e1,$i,$e2,!pos)))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -1592,7 +1592,7 @@ and parse_exp (input,pos) : res_exp =
       val prestate = !pos
       val e2 = parse_exp(input,pos)
    in
-      if notNone e2 then (SOME ((P.App($e1,$e2)))) else (pos := prestate;NONE)
+      if notNone e2 then (SOME ((P.App($e1,$e2,!pos)))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -1629,7 +1629,7 @@ and parse_exp (input,pos) : res_exp =
       val prestate = !pos
       val t = parse_typ(input,pos)
    in
-      if notNone t then (SOME ((P.TyAnn ($e,$t)))) else (pos := prestate;NONE)
+      if notNone t then (SOME ((P.TyAnn ($e,$t,!pos)))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -1670,7 +1670,7 @@ and parse_exp (input,pos) : res_exp =
       val prestate = !pos
       val e2 = parse_exp(input,pos)
    in
-      if notNone e2 then (SOME ((P.Infix($e1,P.Ident "=",$e2)))) else (pos := prestate;NONE)
+      if notNone e2 then (SOME ((P.Infix($e1,P.Ident ("=",!pos),$e2,!pos)))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -1752,7 +1752,7 @@ and parse_expel (input,pos) : res_expel =
       val prestate = !pos
       val l = parse_longid(input,pos)
    in
-      if notNone l then (SOME ((P.OpExp ($l)))) else (pos := prestate;NONE)
+      if notNone l then (SOME ((P.OpExp ($l,!pos)))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -1815,7 +1815,7 @@ and parse_expel (input,pos) : res_expel =
       val prestate = !pos
       val s1' = literal(input,pos,"end")
    in
-      if notNone s1' then SOME ((P.LetExp($d,P.SeqExp($e1 :: $e2))))   else (pos := prestate; NONE)
+      if notNone s1' then SOME ((P.LetExp($d,P.SeqExp($e1 :: $e2,!pos),!pos)))   else (pos := prestate; NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -1882,7 +1882,7 @@ and parse_expel (input,pos) : res_expel =
       val prestate = !pos
       val s1' = literal(input,pos,"end")
    in
-      if notNone s1' then SOME ((P.LetExp($d,$e)))   else (pos := prestate; NONE)
+      if notNone s1' then SOME ((P.LetExp($d,$e,!pos)))   else (pos := prestate; NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -1942,7 +1942,7 @@ and parse_expel (input,pos) : res_expel =
       val prestate = !pos
       val s1' = literal(input,pos,")")
    in
-      if notNone s1' then SOME ((P.TupleExp ($e1 :: $e2)))   else (pos := prestate; NONE)
+      if notNone s1' then SOME ((P.TupleExp ($e1 :: $e2,!pos)))   else (pos := prestate; NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -1995,7 +1995,7 @@ and parse_expel (input,pos) : res_expel =
       val prestate = !pos
       val s1' = literal(input,pos,")")
    in
-      if notNone s1' then SOME ((P.SeqExp ($e1 :: $e2)))   else (pos := prestate; NONE)
+      if notNone s1' then SOME ((P.SeqExp ($e1 :: $e2,!pos)))   else (pos := prestate; NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -2055,7 +2055,7 @@ and parse_expel (input,pos) : res_expel =
       val prestate = !pos
       val s1' = literal(input,pos,"()")
    in
-      if notNone s1' then SOME ((P.UnitExp))   else (pos := prestate; NONE)
+      if notNone s1' then SOME ((P.UnitExp (!pos)))   else (pos := prestate; NONE)
    end
 
    in
@@ -2098,7 +2098,7 @@ and parse_expel (input,pos) : res_expel =
       val prestate = !pos
       val s1' = literal(input,pos,"]")
    in
-      if notNone s1' then SOME ((P.ListExp ($e1 :: $e2)))   else (pos := prestate; NONE)
+      if notNone s1' then SOME ((P.ListExp ($e1 :: $e2,!pos)))   else (pos := prestate; NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -2141,7 +2141,7 @@ and parse_expel (input,pos) : res_expel =
       val prestate = !pos
       val s1' = literal(input,pos,"]")
    in
-      if notNone s1' then SOME ((P.ListExp [$e]))   else (pos := prestate; NONE)
+      if notNone s1' then SOME ((P.ListExp ([$e],!pos)))   else (pos := prestate; NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -2168,7 +2168,7 @@ and parse_expel (input,pos) : res_expel =
       val prestate = !pos
       val s1' = literal(input,pos,"]")
    in
-      if notNone s1' then SOME ((P.ListExp []))   else (pos := prestate; NONE)
+      if notNone s1' then SOME ((P.ListExp ([],!pos)))   else (pos := prestate; NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -2223,7 +2223,7 @@ and parse_expel (input,pos) : res_expel =
       val prestate = !pos
       val e3 = parse_exp(input,pos)
    in
-      if notNone e3 then (SOME ((P.IfExp($e1,$e2,$e3)))) else (pos := prestate;NONE)
+      if notNone e3 then (SOME ((P.IfExp($e1,$e2,$e3,!pos)))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -2278,7 +2278,7 @@ and parse_expel (input,pos) : res_expel =
       val prestate = !pos
       val e2 = parse_exp(input,pos)
    in
-      if notNone e2 then (SOME ((P.WhileExp($e1,$e2)))) else (pos := prestate;NONE)
+      if notNone e2 then (SOME ((P.WhileExp($e1,$e2,!pos)))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -2325,7 +2325,7 @@ and parse_expel (input,pos) : res_expel =
       val prestate = !pos
       val m = parse_match(input,pos)
    in
-      if notNone m then (SOME ((P.CaseExp($e,$m)))) else (pos := prestate;NONE)
+      if notNone m then (SOME ((P.CaseExp($e,$m,!pos)))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -2356,7 +2356,7 @@ and parse_expel (input,pos) : res_expel =
       val prestate = !pos
       val m = parse_match(input,pos)
    in
-      if notNone m then (SOME ((P.FnExp($m)))) else (pos := prestate;NONE)
+      if notNone m then (SOME ((P.FnExp($m,!pos)))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -2604,7 +2604,7 @@ and parse_match (input,pos) : res_match =
       val prestate = !pos
       val m = parse_match(input,pos)
    in
-      if notNone m then (SOME (((P.Match($p,$e)) :: $m))) else (pos := prestate;NONE)
+      if notNone m then (SOME (((P.Match($p,$e,!pos)) :: $m))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -2651,7 +2651,7 @@ and parse_match (input,pos) : res_match =
       val prestate = !pos
       val e = parse_exp(input,pos)
    in
-      if notNone e then (SOME (([P.Match($p,$e)]))) else (pos := prestate;NONE)
+      if notNone e then (SOME (([P.Match($p,$e,!pos)]))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -2710,7 +2710,7 @@ and parse_pat (input,pos) : res_pat =
       val prestate = !pos
       val p2 = parse_pat(input,pos)
    in
-      if notNone p2 then (SOME ((P.AsPat($p1,$p2)))) else (pos := prestate;NONE)
+      if notNone p2 then (SOME ((P.AsPat($p1,$p2,!pos)))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -2751,7 +2751,7 @@ and parse_pat (input,pos) : res_pat =
       val prestate = !pos
       val p2 = parse_pat(input,pos)
    in
-      if notNone p2 then (SOME ((P.InfixPat($p1,$i,$p2)))) else (pos := prestate;NONE)
+      if notNone p2 then (SOME ((P.InfixPat($p1,$i,$p2,!pos)))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -2780,7 +2780,7 @@ and parse_pat (input,pos) : res_pat =
       val prestate = !pos
       val p = parse_pat(input,pos)
    in
-      if notNone p then (SOME ((P.ConstrPat ($i,SOME ($p))))) else (pos := prestate;NONE)
+      if notNone p then (SOME ((P.ConstrPat ($i,SOME ($p),!pos)))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -2815,7 +2815,7 @@ and parse_pat (input,pos) : res_pat =
       val prestate = !pos
       val t = parse_typ(input,pos)
    in
-      if notNone t then (SOME ((P.TyAnnPat ($p,$t)))) else (pos := prestate;NONE)
+      if notNone t then (SOME ((P.TyAnnPat ($p,$t,!pos)))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -2869,7 +2869,7 @@ and parse_patel (input,pos) : res_patel =
       val prestate = !pos
       val s1' = literal(input,pos,"_")
    in
-      if notNone s1' then SOME ((P.WildcardPat))   else (pos := prestate; NONE)
+      if notNone s1' then SOME ((P.WildcardPat (!pos)))   else (pos := prestate; NONE)
    end
 
    in
@@ -2912,7 +2912,7 @@ and parse_patel (input,pos) : res_patel =
       val prestate = !pos
       val s1' = literal(input,pos,")")
    in
-      if notNone s1' then SOME ((P.TuplePat ($p1 :: $p2)))   else (pos := prestate; NONE)
+      if notNone s1' then SOME ((P.TuplePat ($p1 :: $p2,!pos)))   else (pos := prestate; NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -2974,7 +2974,7 @@ and parse_patel (input,pos) : res_patel =
       val prestate = !pos
       val s1' = literal(input,pos,"()")
    in
-      if notNone s1' then SOME ((P.UnitPat))   else (pos := prestate; NONE)
+      if notNone s1' then SOME ((P.UnitPat (!pos)))   else (pos := prestate; NONE)
    end
 
    in
@@ -3001,7 +3001,7 @@ and parse_patel (input,pos) : res_patel =
       val prestate = !pos
       val s1' = literal(input,pos,"]")
    in
-      if notNone s1' then SOME ((P.ListPat ($p)))   else (pos := prestate; NONE)
+      if notNone s1' then SOME ((P.ListPat ($p,!pos)))   else (pos := prestate; NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -3028,7 +3028,7 @@ and parse_patel (input,pos) : res_patel =
       val prestate = !pos
       val s1' = literal(input,pos,"]")
    in
-      if notNone s1' then SOME ((P.ListPat []))   else (pos := prestate; NONE)
+      if notNone s1' then SOME ((P.ListPat ([],!pos)))   else (pos := prestate; NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -3043,7 +3043,7 @@ and parse_patel (input,pos) : res_patel =
       val prestate = !pos
       val c = parse_con(input,pos)
    in
-      if notNone c then (SOME ((P.ConPat ($c)))) else (pos := prestate;NONE)
+      if notNone c then (SOME ((P.ConPat ($c,!pos)))) else (pos := prestate;NONE)
    end
 
    in
@@ -3052,7 +3052,7 @@ and parse_patel (input,pos) : res_patel =
       val prestate = !pos
       val i = parse_longid(input,pos)
    in
-      if notNone i then (SOME ((P.IdPat ($i)))) else (pos := prestate;NONE)
+      if notNone i then (SOME ((P.IdPat ($i,!pos)))) else (pos := prestate;NONE)
    end
 )
    end
@@ -3255,7 +3255,7 @@ and parse_typ (input,pos) : res_typ =
       val prestate = !pos
       val t2 = parse_typ(input,pos)
    in
-      if notNone t2 then (SOME ((P.TyArrow ($t1,$t2)))) else (pos := prestate;NONE)
+      if notNone t2 then (SOME ((P.TyArrow ($t1,$t2,!pos)))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -3296,7 +3296,7 @@ and parse_typ (input,pos) : res_typ =
       val prestate = !pos
       val t2 = parse_typ(input,pos)
    in
-      if notNone t2 then (SOME ((P.TyPair ($t1,$t2)))) else (pos := prestate;NONE)
+      if notNone t2 then (SOME ((P.TyPair ($t1,$t2,!pos)))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -3329,7 +3329,7 @@ and parse_typ (input,pos) : res_typ =
       val prestate = !pos
       val t2 = parse_typ(input,pos)
    in
-      if notNone t2 then (SOME ((P.TyCon ($t1,$t2)))) else (pos := prestate;NONE)
+      if notNone t2 then (SOME ((P.TyCon ($t1,$t2,!pos)))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -3427,7 +3427,7 @@ and parse_typel (input,pos) : res_typel =
       val prestate = !pos
       val i = parse_longid(input,pos)
    in
-      if notNone i then (SOME ((P.TyName ($i)))) else (pos := prestate;NONE)
+      if notNone i then (SOME ((P.TyName ($i,!pos)))) else (pos := prestate;NONE)
    end
 )
    end
@@ -3549,7 +3549,7 @@ and parse_dec (input,pos) : res_dec =
       val prestate = !pos
       val v = parse_valbind(input,pos)
    in
-      if notNone v then (SOME ((P.ValDec($v)))) else (pos := prestate;NONE)
+      if notNone v then (SOME ((P.ValDec($v,!pos)))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -3578,7 +3578,7 @@ and parse_dec (input,pos) : res_dec =
       val prestate = !pos
       val v = parse_typebind(input,pos)
    in
-      if notNone v then (SOME ((P.TypeDec($v)))) else (pos := prestate;NONE)
+      if notNone v then (SOME ((P.TypeDec($v,!pos)))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -3631,7 +3631,7 @@ and parse_dec (input,pos) : res_dec =
       val prestate = !pos
       val l = parse_longid(input,pos)
    in
-      if notNone l then (SOME ((P.DatatypeAssign ($i,$l)))) else (pos := prestate;NONE)
+      if notNone l then (SOME ((P.DatatypeAssign ($i,$l,!pos)))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -3672,7 +3672,7 @@ and parse_dec (input,pos) : res_dec =
       val prestate = !pos
       val d = parse_databind(input,pos)
    in
-      if notNone d then (SOME ((P.DatatypeDec ($d)))) else (pos := prestate;NONE)
+      if notNone d then (SOME ((P.DatatypeDec ($d,!pos)))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -3701,7 +3701,7 @@ and parse_dec (input,pos) : res_dec =
       val prestate = !pos
       val f = parse_funbind(input,pos)
    in
-      if notNone f then (SOME ((P.FunDec ($f)))) else (pos := prestate;NONE)
+      if notNone f then (SOME ((P.FunDec ($f,!pos)))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -3728,7 +3728,7 @@ and parse_dec (input,pos) : res_dec =
       val prestate = !pos
       val s = parse_strbind(input,pos)
    in
-      if notNone s then (SOME ((P.StructDec ($s)))) else (pos := prestate;NONE)
+      if notNone s then (SOME ((P.StructDec ($s,!pos)))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -3799,7 +3799,7 @@ and parse_valbind (input,pos) : res_valbind =
       val prestate = !pos
       val v = parse_valbind(input,pos)
    in
-      if notNone v then (SOME ((P.ValBind ($p,$e) :: $v))) else (pos := prestate;NONE)
+      if notNone v then (SOME ((P.ValBind ($p,$e,!pos) :: $v))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -3838,7 +3838,7 @@ and parse_valbind (input,pos) : res_valbind =
       val prestate = !pos
       val e = parse_exp(input,pos)
    in
-      if notNone e then (SOME (([P.ValBind ($p,$e)]))) else (pos := prestate;NONE)
+      if notNone e then (SOME (([P.ValBind ($p,$e,!pos)]))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -4070,7 +4070,7 @@ and parse_typebind (input,pos) : res_typebind =
       val prestate = !pos
       val l = parse_typebind(input,pos)
    in
-      if notNone l then (SOME ((P.TypeBind($tv,$i,$t) :: $l))) else (pos := prestate;NONE)
+      if notNone l then (SOME ((P.TypeBind($tv,$i,$t,!pos) :: $l))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -4127,7 +4127,7 @@ and parse_typebind (input,pos) : res_typebind =
       val prestate = !pos
       val t = parse_typ(input,pos)
    in
-      if notNone t then (SOME (([P.TypeBind($tv,$i,$t)]))) else (pos := prestate;NONE)
+      if notNone t then (SOME (([P.TypeBind($tv,$i,$t,!pos)]))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -4300,7 +4300,7 @@ and parse_funmatch (input,pos) : res_funmatch =
       val prestate = !pos
       val f = parse_funmatch(input,pos)
    in
-      if notNone f then (SOME ((P.FunMatch (P.OpExp ($i),$l,$t,$e) :: $f))) else (pos := prestate;NONE)
+      if notNone f then (SOME ((P.FunMatch (P.OpExp ($i,!pos),$l,$t,$e,!pos) :: $f))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -4379,7 +4379,7 @@ and parse_funmatch (input,pos) : res_funmatch =
       val prestate = !pos
       val e = parse_exp(input,pos)
    in
-      if notNone e then (SOME (([P.FunMatch(P.OpExp ($i),$l,$t,$e)]))) else (pos := prestate;NONE)
+      if notNone e then (SOME (([P.FunMatch(P.OpExp ($i,!pos),$l,$t,$e,!pos)]))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -4450,7 +4450,7 @@ and parse_funmatch (input,pos) : res_funmatch =
       val prestate = !pos
       val f = parse_funmatch(input,pos)
    in
-      if notNone f then (SOME ((P.FunMatch ($i,$l,$t,$e) :: $f))) else (pos := prestate;NONE)
+      if notNone f then (SOME ((P.FunMatch ($i,$l,$t,$e,!pos) :: $f))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -4503,7 +4503,7 @@ and parse_funmatch (input,pos) : res_funmatch =
       val prestate = !pos
       val e = parse_exp(input,pos)
    in
-      if notNone e then (SOME (([P.FunMatch ($i,$l,$t,$e)]))) else (pos := prestate;NONE)
+      if notNone e then (SOME (([P.FunMatch ($i,$l,$t,$e,!pos)]))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -4588,7 +4588,7 @@ and parse_databind (input,pos) : res_databind =
       val prestate = !pos
       val d = parse_databind(input,pos)
    in
-      if notNone d then (SOME ((P.DataBind($tv,$i,$c) :: $d))) else (pos := prestate;NONE)
+      if notNone d then (SOME ((P.DataBind($tv,$i,$c,!pos) :: $d))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -4645,7 +4645,7 @@ and parse_databind (input,pos) : res_databind =
       val prestate = !pos
       val c = parse_conbind(input,pos)
    in
-      if notNone c then (SOME (([P.DataBind($tv,$i,$c)]))) else (pos := prestate;NONE)
+      if notNone c then (SOME (([P.DataBind($tv,$i,$c,!pos)]))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -4724,7 +4724,7 @@ and parse_conbind (input,pos) : res_conbind =
       val prestate = !pos
       val c = parse_conbind(input,pos)
    in
-      if notNone c then (SOME ((P.ConBind($i,SOME ($t)) :: $c))) else (pos := prestate;NONE)
+      if notNone c then (SOME ((P.ConBind($i,SOME ($t),!pos) :: $c))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -4773,7 +4773,7 @@ and parse_conbind (input,pos) : res_conbind =
       val prestate = !pos
       val t = parse_typ(input,pos)
    in
-      if notNone t then (SOME (([P.ConBind($i,SOME ($t))]))) else (pos := prestate;NONE)
+      if notNone t then (SOME (([P.ConBind($i,SOME ($t),!pos)]))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -4814,7 +4814,7 @@ and parse_conbind (input,pos) : res_conbind =
       val prestate = !pos
       val c = parse_conbind(input,pos)
    in
-      if notNone c then (SOME ((P.ConBind($i,NONE) :: $c))) else (pos := prestate;NONE)
+      if notNone c then (SOME ((P.ConBind($i,NONE,!pos) :: $c))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -4837,7 +4837,7 @@ and parse_conbind (input,pos) : res_conbind =
       val prestate = !pos
       val i = parse_id(input,pos)
    in
-      if notNone i then (SOME (([P.ConBind($i,NONE)]))) else (pos := prestate;NONE)
+      if notNone i then (SOME (([P.ConBind($i,NONE,!pos)]))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -4908,7 +4908,7 @@ and parse_strbind (input,pos) : res_strbind =
       val prestate = !pos
       val st = parse_strbind(input,pos)
    in
-      if notNone st then (SOME ((P.StructBind($i,$s) :: $st))) else (pos := prestate;NONE)
+      if notNone st then (SOME ((P.StructBind($i,$s,!pos) :: $st))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -4955,7 +4955,7 @@ and parse_strbind (input,pos) : res_strbind =
       val prestate = !pos
       val s = parse_str(input,pos)
    in
-      if notNone s then (SOME (([P.StructBind($i,$s)]))) else (pos := prestate;NONE)
+      if notNone s then (SOME (([P.StructBind($i,$s,!pos)]))) else (pos := prestate;NONE)
    end
    else (pos := prestate; NONE)
    end
@@ -5014,7 +5014,7 @@ and parse_str (input,pos) : res_str =
       val prestate = !pos
       val s1' = literal(input,pos,"end")
    in
-      if notNone s1' then SOME ((P.Structure($d)))   else (pos := prestate; NONE)
+      if notNone s1' then SOME ((P.Structure($d,!pos)))   else (pos := prestate; NONE)
    end
    else (pos := prestate; NONE)
    end
