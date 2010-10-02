@@ -3,9 +3,8 @@ COMPILER=mlton -profile time
 KUPEG=$(BIN)/kupeg
 
 all: $(BIN)/kuruc
-	make -C frontend
 
-$(BIN)/kuruc: frontend kuruc.mlb main.sml
+$(BIN)/kuruc: lib frontend kuruc.mlb main.sml
 	$(COMPILER) -output $(BIN)/kuruc kuruc.mlb
 
 main.sml: main.k
@@ -13,6 +12,9 @@ main.sml: main.k
 
 frontend: force
 	make -C frontend
+
+lib: force
+	make -C lib
 
 clean:
 	rm -f $(BIN)/kuruc main.sml
