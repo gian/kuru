@@ -1,0 +1,14 @@
+val $ = 123
+val $ = 123
+val $ = 123
+val $ = 123
+val $ = 123
+val $$$$ = 123
+val $$$ = 123
+val $$$$ = 123
+val foobar = 234
+val inFoo = 123
+val infoo = 1234
+val pl = t
+val in = t
+fun end () = xx

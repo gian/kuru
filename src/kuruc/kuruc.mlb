@@ -1,7 +1,7 @@
 $(SML_LIB)/basis/basis.mlb
 $(SML_LIB)/smlnj-lib/Util/smlnj-lib.mlb
-error.sml
-parsetree.sml
-kuru.kpg.sml
+frontend/error.sml
+frontend/parsetree.sml
+frontend/kuru.kpg.sml
 main.sml
 
