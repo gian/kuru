@@ -12,12 +12,12 @@ fun main () =
                                  parseArgs t)
         | parseArgs (h::t) = h :: parseArgs t
       
-      val args' = parseArgs args 
+      val args' = parseArgs args
 
       val _ = if length args' < 1 then raise Fail "Usage: kupeg [-v] filename.kpg" else ()
 		
-      val filename = hd args'    
- 
+      val filename = hd args'  
+
       val startFn = ref ""
       val nameSy = ref ""
       val nontermTypes = ref [("char","string"),
@@ -26,7 +26,7 @@ fun main () =
       val cacheNames = ref [] : string list ref
 
       fun startSymbol s = startFn := 
-        ("fun kupeg_start s =  valOf (parse_"^s^" (s,ref 0))\n") 
+        ("fun kupeg_start s = valOf (parse_"^s^" (s,ref 0))\n") 
 
 		fun nameSymbol s = nameSy := s
 
@@ -60,7 +60,7 @@ fun main () =
          let
             fun f [] = ""
               | f (h::t) = "val cache_" ^ h ^ 
-                           " = ref [] : (int * res_"^h^") list ref"
+                           " = ref [] : (int * (int * res_"^h^")) list ref"
                          ^ "\n" ^ f t
          in
             f (!cacheNames) ^ "\n"
@@ -109,9 +109,19 @@ fun main () =
       in
       "and parse_" ^ l ^ " (input,pos) : res_" ^ l ^ " =\n" ^
       "   let\n" ^
+      "      val _ = setErrPos (!pos)\n" ^
       "      val _ = debug_print \"parse_" ^ l ^ "\\n\"\n" ^ 
       "      val inppos = !pos\n" ^
-      "      val cacheGen = ("^ gen b ^")\n" ^
+      "      val cacheLk = cachefind cache_"^l^" inppos\n" ^
+      "      val cacheGen = if notNone cacheLk then\n" ^
+      "         let val (cPos,cVal) = valOf cacheLk\n" ^
+      "             val _ = pos := cPos\n" ^
+      "         in cVal end\n" ^
+      "         else let\n" ^
+      "            val cVal = ("^ gen b ^")\n" ^
+      "            val _ = cacheupd cache_"^l^" inppos"^
+      " (!pos,cVal)\n" ^
+      "              in cVal end\n" ^ 
       "   in\n" ^
       "      cacheGen\n" ^
       "   end\n\n"
@@ -169,22 +179,34 @@ fun main () =
 
       val chlitdefs = 
       "fun $ f = valOf f\n\n" ^
-      "val debugVerbose = ref false\n" ^ 
+      "val errorPos = ref 0\n" ^
+      "fun setErrPos c = if !errorPos < c then errorPos := c else ()\n" ^
+      "val debugVerbose = ref false\n" ^
       "fun debug_print s = if (!debugVerbose) then print s else ()\n" ^
       "fun notNone (NONE : 'a option) = false | notNone (SOME _) = true\n" ^
       "fun cachefind c p =\n" ^
       "  (fn NONE => NONE | SOME (k,v) => SOME v)\n" ^
       "   (List.find (fn (p',v) => p = p') (!c))\n" ^
       "fun cacheupd c p v = c := (!c) @ [(p,v)]\n" ^
+      "fun error () = !errorPos\n" ^
       (!startFn) ^ "\n" ^ 
       "and parse_char(input, pos) = \n" ^
       "  if (!pos >= size input) then NONE else\n" ^
       "  (pos := !pos + 1; SOME (String.str (String.sub(input,(!pos - 1)))))\n" ^
-      "  handle Subscript => NONE\n" ^ 
+      "  handle Subscript => NONE\n" ^
+      "and parse_alpha (input, pos) =\n" ^
+      "  if (!pos >= size input) then NONE else\n" ^
+      "  let\n" ^
+      "     val c = String.sub(input,(!pos))\n" ^
+      "  in\n" ^
+      "     if Char.isAlpha c then " ^
+      "SOME (pos := 1 + !pos; String.str c) else NONE\n"^
+      "  end\n" ^
       "and literal(input, pos, str) = \n" ^
+      " (setErrPos (!pos);\n" ^
       "  (if (String.substring(input, !pos, size str) = str) then\n" ^
       "  (pos := !pos + size str; SOME  (str))\n" ^
-      "  else NONE) handle Subscript => NONE\n\n" 
+      "  else NONE) handle Subscript => NONE)\n\n" 
       
 
       val p'' = String.concatWith "\n" (map gen p')

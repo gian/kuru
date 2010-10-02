@@ -4,7 +4,7 @@ KUPEG=$(BIN)/kupeg
 
 all: $(BIN)/kuruc
 
-$(BIN)/kuruc: kuruc.mlb main.sml kuru.kpg.sml parsetree.sml
+$(BIN)/kuruc: kuruc.mlb main.sml kuru.kpg.sml parsetree.sml error.sml
 	$(COMPILER) -output $(BIN)/kuruc kuruc.mlb
 
 main.sml: main.k
@@ -16,9 +16,12 @@ kuru.kpg.sml: kuru.kpg.k
 parsetree.sml: parsetree.k
 	cp parsetree.k parsetree.sml
 
+error.sml: error.k
+	cp error.k error.sml
+
 kuru.kpg.k: kuru.kpg
 	$(KUPEG) kuru.kpg
 
 clean:
-	rm -f $(BIN)/kuruc main.sml kuru.kpg.sml kuru.kpg.k
+	rm -f $(BIN)/kuruc main.sml kuru.kpg.sml kuru.kpg.k parsetree.sml error.sml
 

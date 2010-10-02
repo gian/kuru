@@ -18,7 +18,6 @@ structure P = ParseTree
 %nonterm string of P.pt
 %nonterm stringcont of string
 %nonterm con of P.pt
-%nonterm letter of string
 %nonterm reserved of string
 %nonterm nonid of string
 %nonterm keyword of string
@@ -88,14 +87,9 @@ stringcont     <- !"\\" !"\"" c: char s: stringcont -> ($c ^ $s)
 con            <- real / int / charconst / string.
 
 % Identifiers
-letter         <- "a" / "b" / "c" / "d" / "e" / "f" / "g" / "h" / "i" /
-                  "j" / "k" / "l" / "m" / "n" / "o" / "p" / "q" / "r" /
-                  "s" / "t" / "u" / "v" / "w" / "x" / "y" / "z" /
-                  "A" / "B" / "C" / "D" / "E" / "F" / "G" / "H" / "I" /
-                  "J" / "K" / "L" / "M" / "N" / "O" / "P" / "Q" / "R" /
-                  "S" / "T" / "U" / "V" / "W" / "X" / "Y" / "Z".
 
 reserved       <- "!" / "%" / "&" / "$" / "+" / "-" /  "/" 
+                / "<=" / ">=" / ":=" / "::"
                 / "<" / ">" / "?" / "@" / "\\" / "`" 
                 / "^" / "*".
 
@@ -109,7 +103,7 @@ keyword        <- "val" / "let" / "if" / "then" / "else" / "datatype"
 id             <-  r1: reserved r2: (reserved*) -> (P.Ident(String.concat($r1 :: $r2)))
                 / k: keyword i1: idrest i2: (idrest*) -> 
                   (P.Ident($k ^ $i1 ^String.concat($i2)))
-                / !keyword l: letter r: (idrest*) -> 
+                / !keyword l: alpha r: (idrest*) -> 
                   (P.Ident(String.concat ($l :: $r)))
                 . 
 
@@ -151,6 +145,7 @@ expel          <- "op" _ l: longid -> (P.OpExp ($l))
                 / "[" _ e1: exp _ "," _ e2: explist _ "]" ->
                   (P.ListExp ($e1 :: $e2))
                 / "[" _ e: exp _ "]" -> (P.ListExp [$e])
+                / "[" _ "]" -> (P.ListExp [])
                 / "if"_ e1: exp _"then"_ e2: exp _"else"_ e3: exp
                    -> (P.IfExp($e1,$e2,$e3))
                 / "while"_ e1: exp _"do"_ e2: exp ->
@@ -188,6 +183,7 @@ patel          <- "_" -> (P.WildcardPat)
                 / "(" _ p: pat _ ")" -> ($p)
                 / "()" -> (P.UnitPat)
                 / "[" _ p: patlist _ "]" -> (P.ListPat ($p))
+                / "[" _ "]" -> (P.ListPat [])
                 / c: con -> (P.ConPat ($c))
                 / i: longid -> (P.IdPat ($i))
                 .
