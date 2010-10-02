@@ -98,12 +98,13 @@ type pos = int
      | pp (OpExp (p,_)) = "Op [" ^ pp p ^ "]"
      | pp (App (p1,p2,_)) = "App [" ^ pp p1 ^ ", " ^ pp p2 ^ "]"
      | pp (TyAnn (p1,p2,_)) = "TyAnn [" ^ pp p1 ^ " : " ^ pp p2 ^ "]"
-     | pp (TupleExp (l,p)) = "Tuple [" ^ (String.concatWith ", " (map pp l)) ^ "]"
+     | pp (TupleExp (l,p)) = "Tuple [" ^ (String.concatWith ", " 
+                                             (map pp l)) ^ "]"
      | pp (UnitExp _) = "Unit []"
      | pp (SeqExp (l,_)) = "Seq [" ^ (String.concatWith "; " (map pp l)) ^ "]"
      | pp (ListExp (l,_)) = "List [" ^ (String.concatWith ", " (map pp l)) ^ "]"
-     | pp (LetExp (d,e,_)) = "Let [" ^ (String.concatWith "; " (map pp d)) ^ 
-                            " in " ^ pp e ^ " end]"
+     | pp (LetExp (d,e,_)) = "Let [" ^ (String.concatWith "\n  " (map pp d)) ^ 
+                            " in " ^ pp e ^ " end]\n"
      | pp (IfExp (e1,e2,e3,_)) = "If [" ^ pp e1 ^ " then " ^ pp e2 ^ " else " ^
                                   pp e3 ^ "]"
      | pp (WhileExp (e1,e2,_)) = "While [" ^ pp e1 ^ " do " ^ pp e2 ^ "]"
@@ -130,18 +131,18 @@ type pos = int
      | pp (TyPair (t1,t2,_)) = pp t1 ^ " * " ^ pp t2
      | pp (TyCon (t1,t2,_)) = pp t1 ^ " " ^ pp t2
      | pp (TyName (t1,_)) = pp t1
-     | pp (Match (p,e,_)) = "Match [" ^ pp p ^ " => " ^ pp e ^ "]"
+     | pp (Match (p,e,_)) = "Match [" ^ pp p ^ " => " ^ pp e ^ "]\n"
      | pp (ValDec (b,_)) = 
-         "ValDec [" ^ (String.concatWith "\nand " (map pp b)) ^ "]"
+         "ValDec [" ^ (String.concatWith "\nand " (map pp b)) ^ "]\n"
      | pp (TypeDec (b,_)) =
-         "TypeDec [" ^ (String.concatWith "\nand " (map pp b)) ^ "]"
+         "TypeDec [" ^ (String.concatWith "\nand " (map pp b)) ^ "]\n"
      | pp (DatatypeAssign (i1,i2,_)) = 
-                     "DatatypeAssign [" ^ pp i1 ^ " = " ^ pp i2 ^ "]"
+                     "DatatypeAssign [" ^ pp i1 ^ " = " ^ pp i2 ^ "]\n"
      | pp (DatatypeDec (d,_)) =
-         "DatatypeDec [" ^ (String.concatWith "\nand " (map pp d)) ^ "]"
+         "DatatypeDec [" ^ (String.concatWith "\nand " (map pp d)) ^ "]\n"
      | pp (FunDec (d,_)) = 
          "FunDec [" ^ (String.concatWith "\nand " 
-            (map (fn l => String.concatWith "\n  | " (map pp l)) d)) ^ "]"
+            (map (fn l => String.concatWith "\n  | " (map pp l)) d)) ^ "]\n"
      | pp (ValBind (p,e,_)) = "ValBind [" ^ pp p ^ " = " ^ pp e ^ "]"
      | pp (TypeBind (v,p,e,_)) = "TypeBind [" ^ (String.concatWith "," 
                                  (map pp v))
@@ -153,18 +154,84 @@ type pos = int
                                     (String.concatWith " " (map pp l)) ^ 
                                     " : " ^ pp t ^
                                     " = " ^ pp e ^ "]"
-     | pp (DataBind (tv,i,b,_)) = "DataBind [(" ^ (String.concatWith "," (map pp tv)) ^
+     | pp (DataBind (tv,i,b,_)) = "DataBind [(" ^ (String.concatWith "," 
+                                                      (map pp tv)) ^
                                  ") " ^ pp i ^ " =\n   " ^ 
                                  (String.concatWith "\n | " (map pp b)) ^ "]"
      | pp (ConBind (i,NONE,_)) = "ConBind [" ^ pp i ^ "]"
      | pp (ConBind (i,SOME t,_)) = "ConBind [" ^ pp i ^ " of " ^ pp t ^ "]"
      | pp (StructDec (l,_)) = "Structure [" ^
-                  (String.concatWith "\nand " (map pp l)) ^ "]"
+                  (String.concatWith "\nand " (map pp l)) ^ "]\n"
      | pp (StructBind (i,b,_)) = "StructBind ["^ pp i ^" = "^ pp b ^ "]" 
      | pp (Structure (l,_)) = "Struct [\n   " ^
                   (String.concatWith "\n   " (map pp l)) ^ "]"
 
    fun prettyPrint p = pp p
+
+   (* The primary goal of sanitisation is to remove all infix operators
+      and replace them with function application instead. *)
+
+   fun sanitise x =
+   let
+      fun s (AndAlso (a,b,pos)) = 
+            App(Ident("_andalso",pos),
+                TupleExp ([s a, s b],pos),pos)
+        | s (OrElse (a,b,pos)) = 
+            App(Ident("_orelse",pos),
+               TupleExp ([s a, s b],pos),pos)
+        | s (Infix (a,opr,b,pos)) =
+            App(opr,
+               TupleExp ([s a, s b],pos),pos)
+        | s (LongId (a,b,p)) = LongId (s a, s b,p)
+        | s (Var (a,p)) = Var (s a,p)
+        | s (Raise (a,p)) = Raise (s a,p)
+        | s (Seq (a,b,p)) = Seq (s a, s b,p)
+        | s (OpExp (a,p)) = OpExp (s a,p)
+        | s (App (a,b,p)) = App (s a, s b,p)
+        | s (TyAnn (a,b,p)) = TyAnn (s a, s b,p)
+        | s (TupleExp (l,p)) = TupleExp (map s l,p)
+        | s (SeqExp (l,p)) = SeqExp (map s l,p)
+        | s (ListExp (l,p)) = ListExp (map s l,p)
+        | s (LetExp (l,e,p)) = LetExp (map s l,s e,p)
+        | s (IfExp (a,b,c,p)) = IfExp (s a, s b, s c, p)
+        | s (WhileExp (a,b,p)) = WhileExp (s a, s b,p)
+        | s (CaseExp (a,b,p)) = CaseExp (s a, map s b, p)
+        | s (FnExp (l,p)) = FnExp (map s l,p)
+        | s (HandleExp (e,l,p)) = HandleExp (s e, map s l, p)
+        | s (Match (a,b,p)) = Match (s a, s b,p)
+        | s (AsPat (a,b,p)) = AsPat (s a, s b,p)
+        | s (InfixPat (a,b,c,pos)) = InfixPat (s a, s b, s c,pos)
+        | s (TuplePat (l,p)) = TuplePat (map s l,p)
+        | s (ListPat (l,p)) = ListPat (map s l,p)
+        | s (ConPat (a,p)) = ConPat (s a,p)
+        | s (ConstrPat (a,NONE,p)) = ConstrPat (s a,NONE,p)
+        | s (ConstrPat (a,SOME b,p)) = ConstrPat (s a,SOME (s b),p)
+        | s (TyAnnPat (a,b,p)) = TyAnnPat (s a, s b,p)
+        | s (IdPat (a,p)) = IdPat (s a,p)
+        | s (TyArrow (a,b,p)) = TyArrow (s a, s b,p)
+        | s (TyPair (a,b,p)) = TyPair (s a, s b,p)
+        | s (TyCon (a,b,p)) = TyCon (s a, s b,p)
+        | s (TyName (a,p)) = TyName (s a,p)
+        | s (ValDec (l,p)) = ValDec (map s l,p)
+        | s (TypeDec (l,p)) = TypeDec (map s l,p)
+        | s (DatatypeAssign (a,b,p)) = DatatypeAssign (s a, s b,p)
+        | s (DatatypeDec (l,p)) = DatatypeDec (map s l,p)
+        | s (FunDec (ll,p)) = FunDec (map (fn l => map s l) ll,p)
+        | s (ValBind (a,b,p)) = ValBind (s a, s b,p)
+        | s (TypeBind (l,a,b,p)) = TypeBind (map s l, s a, s b,p)
+        | s (FunMatch (a,l,NONE,c,p)) = FunMatch (s a,map s l, NONE, s c, p)
+        | s (FunMatch (a,l,SOME b,c,p)) = 
+            FunMatch (s a,map s l,SOME (s b),s c, p)
+        | s (DataBind (l,a,b,p)) = DataBind (map s l, s a, map s b,p)
+        | s (ConBind (a,NONE,p)) = ConBind (s a,NONE,p)
+        | s (ConBind (a,SOME b,p)) = ConBind (s a,SOME (s b),p)
+        | s (StructDec (l,p)) = StructDec (map s l,p)
+        | s (StructBind (a,b,p)) = StructBind (s a, s b,p)
+        | s (Structure (l,p)) = Structure (map s l,p)
+        | s t = t
+   in
+      s x
+   end
 
 end
 
