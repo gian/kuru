@@ -5,3 +5,12 @@ all: kil kulex kuruc kuyacc tests
 	make -C kuyacc
 	make -C tests
 
+clean:
+	make -C kupeg clean
+	make -C kulex clean
+	make -C kuruc clean
+	make -C kuyacc clean
+	make -C tests clean
+
+
+

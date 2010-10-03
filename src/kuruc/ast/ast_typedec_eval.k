@@ -16,21 +16,12 @@
 *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *******************************************************************************
 *  This file:
-*    Generate type constraints from pre-scrubbed ASTs. 
+*  Evaluate type bindings, removing them and inserting them into the 
+*  type environment.
 ******************************************************************************)
-structure Constrain =
+
+structure AstTypedecEval =
 struct
-	structure S = Symbol
-	structure T = Type
-	structure E = Env
-	structure P = ParseTree
-	structure A = TypedAST
-
-	type tenv = T.ty S.table ref
-	type venv = E.enventry S.table ref
-
-	fun generateConstraints c = () 
+   fun apply tenv venv p = (tenv,venv,p)
 end
-
-
 

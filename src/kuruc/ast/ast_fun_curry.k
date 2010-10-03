@@ -16,21 +16,12 @@
 *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *******************************************************************************
 *  This file:
-*    Generate type constraints from pre-scrubbed ASTs. 
+*  Replace all curried functions with multiple fn instances, e.g.:
+*  fun f x y = E --> val f = fn x => fn y => E
 ******************************************************************************)
-structure Constrain =
+
+structure AstFunCurry =
 struct
-	structure S = Symbol
-	structure T = Type
-	structure E = Env
-	structure P = ParseTree
-	structure A = TypedAST
-
-	type tenv = T.ty S.table ref
-	type venv = E.enventry S.table ref
-
-	fun generateConstraints c = () 
+   fun apply tenv venv p = (tenv,venv,p)
 end
-
-
 

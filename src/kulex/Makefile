@@ -4,3 +4,6 @@ all: $(BIN)/kulex
 
 $(BIN)/kulex:
 	true
+
+clean:
+	true

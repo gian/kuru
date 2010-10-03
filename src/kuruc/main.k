@@ -23,9 +23,43 @@ structure Main =
 struct
    val args = CommandLine.arguments ()
 
+	fun printUsage () =
+		print ("Usage: kuruc [-vdqh] file1.k ... fileN.k\n" ^
+		       "\tOptions:\n" ^
+				 "\t\t-h\tDisplay this help information and exit.\n" ^
+				 "\t\t-q\tQuiet mode - show only fatal errors.\n" ^
+				 "\t\t-qq\tSilent mode - don't even show errors.\n" ^
+				 "\t\t-v\tVerbose mode.\n" ^
+				 "\t\t-vv\tBe more verbose.\n" ^
+				 "\t\t-d\tEnable debugging output.\n" ^
+				 "\t\t-dd\tEnable noisy debugging mode.\n" ^
+				 "\t\t-V\tOutput version information and exit.\n")
+
+	fun printVersion () =
+		print ("kuruc version " ^ Version.major ^ "." ^ Version.minor ^
+				 " build " ^ Version.build ^ " (" ^ Version.date ^ ") on " ^ 
+				 Version.hostname ^ "\n" ^
+		       "Copyright (C) 2010 Gian Perrone\n" ^ 
+				 "http://www.kuru-lang.org\n")
+
    fun parseArgs [] = []
-	  | parseArgs ("-v"::t) = (KuruParser.debugVerbose := true; 
+	  | parseArgs ("-v"::t) = (Debug.setDebugLevel Debug.verbose;
                               parseArgs t)
+	  | parseArgs ("-vv"::t) = (Debug.setDebugLevel Debug.internal;
+                              parseArgs t)
+	  | parseArgs ("-d"::t) = (Debug.setDebugLevel Debug.debug;
+                              parseArgs t)
+	  | parseArgs ("-dd"::t) = (KuruParser.debugVerbose := true;
+	  									Debug.setDebugLevel Debug.debugmore;
+                              parseArgs t)
+	  | parseArgs ("-q"::t) = (KuruParser.debugVerbose := false;
+	  									Debug.setDebugLevel Debug.error;
+                              parseArgs t)
+	  | parseArgs ("-qq"::t) = (KuruParser.debugVerbose := false;
+	  									Debug.setDebugLevel Debug.silent;
+                              parseArgs t)
+	  | parseArgs ("-V"::t) = (printVersion (); Unix.exit 0w0; raise Fail "")
+	  | parseArgs ("-h"::t) = (printUsage (); Unix.exit 0w0; raise Fail "")
      | parseArgs (h::t) = h :: parseArgs t
   
    fun parseFile filename =
@@ -64,7 +98,8 @@ struct
                                             !linepositions,
                                             KuruParser.error(),
                                             buf)) ^ "\n") else ()
-
+		
+		val astResult = ConvertParseTree.convert [] [] parseResult
    in
       map ParseTree.sanitise parseResult
    end
@@ -74,8 +109,8 @@ struct
    let
       val args' = parseArgs args 
 
-      val _ = if length args' < 1 then 
-            raise Fail "Usage: kuruc [-v] filename.k" else ()
+      val _ = if length args' < 1 then (printUsage (); 
+            raise Fail "Missing filename") else ()
 	
       
       fun parseEach [] = ()

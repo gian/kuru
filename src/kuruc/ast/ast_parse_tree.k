@@ -16,21 +16,11 @@
 *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *******************************************************************************
 *  This file:
-*    Generate type constraints from pre-scrubbed ASTs. 
+*  Do the final conversion from ParseTree to TypedAST.
 ******************************************************************************)
-structure Constrain =
+
+structure AstParseTree =
 struct
-	structure S = Symbol
-	structure T = Type
-	structure E = Env
-	structure P = ParseTree
-	structure A = TypedAST
-
-	type tenv = T.ty S.table ref
-	type venv = E.enventry S.table ref
-
-	fun generateConstraints c = () 
+   fun convert tenv venv p = p 
 end
-
-
 

@@ -1,0 +1,14 @@
+$(SML_LIB)/basis/basis.mlb
+../debug.sml
+../lib/lib.mlb
+../frontend/frontend.mlb
+type.sml
+typed_ast.sml
+ast_datatype_unfold.sml
+ast_infix_apply.sml
+ast_typedec_eval.sml
+typed_ast.sml
+ast_fun_curry.sml
+ast_match_compile.sml
+ast_parse_tree.sml
+convert_parse_tree.sml

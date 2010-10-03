@@ -1,2 +1,6 @@
 $(SML_LIB)/basis/basis.mlb
+../lib/lib.mlb
+../frontend/frontend.mlb
+../ast/ast.mlb
+env.sml
 constrain.sml

@@ -16,21 +16,27 @@
 *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *******************************************************************************
 *  This file:
-*    Generate type constraints from pre-scrubbed ASTs. 
+*    Type environment entries
 ******************************************************************************)
-structure Constrain =
+structure Env =
 struct
-	structure S = Symbol
 	structure T = Type
-	structure E = Env
-	structure P = ParseTree
-	structure A = TypedAST
 
-	type tenv = T.ty S.table ref
-	type venv = E.enventry S.table ref
+	datatype enventry = 
+					  VarEntry of T.ty
+	            | FunEntry of T.ty list * T.ty (* formal parameters * result *)
 
-	fun generateConstraints c = () 
+	fun pp (VarEntry t) = T.prettyPrint t
+	  | pp (FunEntry ([t1],t2)) = T.prettyPrint t1 ^ " -> " ^ T.prettyPrint t2
+	  | pp (FunEntry (t1,t2)) = 
+	  		(String.concatWith " -> " (map T.prettyPrint t1)) ^ 
+				" -> " ^ T.prettyPrint t2
+
+	val prettyPrint = pp
+
+	type env = enventry Symbol.table
+
+	val tenv_base = Symbol.empty : T.ty Symbol.table
+	val venv_base = Symbol.empty : enventry Symbol.table
 end
-
-
 

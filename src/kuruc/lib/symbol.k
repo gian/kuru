@@ -37,9 +37,6 @@ sig
 
   val toString : symbol -> string
   val fromString : string -> symbol
-
-  val asterisk : symbol
-  val equal : symbol
 end
 
 structure Symbol :> SYMBOL =
@@ -82,8 +79,5 @@ struct
   val look = Table.look
   val items = Table.items
   val keys = Table.keys
-
-  val asterisk = fromString "*"
-  val equal = fromString "="
 end
 

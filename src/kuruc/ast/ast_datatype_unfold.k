@@ -16,21 +16,13 @@
 *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *******************************************************************************
 *  This file:
-*    Generate type constraints from pre-scrubbed ASTs. 
+*  Unfold datatype declarations to constructor functions in the current
+*  namespace, e.g.:
+*  datatype foo = A | B --> val A = _constr_foo 0; val B = _constr_foo 1
 ******************************************************************************)
-structure Constrain =
+
+structure AstDatatypeUnfold =
 struct
-	structure S = Symbol
-	structure T = Type
-	structure E = Env
-	structure P = ParseTree
-	structure A = TypedAST
-
-	type tenv = T.ty S.table ref
-	type venv = E.enventry S.table ref
-
-	fun generateConstraints c = () 
+   fun apply tenv venv p = (tenv,venv,p)
 end
-
-
 

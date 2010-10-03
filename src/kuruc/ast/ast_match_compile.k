@@ -16,21 +16,14 @@
 *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *******************************************************************************
 *  This file:
-*    Generate type constraints from pre-scrubbed ASTs. 
+*  Turn functions containing pattern matches into case or let statements
+*  containing a smaller set of pattern constructs, e.g.:
+*  fn (a,b) => E --> fn x => let val a = #1 x; val b = #2 x in E end
+*  fn 0 => E1 | 1 => E2 --> fn y => case y of 0 => E1 | 1 => E2 | _ => MatchExn
 ******************************************************************************)
-structure Constrain =
+
+structure AstMatchCompile =
 struct
-	structure S = Symbol
-	structure T = Type
-	structure E = Env
-	structure P = ParseTree
-	structure A = TypedAST
-
-	type tenv = T.ty S.table ref
-	type venv = E.enventry S.table ref
-
-	fun generateConstraints c = () 
+   fun apply tenv venv p = (tenv,venv,p)
 end
-
-
 
