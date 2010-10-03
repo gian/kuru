@@ -204,13 +204,14 @@ match          <- _ p: pat _"=>"_ e: exp _ "|"_ m: match ->
 pat            <- _ p1: patel _"as"_ p2: pat -> (P.AsPat($p1,$p2,!pos))
                 / _ p1: patel _ i: id _ p2: pat ->
                   (P.InfixPat($p1,$i,$p2,!pos))
-                / i: longid _ p: pat -> (P.ConstrPat ($i,SOME ($p),!pos))
                 / _ p: patel _ ":"_ t: typ -> (P.TyAnnPat ($p,$t,!pos))
                 / _ patel.
 
 patel          <- "_" -> (P.WildcardPat (!pos))
                 / "(" _ p1: pat _ "," _ p2: patlist _ ")" ->
                   (P.TuplePat ($p1 :: $p2,!pos))
+                / "("_ i: longid _ p: pat _")" -> 
+                     (P.ConstrPat ($i,SOME ($p),!pos))
                 / "(" _ p: pat _ ")" -> ($p)
                 / "()" -> (P.UnitPat (!pos))
                 / "[" _ p: patlist _ "]" -> (P.ListPat ($p,!pos))

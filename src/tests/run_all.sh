@@ -27,18 +27,5 @@ do
 	fi
 done
 
-echo "Kuruc tests:"
-for i in *.k
-do
-	printf "%25s: " "$i"
-	../../bin/kuruc $i > $i.kuruout
-	OUT=`md5sum $i.kuruout`
-	EXP=`grep "$i.kuruout" expected.dat`
-	if [ "$OUT" != "$EXP" ]; then
-		echo "	[FAILED]"
-	else echo "	[passed]"
-	fi
-done
-
 
 

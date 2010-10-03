@@ -1,1 +1,0 @@
-val p = let val k = 1 in k + 10 end

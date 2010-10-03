@@ -5,6 +5,10 @@ all: kil kulex kuruc kuyacc tests
 	make -C kuyacc
 	make -C tests
 
+tests: force
+	make -C tests
+	make -C kuruc tests
+
 clean:
 	make -C kupeg clean
 	make -C kulex clean
@@ -12,5 +16,6 @@ clean:
 	make -C kuyacc clean
 	make -C tests clean
 
-
+force:
+	true
 

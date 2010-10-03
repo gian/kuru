@@ -1,0 +1,3 @@
+00f4e93419436301e6c5445a00311351  test-all.k.out
+f733b2ce6154694081365e96be1b56d4  test-ast-datatype-unfold.k.out
+4b90e73569da1a69d5bc8e4e0c7fbbf2  test-ast-fun-curry.k.out

@@ -4,6 +4,9 @@ KUPEG=$(BIN)/kupeg
 
 all: $(BIN)/kuruc
 
+tests: $(BIN)/kuruc
+	make -C tests
+
 $(BIN)/kuruc: lib semant frontend ast debug.sml kuruc.mlb main.sml version.sml
 	$(COMPILER) -output $(BIN)/kuruc kuruc.mlb
 
