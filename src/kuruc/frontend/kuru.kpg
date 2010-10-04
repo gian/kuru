@@ -257,7 +257,11 @@ dec            <- _ "val" _ v: valbind -> (P.ValDec($v,!pos))
                 / _"structure" _ s: strbind -> (P.StructDec ($s,!pos))
                 .
 
-valbind        <- p: pat _"="_ e: exp _ "and" v: valbind ->
+valbind        <- "rec" _ v1: valbind ->
+                  ([P.ValRec ($v1,!pos)])
+                / "rec" _ v: valbind _ ->
+                  ([P.ValRec ($v,!pos)])
+                / p: pat _"="_ e: exp _ "and" v: valbind ->
                   (P.ValBind ($p,$e,!pos) :: $v)
                 / p: pat _"="_ e: exp ->
                   ([P.ValBind ($p,$e,!pos)]).

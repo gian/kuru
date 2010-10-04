@@ -99,14 +99,16 @@ struct
                                             KuruParser.error(),
                                             buf)) ^ "\n") else ()
 		
-		val _ = print ("Pre-Passes: " ^ 
+		val _ = print ("Pre-Passes:\n" ^ 
 								(String.concatWith "\n" (map ParseTree.prettyPrint parseResult)) ^ "\n")
 
 		val (tenv',venv',astResult) = ConvertParseTree.convertPasses 
 													Env.tenv_base Env.venv_base parseResult
 
-		val _ = print ("Post-Passes: " ^ 
+		val _ = print ("Post-Passes:\n" ^ 
 								(String.concatWith "\n" (map ParseTree.prettyPrint astResult)) ^ "\n")
+
+		val _ = print "=============================\n"
 
 		val (tenv'',venv'',astResult') = ConvertParseTree.convert 
 														tenv' venv' astResult
