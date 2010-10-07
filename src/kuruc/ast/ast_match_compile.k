@@ -31,6 +31,10 @@ structure AstMatchCompile =
 struct
    open ParseTree
 
+  val fr = ref 0 (* To generate fresh names *)
+  fun fresh () = (fr := !fr + 1; "_m" ^ Int.toString (!fr))
+
+
    fun apply tenv venv pt =
    let
       fun s (AndAlso (a,b,p)) = AndAlso (s a,s b,p)
@@ -50,7 +54,13 @@ struct
         | s (IfExp (a,b,c,p)) = IfExp (s a, s b, s c, p)
         | s (WhileExp (a,b,p)) = WhileExp (s a, s b,p)
         | s (CaseExp (a,b,p)) = CaseExp (s a, map s b, p)
-        | s (FnExp (l,p)) = FnExp (map s l,p)
+        | s (FnExp (l,p)) = 
+          let
+             val n = Ident (fresh(),p)
+          in
+            FnExp ([Match (IdPat (n,p),
+                     CaseExp (IdPat (n,p), map s l, p), p)],p)
+          end
         | s (HandleExp (e,l,p)) = HandleExp (s e, map s l, p)
         | s (Match (a,b,p)) = Match (s a, s b,p)
         | s (AsPat (a,b,p)) = AsPat (s a, s b,p)
@@ -72,7 +82,9 @@ struct
         | s (DatatypeAssign (a,b,p)) = DatatypeAssign (s a, s b,p)
         | s (DatatypeDec (l,p)) = DatatypeDec (map s l,p)
         | s (FunDec (ll,p)) = FunDec (map (fn l => map s l) ll,p)
-        | s (ValBind (a,b,p)) = ValBind (s a, s b,p)
+        | s (ValBind (a as IdPat (i,_),b,p)) = ValBind (s a, s b,p)
+        | s (ValBind (TyAnnPat (a,b1,p1),b2,p2)) =
+            s (ValBind (a,TyAnn (b2,b1,p1),p2))
         | s (TypeBind (l,a,b,p)) = TypeBind (map s l, s a, s b,p)
         | s (FunMatch (a,l,NONE,c,p)) = FunMatch (s a,map s l, NONE, s c, p)
         | s (FunMatch (a,l,SOME b,c,p)) = 

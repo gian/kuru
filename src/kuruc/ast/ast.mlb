@@ -3,6 +3,7 @@ $(SML_LIB)/basis/basis.mlb
 ../lib/lib.mlb
 ../frontend/frontend.mlb
 type.sml
+../semant/env.sml
 typed_ast.sml
 ast_datatype_unfold.sml
 ast_infix_apply.sml

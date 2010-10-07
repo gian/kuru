@@ -31,26 +31,34 @@ struct
                  | LSTRING of string * pos
                  | LUNIT of pos
 
-   datatype tpat = PCONST of tval * T.ty * pos
+   datatype tpat = PCONST of texp * T.ty * pos
                  | PLIST of tpat vector * T.ty * pos
                  | PTUPLE of tpat vector * T.ty * pos
                  | PCONSTR of S.symbol * tpat option * T.ty * pos
                  | PID of S.symbol * T.ty * pos 
 
-   datatype texp = ELIT of tval * T.ty * pos
+   and      texp = ELIT of tval * T.ty * pos
 	              | EID of S.symbol * T.ty * pos
                  | ELIST of texp vector * T.ty * pos
                  | ETUPLE of texp vector * T.ty * pos
                  | EIF of texp * texp * texp * T.ty * pos
-                 | EFN of tpat * texp * T.ty * pos
-                 | ECASE of texp * (tpat * texp) * T.ty * pos
+                 | EWHILE of texp * texp * T.ty * pos
+                 | EFN of S.symbol * texp * T.ty * pos
+                 | ECASE of texp * (tpat * texp) vector * T.ty * pos
                  | EAPP of texp * texp * T.ty * pos
                  | EEXN of texp * T.ty * pos
                  | ERAISE of texp * pos
                  | EHANDLE of tpat * texp * T.ty * pos
+                 | ESEQ of texp vector * T.ty * pos
+                 | ELET of tast list * texp * T.ty * pos
+                 | EANN of texp * T.ty * pos
                  
-   datatype tast = DVAL of S.symbol * texp * T.ty * pos
-                 | DMUTUAL of tast list * pos
+   and      tast = DVAL of S.symbol * texp * T.ty * pos
+                 | DVALREC of tast * T.ty * pos
+                 | DMUTUAL of tast vector * pos
+                 | DSTRUCTURE of S.symbol * tast vector * pos
+                 | DSTRUCTASSIGN of S.symbol * S.symbol * pos
+                 | DNULL of pos (* For things we've removed *)
 end
 
 

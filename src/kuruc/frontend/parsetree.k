@@ -31,6 +31,7 @@ type pos = int
     | String of string * pos
     | Ident of string * pos
     | LongId of pt * pt * pos
+	 | TyId of pt * pos
     | Var of pt * pos
     | Raise of pt * pos
     | AndAlso of pt * pt * pos

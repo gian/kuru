@@ -52,6 +52,12 @@ struct
 	val tvFresh = ref 0
 	fun fresh () = (tvFresh := !tvFresh +1; 
 						 META (!tvFresh))
+
+   val t_string = NAME (Symbol.symbol "string")
+   val t_int    = NAME (Symbol.symbol "int")
+   val t_real   = NAME (Symbol.symbol "real")
+   val t_char   = NAME (Symbol.symbol "char")
+   val t_unit   = NAME (Symbol.symbol "unit")
 end
 
 

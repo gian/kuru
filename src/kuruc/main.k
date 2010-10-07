@@ -102,17 +102,13 @@ struct
 		val _ = print ("Pre-Passes:\n" ^ 
 								(String.concatWith "\n" (map ParseTree.prettyPrint parseResult)) ^ "\n")
 
-		val (tenv',venv',astResult) = ConvertParseTree.convertPasses 
-													Env.tenv_base Env.venv_base parseResult
+   	val (tenv'',venv'',senv'',astResult) = ConvertParseTree.convert 
+										Symbol.empty Symbol.empty Symbol.empty parseResult
 
-		val _ = print ("Post-Passes:\n" ^ 
-								(String.concatWith "\n" (map ParseTree.prettyPrint astResult)) ^ "\n")
 
-		val _ = print "=============================\n"
 
-		val (tenv'',venv'',astResult') = ConvertParseTree.convert 
-														tenv' venv' astResult
-   in
+
+	   in
       map ParseTree.sanitise parseResult
    end
 

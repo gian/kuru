@@ -49,13 +49,13 @@ struct
             (tenv,venv,p)
                passes
 
-   fun convert tenv venv p =
+   fun convert tenv venv senv p =
       let
          (* Run all the ParseTree -> ParseTree passes *)
          val (tenv',venv',p') = convertPasses tenv venv p
          val _ = D.print D.verbose ("ParseTree -> TypedAST conversion\n")
       in
-         AstParseTree.convert tenv' venv' p'
+         AstParseTree.convert tenv' venv' senv p'
       end
 
 
