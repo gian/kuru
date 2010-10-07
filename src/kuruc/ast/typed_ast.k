@@ -59,6 +59,52 @@ struct
                  | DSTRUCTURE of S.symbol * tast vector * pos
                  | DSTRUCTASSIGN of S.symbol * S.symbol * pos
                  | DNULL of pos (* For things we've removed *)
+
+   val ppty = T.pp
+   fun vtol f = Vector.foldr (fn (a,b) => a::b) [] f
+
+   fun ppv (LINT(i,p)) = Int.toString i
+     | ppv (LREAL(r,p)) = Real.toString r
+     | ppv (LCHAR(c,p)) = "#\"" ^ String.str (c) ^ "\""
+     | ppv (LSTRING(s,p)) = "\"" ^ s ^ "\""
+     | ppv (LUNIT _) = "()"
+
+   fun ppp (PCONST(e,t,p)) = ppe e ^ " : " ^ ppty t
+     | ppp (PLIST(v,ty,p)) = "[" ^ (String.concatWith "," (map ppp (vtol v))) ^ "]"
+     | ppp (PTUPLE(v,ty,p)) = "(" ^ (String.concatWith "," (map ppp (vtol v))) ^ ")"
+     | ppp (PCONSTR(s,NONE,ty,p)) = "???constr???"
+     | ppp (PCONSTR(s,SOME cp,ty,p)) = "???constr???"
+     | ppp (PID(s,t,p)) = S.name s ^ " : " ^ ppty t 
+
+   and ppe (ELIT(tv,ty,p)) =  
+                             ppv tv ^ " : " ^ ppty ty
+     | ppe (EID(s,ty,p)) = S.name s ^ "@" ^ Int.toString p ^ " : " ^ ppty ty
+     | ppe (ELIST(v,ty,p)) = "[" ^ (String.concatWith "," (map ppe (vtol v))) ^ "]"
+     | ppe (ETUPLE(v,ty,p)) = "(" ^ (String.concatWith "," (map ppe (vtol v))) ^ ")"
+     | ppe (EFN(s,e,ty,p)) = "EFN@" ^ Int.toString p ^ "[" ^ S.name s ^ 
+                             " => " ^ ppe e ^ "] : " ^ ppty ty
+     | ppe (ECASE(e1,m,ty,p)) = "ECASE@" ^ Int.toString p ^ " : " ^ ppty ty ^ " [\n" ^
+                                (String.concatWith "\n" (map
+                                                         (fn (p,e) => ppp p ^ " => " ^ ppe e) (vtol m)))
+                                ^ "]\n"
+     | ppe (EAPP(e1,e2,ty,p)) = "EAPP@" ^ Int.toString p ^ 
+                                "[" ^ ppe e1 ^ " (" ^ ppe e2 ^ ")] : " ^ 
+                                ppty ty
+     | ppe _ = "???texp???"
+
+
+   fun prettyPrint [] = ""
+     | prettyPrint ((DNULL _)::t) = prettyPrint t
+     | prettyPrint ((DVAL(s,e,ty,p))::t) = "DVAL@" ^ Int.toString p ^ " " ^
+                                        S.name s ^ " : " ^ ppty ty ^ " = " ^ 
+                                        ppe e ^ "\n" ^ prettyPrint t
+     | prettyPrint ((DVALREC(l,ty,p))::t) = "DVALREC@" ^ Int.toString p ^ " " ^ 
+                                            (prettyPrint [l]) ^"\n"
+                                            ^ prettyPrint t
+     | prettyPrint ((DMUTUAL(v,p))::t) = "DMUTUAL@" ^ Int.toString p ^ " [\n" ^ 
+                                          prettyPrint (vtol v) ^ "]\n" ^ 
+                                          prettyPrint t
+     | prettyPrint (_::t) = "???\n" ^ prettyPrint t
 end
 
 

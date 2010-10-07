@@ -202,7 +202,7 @@ match          <- _ p: pat _"=>"_ e: exp _ "|"_ m: match ->
 % Patterns
 
 pat            <- _ p1: patel _"as"_ p2: pat -> (P.AsPat($p1,$p2,!pos))
-                / _ p1: patel _ i: id _ p2: pat ->
+                / _"("_ p1: patel _ i: id _ p2: pat _")" ->
                   (P.InfixPat($p1,$i,$p2,!pos))
                 / _ p: patel _ ":"_ t: typ -> (P.TyAnnPat ($p,$t,!pos))
                 / _ patel.

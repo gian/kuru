@@ -50,7 +50,8 @@ struct
              (te,ve,A.PLIST (Vector.fromList (
                                 List.map (fn le => (fn (_,_,e) => e) (cpat te ve le)) l),
                              T.UNKNOWN, p))
-        | cpat te ve (ConPat (a,p)) = raise Fail "conPat not implemeneted"
+        | cpat te ve (ConPat (a,p)) =
+            (te,ve,A.PCONST (s te ve a, T.UNKNOWN, p))
         | cpat te ve (ConstrPat (Ident (n,_),NONE,p)) =
           let
              val s' = S.symbol n
@@ -136,7 +137,7 @@ struct
             A.ELIT(A.LSTRING (n,p),T.t_string,p)
         | s te ve (UnitExp p) = A.ELIT(A.LUNIT p, T.t_unit, p)
         | s te ve (Ident (x,p)) = A.EID (Symbol.symbol x,T.UNKNOWN,p)
-        | s te ve _ = raise Fail "expression match failed in ast_parse_tree" 
+        | s te ve pt = raise Fail ("expression match failed in: " ^ pp pt)
 
       fun d te ve se (ValDec (l,p)) =
           let
@@ -178,15 +179,24 @@ struct
           in
              (te',ve',se,A.DNULL p)
           end
-        | d te ve se (DatatypeAssign (a,b,p)) = raise Fail "DatatypeAssign not implemented"
-        | d te ve se (DatatypeDec (l,p)) = raise Fail "DatatypeDec not implemented"
+        | d te ve se (DatatypeAssign (a,b,p)) = 
+               raise Fail "DatatypeAssign not implemented"
+        | d te ve se (DatatypeDec (l,p)) =
+          let
+             val (te',ve',r) =  
+                     List.foldl (fn (bind, (te',ve',r)) => 
+                                 let
+                                    val (te'',ve'',se'',r') = d te' ve' se bind
+                                 in (te'',ve'',r@[r']) end)
+                                    (te,ve,[]) l
+             
+          in (te',ve',se,A.DMUTUAL(Vector.fromList r,p)) end
         | d te ve se (FunDec (ll,p)) = raise IllegalParseTree ("FunDec",p)
         | d te ve se (ValBind (a,b,p)) =
           let
              val (te',ve',A.PID(s',_,_)) = 
                case (cpat te ve a) of (t,v,A.PID x) => (t,v,A.PID x)
-                                                | _ => raise IllegalParseTree
-                                                                  ("ValBind",p)
+                                    | _ => raise IllegalParseTree ("ValBind",p)
              val e = s te' ve' b
           in
              (te',ve',se,A.DVAL (s',e,T.UNKNOWN,p))

@@ -59,7 +59,7 @@ struct
              val n = Ident (fresh(),p)
           in
             FnExp ([Match (IdPat (n,p),
-                     CaseExp (IdPat (n,p), map s l, p), p)],p)
+                     CaseExp (n, map s l, p), p)],p)
           end
         | s (HandleExp (e,l,p)) = HandleExp (s e, map s l, p)
         | s (Match (a,b,p)) = Match (s a, s b,p)
