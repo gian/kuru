@@ -7,7 +7,9 @@ all: $(BIN)/kuruc
 tests: $(BIN)/kuruc
 	make -C tests
 
-$(BIN)/kuruc: lib semant frontend ast debug.sml kuruc.mlb main.sml version.sml
+$(BIN)/kuruc: lib semant frontend ast debug.sml kuruc.mlb main.sml 
+	./version.sh > version.k
+	cp version.k version.sml
 	$(COMPILER) -output $(BIN)/kuruc kuruc.mlb
 
 main.sml: main.k
@@ -15,12 +17,6 @@ main.sml: main.k
 
 debug.sml: debug.k
 	cp debug.k debug.sml
-
-version.sml: version.k
-	cp version.k version.sml
-
-version.k: force
-	./version.sh > version.k
 
 frontend: force
 	make -C frontend
@@ -35,7 +31,7 @@ ast: force
 	make -C ast
 
 clean:
-	rm -f $(BIN)/kuruc main.sml debug.sml version.sml version.k 
+	rm -f $(BIN)/kuruc main.sml debug.sml version.sml 
 	make -C frontend clean
 	make -C lib clean
 	make -C ast clean
