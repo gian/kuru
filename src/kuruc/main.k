@@ -113,7 +113,16 @@ struct
    	val (tenv'',venv'',senv'',astResult) = ConvertParseTree.convert 
 										Symbol.empty Symbol.empty Symbol.empty parseResult
 
+      val _ = print "Untyped AST:\n"
       val _ = print (TypedAST.prettyPrint astResult)
+
+      val (tenv''',venv''',senv''',typedAst) = 
+            Constrain.generateConstraints astResult
+
+
+      val _ = print "\nTyped AST:\n"
+      val _ = print (TypedAST.prettyPrint typedAst) 
+
 
 	   in
       map ParseTree.sanitise parseResult
@@ -134,7 +143,6 @@ struct
              val _ = print ("File " ^ h ^ "\n")
              val p = parseFile h
              val pretty = (String.concatWith "\n" (map ParseTree.prettyPrint p))
-             val _ = print (pretty ^ "\n")
           in
             parseEach t
           end

@@ -122,7 +122,7 @@ struct
           let
              val ve' = Symbol.enter (ve,S.symbol n,Env.VarEntry (T.UNKNOWN))
           in
-            A.EFN (S.symbol n, s te ve' e, T.FN(T.UNKNOWN,T.UNKNOWN), p)
+            A.EFN (S.symbol n, s te ve' e, T.UNKNOWN, p)
           end
         | s te ve (FnExp (_,p)) = raise IllegalParseTree ("FnExp",p)
         | s te ve (HandleExp (e,l,p)) = raise Fail "handle not implemented" 
