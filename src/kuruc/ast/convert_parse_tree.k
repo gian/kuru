@@ -43,13 +43,13 @@ struct
          f tenv venv p
       end
 
-   fun convertPasses tenv venv p =
+   fun convertPasses tenv (venv : Env.enventry S.table) p =
       List.foldl 
          (fn (f,(tenv',venv',p')) => convertPass f tenv' venv' p')
             (tenv,venv,p)
                passes
 
-   fun convert tenv venv senv p =
+   fun convert tenv (venv : Env.enventry S.table) senv p =
       let
          (* Run all the ParseTree -> ParseTree passes *)
          val (tenv',venv',p') = convertPasses tenv venv p

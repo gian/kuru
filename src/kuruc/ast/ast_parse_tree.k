@@ -40,9 +40,13 @@ struct
         | t te ve _ = raise Fail "Unknown type not handled"
 
       and cpat te ve (AsPat (a,b,p)) = raise Fail "aspat not implemented"
-        | cpat te ve (InfixPat (a,b,c,pos)) =  
-            raise Fail "InfixPat not implemented"
-        | cpat te ve (TuplePat (l,p)) =
+        | cpat te ve (InfixPat (a,Ident (n,p),c,pos)) =  
+        		 (te,ve,A.PINFIX ((fn (_,_,e) => e) (cpat te ve a), 
+				 						S.symbol n, 
+										(fn (_,_,e) => e) (cpat te ve c), 
+										T.UNKNOWN, 
+										p))
+		  | cpat te ve (TuplePat (l,p)) =
              (te,ve,A.PTUPLE (Vector.fromList (
                                 List.map (fn le => (fn (_,_,e) => e) (cpat te ve le)) l),
                              T.UNKNOWN, p))
@@ -83,7 +87,7 @@ struct
         | cpat te ve (IdPat (_,p)) = raise IllegalParseTree ("IdPat",p)
         | cpat te ve _ = raise IllegalParseTree ("cpat Match",0)
 
-      and s (te : T.ty S.table) (ve : Env.enventry S.table) ((TupleExp (l,p)) : pt) : A.texp = 
+      and s te ve ((TupleExp (l,p)) : pt) : A.texp = 
             A.ETUPLE (Vector.fromList (map (s te ve) l),T.UNKNOWN,p) : A.texp
         | s te ve (AndAlso (a,b,p)) = raise IllegalParseTree ("andalso",p)
         | s te ve (OrElse (a,b,p)) = raise IllegalParseTree ("orelse",p)
@@ -99,12 +103,12 @@ struct
             A.ESEQ (Vector.fromList (map (s te ve) l),T.UNKNOWN,p) : A.texp
         | s te ve (ListExp (l,p)) = 
             A.ELIST (Vector.fromList (map (s te ve) l),T.UNKNOWN,p) : A.texp
-      (*  | s te ve (LetExp (l,e,p)) = 
+        | s te ve (LetExp (l,e,p)) = 
           let
-             val (te',ve',dl) = convert te ve l
+             val (te',ve',se',dl) = convert te ve Symbol.empty l
           in
-             A.ELET (dl,s te' ve' e,T.UNKNOWN,p)
-          end *)
+             A.ELET (Vector.fromList dl,s te' ve' e,T.UNKNOWN,p)
+          end
         | s te ve (IfExp (a,b,c,p)) = 
              A.EIF (s te ve a, s te ve b, s te ve c, T.UNKNOWN, p)
         | s te ve (WhileExp (a,b,p)) = 
@@ -252,6 +256,7 @@ struct
                      in
                         (te'',ve'',se'',k@[k'])
                      end) (tenv,venv,senv,[]) pt
-   end
+   end handle IllegalParseTree (m,p) => raise Fail ("Illegal Parse Tree: " ^ m ^
+																	 " near " ^ Int.toString p)
 end
 

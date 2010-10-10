@@ -91,6 +91,7 @@ type pos = int
      | pp (String (s,_)) = "String [\"" ^ s ^ "\"]"
      | pp (Ident (s,_)) = "Ident [" ^ s ^ "]"
      | pp (Var (p,_)) = "Var [" ^ pp p ^ "]"
+     | pp (TyId (p,_)) = "TyId [" ^ pp p ^ "]"
      | pp (Raise (p,_)) = "Raise [" ^ pp p ^ "]"
      | pp (LongId (l1,l2,_)) = "LongId [" ^ pp l1 ^ "." ^ pp l2 ^ "]"
      | pp (AndAlso (p1,p2,_)) = "AndAlso [" ^ pp p1 ^ ", " ^ pp p2 ^ "]"

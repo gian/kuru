@@ -36,6 +36,7 @@ struct
                  | PTUPLE of tpat vector * T.ty * pos
                  | PCONSTR of S.symbol * tpat option * T.ty * pos
                  | PID of S.symbol * T.ty * pos 
+                 | PINFIX of tpat * S.symbol * tpat * T.ty * pos
 
    and      texp = ELIT of tval * T.ty * pos
 	              | EID of S.symbol * T.ty * pos
@@ -50,7 +51,7 @@ struct
                  | ERAISE of texp * pos
                  | EHANDLE of tpat * texp * T.ty * pos
                  | ESEQ of texp vector * T.ty * pos
-                 | ELET of tast list * texp * T.ty * pos
+                 | ELET of tast vector * texp * T.ty * pos
                  | EANN of texp * T.ty * pos
                  
    and      tast = DVAL of S.symbol * texp * T.ty * pos
@@ -62,6 +63,114 @@ struct
 
    val ppty = T.pp
    fun vtol f = Vector.foldr (fn (a,b) => a::b) [] f
+
+   fun subst_ty_pat tn th (PCONST (e,t,p)) = 
+            PCONST (subst_ty_exp tn th e, T.substinty tn th t, p)
+     | subst_ty_pat tn th (PLIST (v,t,p)) =
+            PLIST (Vector.map (subst_ty_pat tn th) v,
+                   T.substinty tn th t, p)
+     | subst_ty_pat tn th (PTUPLE (v,t,p)) =
+            PTUPLE (Vector.map (subst_ty_pat tn th) v,
+                   T.substinty tn th t, p)
+     | subst_ty_pat tn th (PCONSTR (s,b,t,p)) = 
+            PCONSTR (s, 
+                     (case b of NONE => NONE
+                              | SOME b' => SOME (subst_ty_pat tn th b')),
+                     T.substinty tn th t,
+                     p)
+     | subst_ty_pat tn th (PID (s,t,p)) =
+            PID (s, T.substinty tn th t, p)
+     | subst_ty_pat tn th (PINFIX (a,opr,b,t,p)) =
+            PINFIX (subst_ty_pat tn th a,
+                    opr,
+                    subst_ty_pat tn th b,
+                    T.substinty tn th t,
+                    p)
+
+   and subst_ty_exp tn th (ELIT (tv,t,p)) =
+            ELIT (tv, T.substinty tn th t, p)
+     | subst_ty_exp tn th (EID (s,t,p)) =
+            EID (s, T.substinty tn th t, p)
+     | subst_ty_exp tn th (ELIST (v,t,p)) =
+            ELIST (Vector.map (subst_ty_exp tn th) v,
+                   T.substinty tn th t, p)
+     | subst_ty_exp tn th (ETUPLE (v,t,p)) =
+            ETUPLE (Vector.map (subst_ty_exp tn th) v,
+                   T.substinty tn th t, p)
+     | subst_ty_exp tn th (EIF (e1,e2,e3,t,p)) =
+            EIF    (subst_ty_exp tn th e1,
+                    subst_ty_exp tn th e2,
+                    subst_ty_exp tn th e3,
+                    T.substinty tn th t,
+                    p)
+     | subst_ty_exp tn th (EWHILE (e1,e2,t,p)) =
+            EWHILE (subst_ty_exp tn th e1,
+                    subst_ty_exp tn th e2,
+                    T.substinty tn th t,
+                    p)
+     | subst_ty_exp tn th (EFN (s,e,t,p)) =
+            EFN (s,
+                 subst_ty_exp tn th e,
+                 T.substinty tn th t,
+                 p)
+     | subst_ty_exp tn th (ECASE (e,m,t,p)) =
+            ECASE (subst_ty_exp tn th e,
+                   Vector.map
+                         (fn (a,b) => 
+                             (subst_ty_pat tn th a,
+                              subst_ty_exp tn th b))
+                         m
+                   ,
+                   T.substinty tn th t,
+                   p)
+     | subst_ty_exp tn th (EAPP (e1,e2,t,p)) =
+            EAPP (subst_ty_exp tn th e1,
+                  subst_ty_exp tn th e2,
+                  T.substinty tn th t,
+                  p)
+     | subst_ty_exp tn th (EEXN (e,t,p)) =
+            EEXN (subst_ty_exp tn th e,
+                  T.substinty tn th t,
+                  p)
+     | subst_ty_exp tn th (ERAISE (e,p)) =
+            ERAISE (subst_ty_exp tn th e, p)
+     | subst_ty_exp tn th (EHANDLE (pat,e,t,p)) =
+            EHANDLE (subst_ty_pat tn th pat,
+                     subst_ty_exp tn th e,
+                     T.substinty tn th t,
+                     p)
+     | subst_ty_exp tn th (ESEQ (v,t,p)) =
+            ESEQ (
+               Vector.map (subst_ty_exp tn th) v,
+               T.substinty tn th t,
+               p)
+     | subst_ty_exp tn th (ELET (l,e,t,p)) =
+            ELET (
+        Vector.map (subst_ty_dec tn th) l,
+                    subst_ty_exp tn th e,
+                    T.substinty tn th t,
+                    p)
+     | subst_ty_exp tn th (EANN (e,t,p)) =
+            EANN (subst_ty_exp tn th e,
+                  T.substinty tn th t,
+                  p)
+   and subst_ty_dec tn th (DVAL (s,e,t,p)) =
+            DVAL (s,
+                  subst_ty_exp tn th e,
+                  T.substinty tn th t,
+                  p)
+     | subst_ty_dec tn th (DVALREC (d,t,p)) =
+            DVALREC (subst_ty_dec tn th d,
+                     T.substinty tn th t,
+                     p)
+     | subst_ty_dec tn th (DMUTUAL (v,p)) =
+            DMUTUAL (Vector.map (subst_ty_dec tn th) v, p)
+     | subst_ty_dec tn th (DSTRUCTURE (s,v,p)) =
+            DSTRUCTURE (s,
+                        Vector.map (subst_ty_dec tn th) v,
+                        p)
+     | subst_ty_dec tn th d = d 
+
 
    fun ppv (LINT(i,p)) = Int.toString i
      | ppv (LREAL(r,p)) = Real.toString r
@@ -75,33 +184,37 @@ struct
      | ppp (PCONSTR(s,NONE,ty,p)) = "???constr???"
      | ppp (PCONSTR(s,SOME cp,ty,p)) = "???constr???"
      | ppp (PID(s,t,p)) = S.name s ^ " : " ^ ppty t 
+     | ppp (PINFIX (a,b,c,t,p)) = "(" ^ ppp a ^ S.name b ^ ppp c ^ ")"
 
    and ppe (ELIT(tv,ty,p)) =  
                              ppv tv ^ " : " ^ ppty ty
-     | ppe (EID(s,ty,p)) = S.name s ^ "@" ^ Int.toString p ^ " : " ^ ppty ty
+     | ppe (EID(s,ty,p)) = S.name s ^ " : " ^ ppty ty
      | ppe (ELIST(v,ty,p)) = "[" ^ (String.concatWith "," (map ppe (vtol v))) ^ "]"
      | ppe (ETUPLE(v,ty,p)) = "(" ^ (String.concatWith "," (map ppe (vtol v))) ^ ")"
-     | ppe (EFN(s,e,ty,p)) = "EFN@" ^ Int.toString p ^ "[" ^ S.name s ^ 
-                             " => " ^ ppe e ^ "] : " ^ ppty ty
-     | ppe (ECASE(e1,m,ty,p)) = "ECASE@" ^ Int.toString p ^ " : " ^ ppty ty ^ " [\n" ^
+     | ppe (EFN(s,e,ty,p)) = "fn " ^ S.name s ^ 
+                             " => (" ^ ppe e ^ ") : " ^ ppty ty
+     | ppe (ECASE(e1,m,ty,p)) = "case " ^ ppe e1 ^ " of [\n" ^
                                 (String.concatWith "\n" (map
                                                          (fn (p,e) => ppp p ^ " => " ^ ppe e) (vtol m)))
-                                ^ "]\n"
-     | ppe (EAPP(e1,e2,ty,p)) = "EAPP@" ^ Int.toString p ^ 
+                                ^ "] : " ^ ppty ty ^ "\n"
+     | ppe (EAPP(e1,e2,ty,p)) = "APP" ^ 
                                 "[" ^ ppe e1 ^ " (" ^ ppe e2 ^ ")] : " ^ 
                                 ppty ty
+     | ppe (ELET (v,e,t,p)) = "let\n   " ^ prettyPrint (vtol v) ^ 
+                              "in\n   " ^ ppe e ^ 
+                              "\nend\n"
      | ppe _ = "???texp???"
 
 
-   fun prettyPrint [] = ""
+   and prettyPrint [] = ""
      | prettyPrint ((DNULL _)::t) = prettyPrint t
-     | prettyPrint ((DVAL(s,e,ty,p))::t) = "DVAL@" ^ Int.toString p ^ " " ^
+     | prettyPrint ((DVAL(s,e,ty,p))::t) = "val " ^
                                         S.name s ^ " : " ^ ppty ty ^ " = " ^ 
                                         ppe e ^ "\n" ^ prettyPrint t
-     | prettyPrint ((DVALREC(l,ty,p))::t) = "DVALREC@" ^ Int.toString p ^ " " ^ 
+     | prettyPrint ((DVALREC(l,ty,p))::t) = "rec " ^ 
                                             (prettyPrint [l]) ^"\n"
                                             ^ prettyPrint t
-     | prettyPrint ((DMUTUAL(v,p))::t) = "DMUTUAL@" ^ Int.toString p ^ " [\n" ^ 
+     | prettyPrint ((DMUTUAL(v,p))::t) = "DMUTUAL [\n" ^ 
                                           prettyPrint (vtol v) ^ "]\n" ^ 
                                           prettyPrint t
      | prettyPrint (_::t) = "???\n" ^ prettyPrint t

@@ -37,6 +37,8 @@ sig
 
   val toString : symbol -> string
   val fromString : string -> symbol
+
+  val prettyPrint : ('a -> string) -> 'a table -> string
 end
 
 structure Symbol :> SYMBOL =
@@ -79,5 +81,16 @@ struct
   val look = Table.look
   val items = Table.items
   val keys = Table.keys
+
+  fun prettyPrint f t =
+     let
+        fun p [] = []
+          | p ((k,v)::t) = 
+               ((case (unhash k) of NONE => "???"
+                                | SOME s => name s) ^ ": " ^
+                                f v) :: p t
+     in
+        String.concatWith "\n" (p (keys t))
+     end
 end
 

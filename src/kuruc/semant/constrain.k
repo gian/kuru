@@ -34,7 +34,7 @@ struct
 
    (* TODO: Add position to constraint so we can report a position when
       type unification fails *)
-   fun add_constr (k,v) = constraints := (k,v) :: (!constraints)
+   fun add_constr (k,v) = constraints := (!constraints) @ [(k,v)]
    fun vtol f = Vector.foldr (fn (a,b) => a::b) [] f
 
    fun prettyPrint c =
@@ -157,6 +157,40 @@ struct
        in
           (te,ve,se,rt,A.ECASE (e1',v',rt,p))
        end
+     | constr_exp te ve se (A.ESEQ (v,t,p)) =
+       let
+          val rt = T.fresh ()
+
+          val v' = Vector.map (fn el => 
+                           let
+                              val (te',ve',se',t',el') = constr_exp te ve se el
+                           in
+                              (t',el')
+                           end) v
+
+          val (lt,le) = Vector.sub (v', Vector.length v' - 1)
+          val _ = add_constr (rt,lt)
+          val v'' = Vector.map (fn (a,b) => b) v'
+       in
+          (te,ve,se,rt,A.ESEQ (v'',rt,p))
+       end
+     | constr_exp te ve se (A.ELET (v,e,t,p)) =
+       let
+          val (te',ve',se',v') = Vector.foldl (fn (d,(te',ve',se',d')) => 
+                                 let
+                                    val (te'',ve'',se'',_,d'') = 
+                                          constr_dec te' ve' se' false d
+                                 in
+                                    (te'',ve'',se'',d'@[d''])
+                                 end) (te,ve,se,[]) v
+
+          val (_,_,_,t',e') = constr_exp te' ve' se' e
+
+          val _ = case t of T.UNKNOWN => ()
+                          | t'' => add_constr (t',t'')
+       in  
+          (te,ve,se,t',A.ELET(Vector.fromList v',e',t',p))
+       end
      | constr_exp _ _ _ e = raise Fail ("Unhandled constr_exp:" ^ A.ppe e)
 
    (* The flag in the 4th argument indicates whether to bind the name
@@ -168,16 +202,16 @@ struct
           val _ = add_constr (tx,t')
           val _ = case t of T.UNKNOWN => ()
                           | t'' => add_constr (tx,t'')
-          val _ = S.enter (ve,s,E.VarEntry tx)
+          val ve'' = S.enter (ve,s,E.VarEntry tx)
        in
-          (te,ve',se,tx,A.DVAL (s,e',tx,p))
+          (te,ve'',se,tx,A.DVAL (s,e',tx,p))
        end
      | constr_dec te ve se true (A.DVAL (s,e,t,p)) =
        let
           val tx = T.fresh ()
-          val _ = S.enter (ve,s,E.VarEntry tx)
+          val ve'' = S.enter (ve,s,E.VarEntry tx)
           
-          val (te',ve',se',t',e') = constr_exp te ve se e
+          val (te',ve',se',t',e') = constr_exp te ve'' se e
          
          val _ = add_constr (tx,t')
          
@@ -185,30 +219,40 @@ struct
                           | t'' => add_constr (tx,t'')
 
        in
-          (te,ve',se,tx,A.DVAL (s,e',tx,p))
+          (te,ve'',se,tx,A.DVAL (s,e',tx,p))
        end
      | constr_dec te ve se b (A.DVALREC (a,t,p)) =
          constr_dec te ve se true a
      | constr_dec _ _ _ _ _ = raise Fail "Unhandled constr_dec"
 
-	fun generateConstraints' c =
+	fun generateConstraints' te ve se c =
       List.foldl (fn (d,(te',ve',se',d')) =>
                       let
+                         val _ = Debug.print Debug.debug ("Constraining: " ^
+                                    A.prettyPrint [d] ^ "\n")
                          val (te'',ve'',se'',_,d'') = constr_dec te' ve' se' false d
+                         val _ = Debug.print Debug.debug "Value Environment:\n"
+                         val _ = Debug.print Debug.debug (S.prettyPrint 
+                                    (fn (E.VarEntry t) => T.prettyPrint t) ve'')
+                         val _ = Debug.print Debug.debug "\n"
                       in
                          (te'',ve'',se'',d'@[d''])
                       end)
-                        (E.tenv_base,E.venv_base,S.empty,[]) c
+                        (te,ve,se,[]) c
 
-   fun generateConstraints c =
+   fun generateConstraints tenv venv senv c =
       let
-         val k = generateConstraints' c
+         val (te,ve,se,k) = generateConstraints' tenv venv senv c
          val _ = Debug.print Debug.internal "Constraint Set:\n================\n"
-         val _ = Debug.print Debug.internal (prettyPrint (!constraints))
+         val _ = Debug.print Debug.internal ("\n" ^prettyPrint (!constraints) ^"\n")
          val _ = Debug.print Debug.internal "\n================\n"
+         val cn = !constraints
+         val _ = constraints := []
       in
-         k
-      end
+         (te,ve,se,cn,k)
+      end handle IdUnknown (s,p) => raise Fail ("Unknown identifier: " ^
+                                                s ^ " near " ^
+                                                Int.toString p)
 end
 
 

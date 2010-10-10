@@ -32,6 +32,42 @@ struct
 					| POLY of int
 					| UNKNOWN
 
+   fun substinty (NAME s) th (NAME t) = if s = t then th else NAME t
+     | substinty tn th (FN (t1,t2)) = FN (substinty tn th t1,
+                                          substinty tn th t2)
+     | substinty tn th (TUPLE l) = TUPLE (map (substinty tn th) l)
+     | substinty tn th (CONSTR (l,t)) = CONSTR (map (substinty tn th) l,
+                                                substinty tn th t)
+     | substinty (META i) th (META j) = if i = j then th else META j
+     | substinty (VAR s) th (VAR t) = if s = t then th else VAR t
+     | substinty (POLY i) th (POLY j) = if i = j then th else POLY j
+     | substinty tn th t = t
+
+   fun equal (NAME s) (NAME t) = s = t
+     | equal (FN (t1,t2)) (FN (t3,t4)) = equal t1 t3 andalso equal t2 t4
+     | equal (TUPLE l1) (TUPLE l2) = 
+         List.all (fn (a,b) => equal a b) (ListPair.zip (l1,l2))
+     | equal (CONSTR (l1,t1)) (CONSTR (l2,t2)) = 
+         (List.all (fn (a,b) => equal a b) (ListPair.zip (l1,l2))) andalso
+         equal t1 t2
+     | equal (META i) (META j) = i = j
+     | equal (VAR s) (VAR t) = s = t
+     | equal (POLY i) (POLY j) = i = j
+     | equal _ _ = false
+
+	fun occursin (META tyX) tyT =
+		let
+			fun oc tyT = (case tyT of
+				 FN(tyT1,tyT2) => oc tyT1 orelse oc tyT2
+			  | TUPLE tyT1 => List.all oc tyT1
+			  | CONSTR (tyT1,t2) => List.all oc tyT1 orelse oc t2
+			  | META x => (x = tyX)
+			  | _ => false)
+     in
+        oc tyT
+     end
+	  | occursin _ _ = raise Fail "Non-UVar argument to occursin"
+
 	fun pp (NAME s) = Symbol.name s
 	  | pp (FN (t1,t2)) = pp t1 ^ " -> " ^ pp t2
 	  | pp (TUPLE l) = String.concatWith " * " (map pp l)

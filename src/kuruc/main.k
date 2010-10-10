@@ -103,7 +103,7 @@ struct
 								(String.concatWith "\n" (map ParseTree.prettyPrint parseResult)) ^ "\n")
 
       val (tenv',venv',astResult1) = ConvertParseTree.convertPasses
-										Symbol.empty Symbol.empty parseResult
+										Env.tenv_base Env.venv_base parseResult
 
 	
 		val _ = print ("Post-Passes:\n" ^ 
@@ -111,18 +111,22 @@ struct
 
 
    	val (tenv'',venv'',senv'',astResult) = ConvertParseTree.convert 
-										Symbol.empty Symbol.empty Symbol.empty parseResult
+										tenv' venv' Symbol.empty parseResult
 
       val _ = print "Untyped AST:\n"
       val _ = print (TypedAST.prettyPrint astResult)
 
-      val (tenv''',venv''',senv''',typedAst) = 
-            Constrain.generateConstraints astResult
+      val (tenv''',venv''',senv''',constraints,typedAst) = 
+            Constrain.generateConstraints tenv'' Env.venv_base senv'' astResult
 
 
       val _ = print "\nTyped AST:\n"
       val _ = print (TypedAST.prettyPrint typedAst) 
 
+      val constraints' = Unify.unify constraints
+      val _ = print "\nUnified Constraints:\n"
+      val _ = print (Constrain.prettyPrint constraints')
+      val _ = print "\n"
 
 	   in
       map ParseTree.sanitise parseResult
