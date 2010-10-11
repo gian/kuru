@@ -54,6 +54,8 @@ struct
         | s (IfExp (a,b,c,p)) = IfExp (s a, s b, s c, p)
         | s (WhileExp (a,b,p)) = WhileExp (s a, s b,p)
         | s (CaseExp (a,b,p)) = CaseExp (s a, map s b, p)
+        | s (FnExp ([Match (IdPat (Ident (n,p1),p2),e1,p3)],p4)) = 
+            FnExp ([Match (IdPat (Ident (n,p1),p2),s e1,p3)],p4)
         | s (FnExp (l,p)) = 
           let
              val n = Ident (fresh(),p)

@@ -118,16 +118,6 @@ struct
 
       val (tenv''',venv''',senv''',constraints,typedAst) = 
             Constrain.generateConstraints tenv'' Env.venv_base senv'' astResult
-
-
-      val _ = print "\nTyped AST:\n"
-      val _ = print (TypedAST.prettyPrint typedAst) 
-
-      val constraints' = Unify.unify constraints
-      val _ = print "\nUnified Constraints:\n"
-      val _ = print (Constrain.prettyPrint constraints')
-      val _ = print "\n"
-
 	   in
       map ParseTree.sanitise parseResult
    end

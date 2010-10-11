@@ -19,8 +19,8 @@ ast/ast_fun_curry.sml
 ast/ast_match_compile.sml
 ast/ast_parse_tree.sml
 ast/convert_parse_tree.sml
-semant/constrain.sml
 semant/unify.sml
+semant/constrain.sml
 version.sml
 main.sml
 

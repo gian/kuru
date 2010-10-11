@@ -171,6 +171,8 @@ struct
                         p)
      | subst_ty_dec tn th d = d 
 
+   fun subst_ty tn th l = 
+      map (subst_ty_dec tn th) l
 
    fun ppv (LINT(i,p)) = Int.toString i
      | ppv (LREAL(r,p)) = Real.toString r

@@ -33,7 +33,7 @@ structure Set = struct
    fun diff(sh, sl)  = List.filter (fn e => not (member(e, sl))) sh
    fun insert(e,sl) = if member(e,sl) then sl else e::sl
    fun union(sh, sl) = List.foldl insert sl sh
-      fun subset(sh, sl) = List.all (fn e => member(e, sl)) sh
+   fun subset(sh, sl) = List.all (fn e => member(e, sl)) sh
    fun size sh = List.length sh
    fun fromList sh = List.foldl insert empty sh
    fun toList sh = sh

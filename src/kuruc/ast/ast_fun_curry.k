@@ -45,9 +45,18 @@ struct
         | tuplefm _ = raise Fail "AstFunCurry.tuplefm called with non-FunMatch" 
 
       fun casefml [] = raise Fail "AstFunCurry.casefml matches = []"
+        | casefml [FunMatch (n,[IdPat (Ident (sy,p),p')],_,e,pos)] = 
+        let
+           
+        in
+           ValRec ([ValBind (IdPat (n,pos), 
+              FnExp ([Match(IdPat (Ident (sy,p),pos),e,pos)],pos),pos)],pos)
+        end
         | casefml l = 
          let
-            val (FunMatch (n,pat,_,_,pos)) = hd l
+            val (FunMatch (n,pat,_,_,pos)) = 
+               case hd l of FunMatch c => FunMatch c
+                          | _ => raise Fail "Non-funmatch"
             
             fun mkfn p e pos = 
                   FnExp ([Match (IdPat ((Ident (p,pos),pos)),e,pos)],pos)

@@ -79,10 +79,9 @@ struct
         | cpat te ve (IdPat (Ident (n,_),p)) =
           let
              val s' = S.symbol n
-             val t = T.fresh()
-             val ve' = S.enter (ve,s',Env.VarEntry t)
+             val ve' = S.enter (ve,s',Env.VarEntry T.UNKNOWN) 
           in
-             (te,ve',A.PID (s',t,p))
+             (te,ve',A.PID (s',T.UNKNOWN,p))
           end
         | cpat te ve (IdPat (_,p)) = raise IllegalParseTree ("IdPat",p)
         | cpat te ve _ = raise IllegalParseTree ("cpat Match",0)

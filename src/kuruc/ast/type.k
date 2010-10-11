@@ -32,6 +32,16 @@ struct
 					| POLY of int
 					| UNKNOWN
 
+   fun freevars (NAME s) = Set.empty
+     | freevars (FN (t1,t2)) = Set.union (freevars t1, freevars t2)
+     | freevars (TUPLE l) = 
+         List.foldl (fn (a,b) => Set.union(b,freevars a)) Set.empty l
+     | freevars (CONSTR (l,t)) = 
+         Set.union (List.foldl (fn (a,b) => Set.union(b,freevars a)) Set.empty l,
+                    freevars t)
+     | freevars (META i) = Set.singleton (META i)
+     | freevars _ = []
+
    fun substinty (NAME s) th (NAME t) = if s = t then th else NAME t
      | substinty tn th (FN (t1,t2)) = FN (substinty tn th t1,
                                           substinty tn th t2)
@@ -41,7 +51,7 @@ struct
      | substinty (META i) th (META j) = if i = j then th else META j
      | substinty (VAR s) th (VAR t) = if s = t then th else VAR t
      | substinty (POLY i) th (POLY j) = if i = j then th else POLY j
-     | substinty tn th t = t
+     | substinty tn th t = t 
 
    fun equal (NAME s) (NAME t) = s = t
      | equal (FN (t1,t2)) (FN (t3,t4)) = equal t1 t3 andalso equal t2 t4
@@ -69,6 +79,7 @@ struct
 	  | occursin _ _ = raise Fail "Non-UVar argument to occursin"
 
 	fun pp (NAME s) = Symbol.name s
+     | pp (FN (f as FN _,t2)) = "(" ^ pp f ^ ") -> " ^ pp t2
 	  | pp (FN (t1,t2)) = pp t1 ^ " -> " ^ pp t2
 	  | pp (TUPLE l) = String.concatWith " * " (map pp l)
 	  | pp (CONSTR ([],t2)) = pp t2
@@ -79,7 +90,7 @@ struct
 	  | pp (QUANT (t1,t2,t3)) = pp t1 ^ " " ^ pp t2 ^ " => " ^ pp t3
 	  | pp (VAR s) = Symbol.name s
 	  | pp (META i) = "?X" ^ Int.toString i 
-	  | pp (POLY i) = "'" ^ (String.str (Char.chr (i - (Char.ord #"a"))))
+	  | pp (POLY i) = "'" ^ (String.str (Char.chr (i + (Char.ord #"a"))))
      | pp (UNKNOWN) = "???"
 
 	val prettyPrint = pp
