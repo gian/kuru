@@ -193,7 +193,8 @@ struct
      | ppe (EID(s,ty,p)) = S.name s ^ " : " ^ ppty ty
      | ppe (ELIST(v,ty,p)) = "[" ^ (String.concatWith "," (map ppe (vtol v))) ^ "]"
      | ppe (ETUPLE(v,ty,p)) = "(" ^ (String.concatWith "," (map ppe (vtol v))) ^ ")"
-     | ppe (EFN(s,e,ty,p)) = "fn " ^ S.name s ^ 
+     | ppe (EFN(s,e,ty,p)) = "fn " ^ S.name s ^ " : " ^ ((fn (T.FN(x,y)) => ppty x 
+	  																		  | lk => ppty lk) ty)^ 
                              " => (" ^ ppe e ^ ") : " ^ ppty ty
      | ppe (ECASE(e1,m,ty,p)) = "case " ^ ppe e1 ^ " of [\n" ^
                                 (String.concatWith "\n" (map
