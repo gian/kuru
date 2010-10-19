@@ -180,29 +180,27 @@ struct
      | ppv (LSTRING(s,p)) = "\"" ^ s ^ "\""
      | ppv (LUNIT _) = "()"
 
-   fun ppp (PCONST(e,t,p)) = ppe e ^ " : " ^ ppty t
+   fun ppp (PCONST(e,t,p)) = ppe e
      | ppp (PLIST(v,ty,p)) = "[" ^ (String.concatWith "," (map ppp (vtol v))) ^ "]"
      | ppp (PTUPLE(v,ty,p)) = "(" ^ (String.concatWith "," (map ppp (vtol v))) ^ ")"
      | ppp (PCONSTR(s,NONE,ty,p)) = "???constr???"
      | ppp (PCONSTR(s,SOME cp,ty,p)) = "???constr???"
-     | ppp (PID(s,t,p)) = S.name s ^ " : " ^ ppty t 
+     | ppp (PID(s,t,p)) = S.name s  
      | ppp (PINFIX (a,b,c,t,p)) = "(" ^ ppp a ^ S.name b ^ ppp c ^ ")"
 
    and ppe (ELIT(tv,ty,p)) =  
-                             ppv tv ^ " : " ^ ppty ty
-     | ppe (EID(s,ty,p)) = S.name s ^ " : " ^ ppty ty
+                             ppv tv 
+     | ppe (EID(s,ty,p)) = S.name s 
      | ppe (ELIST(v,ty,p)) = "[" ^ (String.concatWith "," (map ppe (vtol v))) ^ "]"
      | ppe (ETUPLE(v,ty,p)) = "(" ^ (String.concatWith "," (map ppe (vtol v))) ^ ")"
-     | ppe (EFN(s,e,ty,p)) = "fn " ^ S.name s ^ " : " ^ ((fn (T.FN(x,y)) => ppty x 
-	  																		  | lk => ppty lk) ty)^ 
-                             " => (" ^ ppe e ^ ") : " ^ ppty ty
+     | ppe (EFN(s,e,ty,p)) = "fn " ^ S.name s ^  
+                             " => (" ^ ppe e ^ ")"
      | ppe (ECASE(e1,m,ty,p)) = "case " ^ ppe e1 ^ " of [\n" ^
                                 (String.concatWith "\n" (map
                                                          (fn (p,e) => ppp p ^ " => " ^ ppe e) (vtol m)))
-                                ^ "] : " ^ ppty ty ^ "\n"
-     | ppe (EAPP(e1,e2,ty,p)) = "APP" ^ 
-                                "[" ^ ppe e1 ^ " (" ^ ppe e2 ^ ")] : " ^ 
-                                ppty ty
+                                ^ "]\n"
+     | ppe (EAPP(e1,e2,ty,p)) =  
+                                ppe e1 ^ " (" ^ ppe e2 ^ ")" 
      | ppe (ELET (v,e,t,p)) = "let\n   " ^ prettyPrint (vtol v) ^ 
                               "in\n   " ^ ppe e ^ 
                               "\nend\n"

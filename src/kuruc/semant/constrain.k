@@ -72,7 +72,7 @@ struct
                let
                   val (te',ve',se',cs',t',e') = constr_pat te ve se e
                in
-                  (te',ve',se',cs@cs',ts@[t'],es@[e'])
+                  (te',ve',se',cs'@cs,ts@[t'],es@[e'])
                end) (te,ve,se,[],[],[]) (vtol v)
 
           val v'' = Vector.fromList v'
@@ -108,11 +108,6 @@ struct
        end
      | constr_exp te ve se (A.EFN (s,e,t,p)) =
        let
-          (* We've transformed all functions to factor out patterns.
-             As a result, any type information attached
-             to the EFN will be an FN type ta -> tb, which we add
-             as a constraint on our inferred type, t' -> tx *)
-          
           val t' = T.fresh ()
           val ve' = S.enter (ve,s,E.VarEntry t')
           
@@ -124,8 +119,8 @@ struct
        end
      | constr_exp te ve se (A.EAPP (e1,e2,t,p)) =
        let
-          val (te',ve',se',cs1,te2,e2') = constr_exp te ve se e2
-          val (te',ve',se',cs2,te1,e1') = constr_exp te ve se e1
+          val (te',ve',se',cs1,te1,e1') = constr_exp te ve se e1
+          val (te',ve',se',cs2,te2,e2') = constr_exp te ve se e2
           
           (*val te1' = inst (T.fresh ()) te1 *)
 			 val te1' = te1
@@ -149,7 +144,8 @@ struct
                         let
                            val (te',ve',se',pcs',pt,p') = constr_pat te ve se p
                            val (_,_,_,ecs',et,e') = constr_exp te' ve' se' e
-                 				val _ = kcs := (!kcs) @ pcs' @ ecs'
+                 				val _ = kcs := [(et,rt)] @
+															[(t1,pt)] @ pcs' @ ecs' @ (!kcs)
 					  			in
                            (p',e')
                         end) (vtol v)
@@ -202,14 +198,14 @@ struct
        end
      | constr_dec te ve se true (A.DVAL (s,e,t,p)) =
        let
-          val tx = T.fresh () 
+          val tx = T.fresh()
           val ve'' = S.enter (ve,s,E.VarEntry tx)
           
           val (te',ve',se',cs',t',e') = constr_exp te ve'' se e
 
-          val cs = [(tx,t')]
+			 val cs'' = cs' @ [(tx,t')]
        in
-          (te,ve',se,cs'@cs,t',A.DVAL (s,e',t',p))
+          (te,ve',se,cs'',t',A.DVAL (s,e',t',p))
        end
      | constr_dec te ve se b (A.DVALREC (a,t,p)) =
          constr_dec te ve se true a
@@ -242,10 +238,10 @@ struct
                                     (fn (E.VarEntry t) => T.prettyPrint t) ve'')
                          val _ = Debug.print Debug.debug "\n"
 
-                         val cs''' = Unify.unify (cs'')
+                         val cs''' = Unify.unify (cs' @ cs'')
 
 						      val _ = Debug.print Debug.internal 
-                                 "Constraint Set:\n================\n"
+                                 "Constraint Set ununified:\n================\n"
                          val _ = Debug.print Debug.internal 
                                  ("\n" ^prettyPrint (cs'') ^"\n")
                          val _ = Debug.print Debug.internal 
@@ -253,7 +249,7 @@ struct
 
 
                          val _ = Debug.print Debug.internal 
-                                 "Constraint Set:\n================\n"
+                                 "Constraint Set unified:\n================\n"
                          val _ = Debug.print Debug.internal 
                                  ("\n" ^prettyPrint (cs''') ^"\n")
                          val _ = Debug.print Debug.internal 
@@ -263,8 +259,7 @@ struct
                                          substinenv cstr ve) ve'' (!constraints)
 								*)
                       in
-                         (te'',ve'',se'',cs'''@cs',
-								 	Unify.apply (cs''') (d'@[d'']))
+                         (te'',ve'',se'',cs''',(d'@[d'']))
                       end)
                         (te,ve,se,[],[]) c
 

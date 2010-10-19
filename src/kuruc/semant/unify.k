@@ -49,16 +49,17 @@ struct
       end
 
    fun unify' [] = []
-     | unify' ((t1,T.META x) :: rest) = 
-         if T.equal t1 (T.META x) then unify rest
-         else if T.occursin (T.META x) t1 then
-                  raise (Fail "Circular constraints")
-         else (unify (substinconstr (T.META x) t1 rest)) @ [(T.META x, t1)]
      | unify' ((T.META x,t2) :: rest) = 
          if T.equal t2 (T.META x) then unify rest
          else if T.occursin (T.META x) t2 then
                   raise (Fail "Circular constraints")
          else (unify (substinconstr (T.META x) t2 rest)) @ [(T.META x, t2)]
+     | unify' ((t1,T.META x) :: rest) = 
+         if T.equal t1 (T.META x) then unify rest
+         else if T.occursin (T.META x) t1 then
+                  raise (Fail "Circular constraints")
+         else (unify (substinconstr (T.META x) t1 rest)) @ [(T.META x, t1)]
+
      | unify' ((T.NAME s,T.NAME t) :: rest) =
          if s = t then unify rest
          else raise (Fail ("Type error: " ^ S.name s ^ " != " ^ S.name t))

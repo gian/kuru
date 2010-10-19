@@ -1,0 +1,20 @@
+Koffers is the automatic dependency resolution and installation tool, responsible for pulling library dependencies from repositories.
+
+Usage:
+
+Find a package to install:
+
+	koffers search <pattern>
+
+Install a package, optionally specifying a version:
+
+	koffers install <package> [<version>]
+
+Uninstall a package:
+	koffers remove <package> [<version>]
+
+List dependencies for a given package:
+	koffers depends <package> [<version>]
+
+List installed packages:
+	koffers list

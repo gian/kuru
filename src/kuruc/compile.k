@@ -88,6 +88,64 @@ struct
          val (te'',ve'',se'',cs,fl''') = 
                    Constrain.generateConstraints te' ve' se' fl''
 
+         val cs' = Unify.unify cs
+         val _ = Debug.print Debug.internal ("Unified Constraints:\n")
+         val _ = Debug.print Debug.internal (Unify.ppc cs' ^ "\n")
+
+         val d = Unify.apply cs' fl'''
+
+         val _ = Debug.print Debug.internal ("Typed program:\n")
+         val _ = Debug.print Debug.internal (TypedAST.prettyPrint d ^ "\n")
+
+
+         (* Test program *)
+         val fix = Symbol.symbol "fix"
+         val f = Symbol.symbol "f"
+         val n = Symbol.symbol "n"
+
+         val term = TypedAST.DVALREC (
+                       TypedAST.DVAL (
+                          fix,
+                          TypedAST.EFN (f,
+                             TypedAST.EFN (n,
+                                TypedAST.EAPP (
+                                      TypedAST.EAPP (
+                                         TypedAST.EID(f,Type.UNKNOWN,0),
+                                         TypedAST.EAPP(
+                                            TypedAST.EID(fix,Type.UNKNOWN,0),
+                                            TypedAST.EID(f,Type.UNKNOWN,0),
+                                            Type.UNKNOWN,
+                                            0),
+                                         Type.UNKNOWN,
+                                         0
+                                         ),
+                                      TypedAST.EID(n,Type.UNKNOWN,0),
+                                      Type.UNKNOWN,
+                                      0
+                                ),
+                             Type.UNKNOWN,
+                             0),
+                          Type.UNKNOWN,
+                          0),
+                       Type.UNKNOWN,
+                       0
+                       ),
+                       Type.UNKNOWN,
+                       0
+                    )
+
+         val (te'',ve'',se'',cs,term') = 
+                   Constrain.generateConstraints Env.tenv_base Env.venv_base S.empty  [term]
+
+         val cs' = Unify.unify cs
+         val _ = Debug.print Debug.internal ("Term Unified Constraints:\n")
+         val _ = Debug.print Debug.internal (Unify.ppc cs' ^ "\n")
+
+         val d = Unify.apply cs' term' 
+
+         val _ = Debug.print Debug.internal ("Typed Sample program:\n")
+         val _ = Debug.print Debug.internal (TypedAST.prettyPrint d ^ "\n")
+
          (* Stage 4 - Optimisation *)
 
          (* Stage 5 - Typed Intermediate Representation *)
