@@ -67,6 +67,8 @@ struct
          unify ((t1,t3) :: (t2,t4) :: rest)
      | unify' ((T.TUPLE l1,T.TUPLE l2) :: rest) =
          unify ((ListPair.zip (l1,l2)) @ rest)
+     | unify' ((T.CONSTR (l1,lt),T.CONSTR (r1,rt)) :: rest) =
+	  		unify ((ListPair.zip (l1,r1)) @ [(lt,rt)] @ rest)
      | unify' ((t1,t2) :: rest) = 
          raise Fail ("Type error: " ^ T.prettyPrint t1 ^ " != " ^ 
                                       T.prettyPrint t2)

@@ -65,6 +65,23 @@ struct
       in
          (te,ve',se,[],t,A.PID(s,t,p))
       end
+     | constr_pat te ve se (A.PLIST (v,t,p)) =
+       let
+          val tx = T.fresh ()
+          val (te',ve',se',cs',t',v') = List.foldl 
+             (fn (e,(te,ve,se,cs,ts,es)) => 
+               let
+                  val (te',ve',se',cs',t',e') = constr_pat te ve se e
+                  val cs'' = cs @ cs' @ [(t',ts)]
+               in
+                  (te',ve',se',cs@cs',t',es@[e'])
+               end) (te,ve,se,[],tx,[]) (vtol v)
+
+          val v'' = Vector.fromList v'
+          val t'' = T.CONSTR ([t'],T.t_list)
+       in
+          (te',ve',se',cs',t'',A.PLIST(v'',t'',p))
+       end
      | constr_pat te ve se (A.PTUPLE (v,t,p)) =
        let
           val (te',ve',se',cs',t',v') = List.foldl 
@@ -80,7 +97,18 @@ struct
        in
           (te',ve',se',cs',t'',A.PTUPLE(v'',t'',p))
        end
-
+     | constr_pat te ve se (A.PINFIX (l,s,r,t,p)) =
+       let
+          val _ = if s = Symbol.symbol "::" then () else
+                     raise Fail ("Unknown infix pattern: " ^ S.name s)
+          val (te',ve',se',cs,lt,l') = constr_pat te ve se l
+          val (te'',ve'',se'',cs',rt,r') = constr_pat te ve' se r
+          val tx = T.fresh ()
+          val t' = T.CONSTR ([tx],T.t_list)
+          val cs'' = cs @ cs' @ [(tx,lt),(rt,t')]
+       in
+          (te,ve'',se,cs'',t',A.PINFIX (l',s,r',t',p))
+       end
      | constr_pat _ _ _ _ = raise Fail "constr_pat not implemented"
 
    and constr_exp te ve se (A.ELIT(tv,_,p)) = 
@@ -95,6 +123,28 @@ struct
                                          | SOME (E.VarEntry k) => k
        in
           (te,ve,se,[],t',A.EID (s,t',p))
+       end
+     | constr_exp te ve se (A.ELIST (v,t,p)) =
+       let
+          val v' = map (constr_exp te ve se) (vtol v)
+
+          val v'' = Vector.fromList (map (fn (_,_,_,_,_,e) => e) v')
+          val tt = if length v' > 0 then (fn (_,_,_,_,t,_) => t) (hd v')
+                     else T.fresh () 
+          val t = T.CONSTR ([tt], T.t_list)
+
+          val tc = List.all (fn (_,_,_,_,t',_) => T.equal tt t') v'
+
+          val _ = if not tc then 
+               raise Fail ("List elements disagree on type: [\n   " ^
+                           (String.concatWith "\n   " (map (fn (_,_,_,_,t,_) =>
+                                                      T.prettyPrint t) v'))
+                           ^ "\n]")
+                     else ()
+
+			 val cs' = List.concat (map (fn (_,_,_,c,_,_) => c) v')
+       in
+          (te,ve,se,cs',t,A.ELIST(v'',t,p))
        end
      | constr_exp te ve se (A.ETUPLE (v,t,p)) =
        let
@@ -236,12 +286,16 @@ struct
                                     (fn (E.VarEntry t) => T.prettyPrint t) ve'')
                          val _ = Debug.print Debug.debug "\n"
 
-                         val cs''' = Unify.unify (cs' @ cs'')
+                         (*val cs''' = List.rev (Unify.generalise (List.rev cs''))*)
+
+                         val cs''' = cs''
+
+                         val cs'''' = Unify.unify (cs' @ cs''')
 
 						      val _ = Debug.print Debug.internal 
                                  "Constraint Set ununified:\n================\n"
                          val _ = Debug.print Debug.internal 
-                                 ("\n" ^prettyPrint (cs'') ^"\n")
+                                 ("\n" ^prettyPrint (cs''') ^"\n")
                          val _ = Debug.print Debug.internal 
                                  "\n================\n"
 
@@ -249,15 +303,15 @@ struct
                          val _ = Debug.print Debug.internal 
                                  "Constraint Set unified:\n================\n"
                          val _ = Debug.print Debug.internal 
-                                 ("\n" ^prettyPrint (cs''') ^"\n")
+                                 ("\n" ^prettyPrint (cs'''') ^"\n")
                          val _ = Debug.print Debug.internal 
                                  "\n================\n"
 
-                         (*val ve''' = List.foldl (fn (cstr,ve) => 
-                                         substinenv cstr ve) ve'' (!constraints)
-								*)
+
+                         val ve''' = List.foldl (fn (cstr,ve) => 
+                                         substinenv cstr ve) ve'' cs''''
                       in
-                         (te'',ve'',se'',cs''',(d'@[d'']))
+                         (te'',ve''',se'',cs'''',Unify.apply cs'''' (d'@[d'']))
                       end)
                         (te,ve,se,[],[]) c
 

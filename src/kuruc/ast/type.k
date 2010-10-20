@@ -105,6 +105,8 @@ struct
    val t_real   = NAME (Symbol.symbol "real")
    val t_char   = NAME (Symbol.symbol "char")
    val t_unit   = NAME (Symbol.symbol "unit")
+
+   val t_list   = NAME (Symbol.symbol "list")
 end
 
 
