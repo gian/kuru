@@ -13,7 +13,7 @@ src/
    kil/ - Crude bootstrap interpreter for Kuru written in SML
    kuruc/ - Kuru compiler, written in Kuru
    kupeg/ - KuPEG parser generator, written in Kuru.
-	tests/ - Automated test programs
+   tests/ - Automated test programs
 doc/ - Main documentation tree
    examples/ - Example programs
 
