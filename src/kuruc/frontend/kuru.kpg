@@ -50,6 +50,7 @@ structure P = ParseTree
 %nonterm longid of P.pt
 %nonterm exp of P.pt
 %nonterm expel of P.pt
+%nonterm expapp of P.pt list
 %nonterm explist of P.pt list
 %nonterm expseq of P.pt list
 %nonterm match of P.pt list
@@ -149,10 +150,9 @@ exp            <- _ "raise" _ e: exp -> (P.Raise ($e,!pos))
                   (P.OrElse($e1,$e2,!pos))
                 / _ e: expel _ "handle" _ m: match ->
                   (P.HandleExp($e,$m,!pos))
+                / _ e1: expapp -> (P.AppList ($e1,!pos))
                 / _ e1: expel _ i: id _ e2: exp ->
                   (P.Infix($e1,$i,$e2,!pos))
-                / _ e1: expel _ e2: exp -> 
-                  (P.App($e1,$e2,!pos))
                 / _ e: expel _ ":" _ t: typ ->
                   (P.TyAnn ($e,$t,!pos))
                 / _ e1: expel _ "=" _ e2: exp ->
@@ -185,6 +185,9 @@ expel          <- "op" _ l: longid -> (P.OpExp ($l,!pos))
                 / "fn"_ m: match -> (P.FnExp($m,!pos))
                 / longid 
                 .
+
+expapp         <- e1: expel _ e2: expapp -> ($e1 :: $e2)
+                / e1: expel -> ([$e1]).
 
 explist        <- _ e1: exp _","_ e2: explist -> 
                   ($e1 :: $e2)

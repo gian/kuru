@@ -101,9 +101,11 @@ struct
          (* Test program *)
          val fix = Symbol.symbol "fix"
          val f = Symbol.symbol "f"
+         val f1 = Symbol.symbol "f1"
          val n = Symbol.symbol "n"
+         val n1 = Symbol.symbol "n1"
 
-         val term = TypedAST.DVALREC (
+(*         val term = TypedAST.DVALREC (
                        TypedAST.DVAL (
                           fix,
                           TypedAST.EFN (f,
@@ -134,6 +136,55 @@ struct
                        0
                     )
 
+         val term = TypedAST.DVALREC (
+                       TypedAST.DVAL (
+                          fix,
+                          TypedAST.EFN (f1,
+                             TypedAST.EFN (n1,
+
+									     TypedAST.ECASE (
+										  	TypedAST.ETUPLE (
+									Vector.fromList [TypedAST.EID (f1,Type.UNKNOWN,0),
+												  TypedAST.EID (n1,Type.UNKNOWN,0)],
+												Type.UNKNOWN,0),
+								   Vector.fromList [
+											(
+										  TypedAST.PTUPLE (
+                                    Vector.fromList
+                                    [TypedAST.PID (f,Type.UNKNOWN,0),
+										  							TypedAST.PID (n,Type.UNKNOWN,0)],
+																 Type.UNKNOWN,
+																 0),
+                                TypedAST.EAPP (
+                                      TypedAST.EAPP (
+                                         TypedAST.EID(f,Type.UNKNOWN,0),
+                                         TypedAST.EAPP(
+                                            TypedAST.EID(fix,Type.UNKNOWN,0),
+                                            TypedAST.EID(f,Type.UNKNOWN,0),
+                                            Type.UNKNOWN,
+                                            0),
+                                         Type.UNKNOWN,
+                                         0
+                                         ),
+                                      TypedAST.EID(n,Type.UNKNOWN,0),
+                                      Type.UNKNOWN,
+                                      0
+                                ))
+										  ], 
+										  Type.UNKNOWN,
+										  0
+										 ),
+                             Type.UNKNOWN,
+                             0),
+                          Type.UNKNOWN,
+                          0),
+                       Type.UNKNOWN,
+                       0
+                       ),
+                       Type.UNKNOWN,
+                       0
+                    )
+
          val (te'',ve'',se'',cs,term') = 
                    Constrain.generateConstraints Env.tenv_base Env.venv_base S.empty  [term]
 
@@ -144,7 +195,7 @@ struct
          val d = Unify.apply cs' term' 
 
          val _ = Debug.print Debug.internal ("Typed Sample program:\n")
-         val _ = Debug.print Debug.internal (TypedAST.prettyPrint d ^ "\n")
+         val _ = Debug.print Debug.internal (TypedAST.prettyPrint d ^ "\n")*)
 
          (* Stage 4 - Optimisation *)
 

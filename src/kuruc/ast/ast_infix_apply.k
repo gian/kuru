@@ -42,6 +42,7 @@ struct
         | s (Seq (a,b,p)) = Seq (s a, s b,p)
         | s (OpExp (a,p)) = OpExp (s a,p)
         | s (App (a,b,p)) = App (s a, s b,p)
+        | s (AppList (l,p)) = AppList (map s l,p)
         | s (TyAnn (a,b,p)) = TyAnn (s a, s b,p)
         | s (TupleExp (l,p)) = TupleExp (map s l,p)
         | s (SeqExp (l,p)) = SeqExp (map s l,p)

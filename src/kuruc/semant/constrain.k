@@ -72,7 +72,7 @@ struct
                let
                   val (te',ve',se',cs',t',e') = constr_pat te ve se e
                in
-                  (te',ve',se',cs'@cs,ts@[t'],es@[e'])
+                  (te',ve',se',cs@cs',ts@[t'],es@[e'])
                end) (te,ve,se,[],[],[]) (vtol v)
 
           val v'' = Vector.fromList v'
@@ -144,8 +144,13 @@ struct
                         let
                            val (te',ve',se',pcs',pt,p') = constr_pat te ve se p
                            val (_,_,_,ecs',et,e') = constr_exp te' ve' se' e
-                 				val _ = kcs := [(et,rt)] @
-															[(t1,pt)] @ pcs' @ ecs' @ (!kcs)
+                 				val _ = kcs := (!kcs) @ [(rt,et)] @
+															[(pt,t1)] @ pcs' @ ecs'
+
+									val _ = Debug.print Debug.debug (
+												"case constraint: " ^ T.prettyPrint t1 ^ " = " ^
+												T.prettyPrint pt ^ "\n"
+											  )
 					  			in
                            (p',e')
                         end) (vtol v)
@@ -173,14 +178,7 @@ struct
        end
      | constr_exp te ve se (A.ELET (v,e,t,p)) =
        let
-          val (te',ve',se',cs,v') = Vector.foldl (fn (d,(te',ve',se',cs',d')) => 
-                                 let
-                                    val (te'',ve'',se'',cs'',_,d'') = 
-                                          constr_dec te' ve' se' false d
-                                 in
-                                    (te'',ve'',se'',cs'@cs'',d'@[d''])
-                                 end) (te,ve,se,[],[]) v
-
+          val (te',ve',se',cs,v') = generateConstraints' te ve se (vtol v) 
           val (_,_,_,cs',t',e') = constr_exp te' ve' se' e
        in  
           (te,ve,se,cs@cs',t',A.ELET(Vector.fromList v',e',t',p))
@@ -211,7 +209,7 @@ struct
          constr_dec te ve se true a
      | constr_dec _ _ _ _ _ = raise Fail "Unhandled constr_dec"
 
-   fun substinenv (tn,tr) ve =
+   and substinenv (tn,tr) ve =
       let
 			val vkeys = S.keys ve 
 		
@@ -226,7 +224,7 @@ struct
 				) ve vkeys
 		end
 
-	fun generateConstraints' te ve se c =
+	and generateConstraints' te ve se c =
       List.foldl (fn (d,(te',ve',se',cs',d')) =>
                       let
                          val _ = Debug.print Debug.debug ("Constraining: " ^

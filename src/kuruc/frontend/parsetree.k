@@ -40,6 +40,7 @@ type pos = int
     | Infix of pt * pt * pt * pos
     | OpExp of pt * pos
     | App of pt * pt * pos
+    | AppList of pt list * pos
     | TyAnn of pt * pt * pos
     | TupleExp of pt list * pos
     | UnitExp of pos
@@ -100,6 +101,7 @@ type pos = int
      | pp (Infix (a,b,c,_)) = "Infix [" ^ pp a ^ " " ^ pp b ^ " " ^ pp c ^ "]"
      | pp (OpExp (p,_)) = "Op [" ^ pp p ^ "]"
      | pp (App (p1,p2,_)) = "App [" ^ pp p1 ^ ", " ^ pp p2 ^ "]"
+     | pp (AppList (l,_)) = "AppList [" ^ (String.concatWith ", " (map pp l)) ^ "]"
      | pp (TyAnn (p1,p2,_)) = "TyAnn [" ^ pp p1 ^ " : " ^ pp p2 ^ "]"
      | pp (TupleExp (l,p)) = "Tuple [" ^ (String.concatWith ", " 
                                              (map pp l)) ^ "]"

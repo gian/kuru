@@ -37,6 +37,7 @@ struct
         | s te ve (Seq (a,b,p)) = Seq (s te ve a, s te ve b,p)
         | s te ve (OpExp (a,p)) = OpExp (s te ve a,p)
         | s te ve (App (a,b,p)) = App (s te ve a, s te ve b,p)
+        | s te ve (AppList (l,p)) = AppList (map (s te ve) l,p)
         | s te ve (TyAnn (a,b,p)) = TyAnn (s te ve a, s te ve b,p)
         | s te ve (TupleExp (l,p)) = TupleExp (map (s te ve) l,p)
         | s te ve (SeqExp (l,p)) = SeqExp (map (s te ve) l,p)
