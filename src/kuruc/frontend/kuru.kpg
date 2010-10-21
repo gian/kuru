@@ -148,13 +148,13 @@ exp            <- _ "raise" _ e: exp -> (P.Raise ($e,!pos))
                   (P.AndAlso($e1,$e2,!pos))
                 / _ e1: expel _ "orelse" _ e2: exp ->
                   (P.OrElse($e1,$e2,!pos))
+                / _ e: expel _ ":" _ t: typ ->
+                  (P.TyAnn ($e,$t,!pos))
                 / _ e: expel _ "handle" _ m: match ->
                   (P.HandleExp($e,$m,!pos))
                 / _ e1: expapp -> (P.AppList ($e1,!pos))
                 / _ e1: expel _ i: id _ e2: exp ->
                   (P.Infix($e1,$i,$e2,!pos))
-                / _ e: expel _ ":" _ t: typ ->
-                  (P.TyAnn ($e,$t,!pos))
                 / _ e1: expel _ "=" _ e2: exp ->
                   (P.Infix($e1,P.Ident ("=",!pos),$e2,!pos))
                 / _ e: expel _ -> ($e).
@@ -277,9 +277,10 @@ tyvars         <- _"("_ l: tyvarlist _ ")" -> ($l)
                 / -> ([]).
 
 typebind       <- _ tv: tyvars _ i: id _"="_ t: typ _ "and" 
-                     l: typebind -> (P.TypeBind($tv,$i,$t,!pos) :: $l)
+                     l: typebind -> (P.TypeBind($tv,
+                                     P.TyName ($i,!pos),$t,!pos) :: $l)
                 / _ tv: tyvars _ i: id _"="_ t: typ ->
-                     ([P.TypeBind($tv,$i,$t,!pos)]).
+                     ([P.TypeBind($tv,P.TyName ($i,!pos),$t,!pos)]).
 
 funbind        <- _ f: funmatch _ "and" _ l: funbind ->
                  ($f :: $l)

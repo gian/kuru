@@ -36,15 +36,28 @@ struct
       String.concatWith "\n" (map (fn (a,b) => T.prettyPrint a ^ "\t\t:\t" ^
                                                T.prettyPrint b) c)
 
-   (*fun inst tyS (T.POLY i) =
-      (constraints := (map (fn (l,r) => 
-         (T.substinty (T.POLY i) tyS l,
-          T.substinty (T.POLY i) tyS r)) (!constraints));
-          tyS)
-     | inst tyS (T.FN (a,b)) = T.FN (inst tyS a, inst tyS b)
-     | inst tyS (T.TUPLE l) = T.TUPLE (map (inst tyS) l)
-     | inst tyS (T.CONSTR (l,t)) = T.CONSTR (map (inst tyS) l, inst tyS t)
-     | inst tyS t = t*)
+   fun inst l =
+      let
+         val instMap = ref S.empty : T.ty S.table ref
+
+         fun inst' (T.POLY i) = 
+               (case S.look (!instMap,S.symbol (Int.toString i)) of
+                  SOME t => t
+                | NONE => 
+                  let
+                     val tx = T.fresh ()
+                     val _ = instMap := S.enter 
+                                          (!instMap,S.symbol (Int.toString i),tx)
+                  in
+                     tx
+                  end)
+           | inst' (T.FN (a,b)) = T.FN (inst' a, inst' b)
+           | inst' (T.TUPLE l) = T.TUPLE (map inst' l)
+           | inst' (T.CONSTR (l,t)) = T.CONSTR (map inst' l, inst' t)
+           | inst' t = t
+      in
+         inst' l
+      end
 
    fun tval_ty (A.LINT _) = T.t_int
      | tval_ty (A.LSTRING _) = T.t_string
@@ -172,9 +185,8 @@ struct
           val (te',ve',se',cs1,te1,e1') = constr_exp te ve se e1
           val (te',ve',se',cs2,te2,e2') = constr_exp te ve se e2
           
-          (*val te1' = inst (T.fresh ()) te1 *)
-			 val te1' = te1
-
+          val te1' = inst te1 
+          
           val tx = T.fresh ()
           
           val cs' = [(te1',T.FN(te2,tx))]
@@ -233,6 +245,13 @@ struct
        in  
           (te,ve,se,cs@cs',t',A.ELET(Vector.fromList v',e',t',p))
        end
+     | constr_exp te ve se (A.EANN (e,t,p)) =
+       let
+          val (te',ve',se',cs,t',e') = constr_exp te ve se e
+          val cs' = cs @ [(t',t)]
+       in
+          (te,ve,se,cs',t',e)
+       end
      | constr_exp _ _ _ e = raise Fail ("Unhandled constr_exp:" ^ A.ppe e)
 
    (* The flag in the 4th argument indicates whether to bind the name
@@ -257,6 +276,7 @@ struct
        end
      | constr_dec te ve se b (A.DVALREC (a,t,p)) =
          constr_dec te ve se true a
+     | constr_dec te ve se _ (A.DNULL p) = (te,ve,se,[],T.UNKNOWN,A.DNULL p)
      | constr_dec _ _ _ _ _ = raise Fail "Unhandled constr_dec"
 
    and substinenv (tn,tr) ve =
@@ -286,16 +306,14 @@ struct
                                     (fn (E.VarEntry t) => T.prettyPrint t) ve'')
                          val _ = Debug.print Debug.debug "\n"
 
-                         (*val cs''' = List.rev (Unify.generalise (List.rev cs''))*)
+                         val cs'''' = Unify.unify (cs' @ cs'')
 
-                         val cs''' = cs''
-
-                         val cs'''' = Unify.unify (cs' @ cs''')
+                         val d''' = Unify.apply cs'''' [d'']
 
 						      val _ = Debug.print Debug.internal 
                                  "Constraint Set ununified:\n================\n"
                          val _ = Debug.print Debug.internal 
-                                 ("\n" ^prettyPrint (cs''') ^"\n")
+                                 ("\n" ^prettyPrint (cs'') ^"\n")
                          val _ = Debug.print Debug.internal 
                                  "\n================\n"
 
@@ -307,11 +325,30 @@ struct
                          val _ = Debug.print Debug.internal 
                                  "\n================\n"
 
+                         val d'''' = Unify.apply cs'''' (d'@d''')
+
+                         val (gty,csg) = List.foldl 
+                                          (fn (l,(d,cs)) => 
+                                             let
+                                                val (d',cs') = 
+                                                   Unify.generalise cs
+                                                      (A.getType l)
+                                                val d'' = 
+                                                   A.setType l d'
+                                             in
+                                                (d@[d''],cs')
+                                             end) ([],cs'''') d''''
+
+                         val _ = Debug.print 
+                                    Debug.debug ("csg: " ^ Unify.ppc csg ^ "\n")
+                         val _ = Debug.print
+                                    Debug.debug ("gty: " ^ A.prettyPrint gty ^ 
+                                                   "\n")
 
                          val ve''' = List.foldl (fn (cstr,ve) => 
-                                         substinenv cstr ve) ve'' cs''''
+                                         substinenv cstr ve) ve'' csg 
                       in
-                         (te'',ve''',se'',cs'''',Unify.apply cs'''' (d'@[d'']))
+                         (te'',ve''',se'',csg,gty)
                       end)
                         (te,ve,se,[],[]) c
 

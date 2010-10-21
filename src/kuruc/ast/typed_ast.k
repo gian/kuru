@@ -64,6 +64,16 @@ struct
    val ppty = T.pp
    fun vtol f = Vector.foldr (fn (a,b) => a::b) [] f
 
+	fun getType (DVAL (_,_,t,_)) = t
+	  | getType (DVALREC (_,t,_)) = t
+	  | getType (DNULL _) = T.UNKNOWN
+	  | getType _ = raise Fail "Can't getType for non DVAL or DVALREC"
+
+	fun setType (DVAL (a,b,_,c)) t = DVAL (a,b,t,c)
+	  | setType (DVALREC (a,_,b)) t = DVALREC (a,t,b)
+	  | setType (DNULL p) t = DNULL p
+	  | setType x t = x
+
    fun subst_ty_pat tn th (PCONST (e,t,p)) = 
             PCONST (subst_ty_exp tn th e, T.substinty tn th t, p)
      | subst_ty_pat tn th (PLIST (v,t,p)) =

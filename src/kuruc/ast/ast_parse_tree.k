@@ -37,7 +37,8 @@ struct
         | t te ve (TyPair (a,b,p)) = raise Fail "TyPair not implemented"
         | t te ve (TyCon (a,b,p)) = T.CONSTR ([t te ve a], t te ve b)
         | t te ve (TyName (Ident (a,_),p)) = T.NAME (S.symbol a) 
-        | t te ve _ = raise Fail "Unknown type not handled"
+        | t te ve n = raise Fail ("Unknown type not handled: " ^ 
+                                    ParseTree.prettyPrint n)
 
       and cpat te ve (AsPat (a,b,p)) = raise Fail "aspat not implemented"
         | cpat te ve (InfixPat (a,Ident (n,p),c,pos)) =  

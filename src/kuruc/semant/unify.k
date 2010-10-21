@@ -48,6 +48,15 @@ struct
          c'
       end
 
+   fun substinconstr_rhs tn th l = 
+      let
+         val c' = map (fn (a,b) => (a,
+                                    T.substinty tn th b)) l
+      in
+         c'
+      end
+
+
    fun unify' [] = []
      | unify' ((T.META x,t2) :: rest) = 
          if T.equal t2 (T.META x) then unify rest
@@ -85,31 +94,31 @@ struct
    fun apply [] d = d
      | apply ((l,r)::t) d = apply t (A.subst_ty l r d)
 
-   fun generalise [] = []
-     | generalise l = 
-       let
-          val pv = ref 0
+   fun generalise cs t =
+      let
+         val pv = ref 0
+         val st = ref S.empty : T.ty S.table ref
+         val csr = ref cs
 
-          val bound = Set.fold (fn ((l,r),a) => 
-                                     Set.union (T.freevars l,a)) (Set.empty) l
-          val rvars = Set.fold (fn ((l,r),a) =>
-                                     Set.union (T.freevars r,a)) (Set.empty) l
+         fun g (T.META i) = 
+               (case S.look (!st,S.symbol (Int.toString i)) of 
+                  SOME t' => t'
+                | NONE => 
+                  let
+                     val p = T.POLY (!pv)
+                     val _ = pv := !pv + 1
+                     val _ = st := S.enter (!st,S.symbol (Int.toString i),
+                                            p)
+                     val _ = csr := substinconstr_rhs (T.META i) p (!csr)
+                  in
+                     p
+                  end)
+           | g (T.FN (t1,t2)) = T.FN (g t1, g t2)
+           | g (T.TUPLE l1) = T.TUPLE (map g l1)
+           | g (T.CONSTR (l1,t1)) = T.CONSTR (map g l1, g t1)
+           | g x = x
+      in
+         (g t, !csr)
+      end
 
-          val free = Set.diff (rvars,bound)
-
-          fun substinconstr_rhs tn tr [] = []
-            | substinconstr_rhs tn tr ((l,r)::t) = (l,T.substinty tn tr r) ::
-                                                      substinconstr_rhs tn tr t
-
-          val l' = Set.fold (fn (f,l) => 
-                              let
-                                 val l' = substinconstr_rhs f (T.POLY (!pv)) l
-                                 val _ = pv := !pv + 1
-                              in
-                                 l'
-                              end) l free
-       in
-          l'
-       end
-         
 end

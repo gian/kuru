@@ -99,13 +99,13 @@ struct
 
 
          (* Test program *)
-         val fix = Symbol.symbol "fix"
+(*         val fix = Symbol.symbol "fix"
          val f = Symbol.symbol "f"
          val f1 = Symbol.symbol "f1"
          val n = Symbol.symbol "n"
          val n1 = Symbol.symbol "n1"
 
-(*         val term = TypedAST.DVALREC (
+         val term = TypedAST.DVALREC (
                        TypedAST.DVAL (
                           fix,
                           TypedAST.EFN (f,
