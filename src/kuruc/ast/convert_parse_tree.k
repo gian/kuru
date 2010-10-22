@@ -30,9 +30,9 @@ struct
     * various command line parameters *)
    val passes = [
       ("ast-infix-apply",AstInfixApply.apply),
+      ("ast-app-apply",AstAppApply.apply),
       ("ast-fun-curry",AstFunCurry.apply),
       ("ast-typedec-eval",AstTypedecEval.apply),
-      ("ast-type-alias-expand",AstTypeAliasExpand.apply),
       ("ast-match-compile", AstMatchCompile.apply),
       ("ast-datatype-unfold", AstDatatypeUnfold.apply)
    ]

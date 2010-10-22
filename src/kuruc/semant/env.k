@@ -26,6 +26,11 @@ struct
 					  VarEntry of T.ty
 	            | FunEntry of T.ty list * T.ty (* formal parameters * result *)
 
+   datatype structentry =
+                 StructEntry of T.ty Symbol.table * 
+                            enventry Symbol.table * 
+                         structentry Symbol.table
+
 	fun pp (VarEntry t) = T.prettyPrint t
 	  | pp (FunEntry ([t1],t2)) = T.prettyPrint t1 ^ " -> " ^ T.prettyPrint t2
 	  | pp (FunEntry (t1,t2)) = 

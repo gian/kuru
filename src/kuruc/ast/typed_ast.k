@@ -40,6 +40,7 @@ struct
 
    and      texp = ELIT of tval * T.ty * pos
 	              | EID of S.symbol * T.ty * pos
+					  | ELID of S.symbol list * T.ty * pos
                  | ELIST of texp vector * T.ty * pos
                  | ETUPLE of texp vector * T.ty * pos
                  | EIF of texp * texp * texp * T.ty * pos
@@ -101,6 +102,8 @@ struct
             ELIT (tv, T.substinty tn th t, p)
      | subst_ty_exp tn th (EID (s,t,p)) =
             EID (s, T.substinty tn th t, p)
+     | subst_ty_exp tn th (ELID (s,t,p)) =
+            ELID (s, T.substinty tn th t, p)
      | subst_ty_exp tn th (ELIST (v,t,p)) =
             ELIST (Vector.map (subst_ty_exp tn th) v,
                    T.substinty tn th t, p)
@@ -201,6 +204,7 @@ struct
    and ppe (ELIT(tv,ty,p)) =  
                              ppv tv 
      | ppe (EID(s,ty,p)) = S.name s 
+	  | ppe (ELID(s,ty,p)) = String.concatWith "." (map Symbol.name s)
      | ppe (ELIST(v,ty,p)) = "[" ^ (String.concatWith "," (map ppe (vtol v))) ^ "]"
      | ppe (ETUPLE(v,ty,p)) = "(" ^ (String.concatWith "," (map ppe (vtol v))) ^ ")"
      | ppe (EFN(s,e,ty,p)) = "fn " ^ S.name s ^  
