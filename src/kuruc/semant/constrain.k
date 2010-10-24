@@ -137,6 +137,21 @@ struct
        in
           (te,ve,se,[],t',A.EID (s,t',p))
        end
+     | constr_exp te ve se (A.ELID (sl,t,p)) =
+       let
+          fun res stbl vtbl [] = raise Fail "constr_exp: BUG: empty long id?"
+            | res stbl vtbl [id] = (case S.look (vtbl,id) of
+                               NONE => raise IdUnknown (S.name id,p)
+                             | SOME (E.VarEntry k) => k)
+            | res stbl vtbl (h::rest) = 
+                                   (case S.look (stbl,h) of
+                               NONE => raise IdUnknown (S.name h,p)
+                             | SOME (E.StructEntry (te',ve',se')) =>
+                                       res se' ve' rest)
+          val t' = res se ve sl
+       in
+          (te,ve,se,[],t',A.ELID (sl,t',p))
+       end
      | constr_exp te ve se (A.ELIST (v,t,p)) =
        let
           val v' = map (constr_exp te ve se) (vtol v)
@@ -277,6 +292,13 @@ struct
      | constr_dec te ve se b (A.DVALREC (a,t,p)) =
          constr_dec te ve se true a
      | constr_dec te ve se _ (A.DNULL p) = (te,ve,se,[],T.UNKNOWN,A.DNULL p)
+     | constr_dec te ve se b (A.DSTRUCTURE (s,v,p)) =
+       let
+          val (te',ve',se',cn,v') = generateConstraints' te ve se (vtol v)
+          val se'' = S.enter (se,s,E.StructEntry (te',ve',se'))
+       in
+          (te,ve,se'',cn,T.UNKNOWN,A.DSTRUCTURE (s,Vector.fromList v',p))
+       end
      | constr_dec _ _ _ _ _ = raise Fail "Unhandled constr_dec"
 
    and substinenv (tn,tr) ve =

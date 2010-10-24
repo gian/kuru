@@ -68,6 +68,7 @@ struct
 	fun getType (DVAL (_,_,t,_)) = t
 	  | getType (DVALREC (_,t,_)) = t
 	  | getType (DNULL _) = T.UNKNOWN
+	  | getType (DSTRUCTURE _) = T.UNKNOWN
 	  | getType _ = raise Fail "Can't getType for non DVAL or DVALREC"
 
 	fun setType (DVAL (a,b,_,c)) t = DVAL (a,b,t,c)
@@ -232,6 +233,9 @@ struct
      | prettyPrint ((DMUTUAL(v,p))::t) = "DMUTUAL [\n" ^ 
                                           prettyPrint (vtol v) ^ "]\n" ^ 
                                           prettyPrint t
+	  | prettyPrint ((DSTRUCTURE (s,l,p))::t) = "DSTRUCTURE " ^ S.name s ^ " [\n" ^
+	  																prettyPrint (vtol l)  ^ "]\n" ^
+																	prettyPrint t
      | prettyPrint (_::t) = "???\n" ^ prettyPrint t
 end
 

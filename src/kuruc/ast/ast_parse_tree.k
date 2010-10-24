@@ -243,17 +243,18 @@ struct
         | d te ve se (DataBind (l,a,b,p)) =
              raise Fail "Databind not implemented"
         | d te ve se (ConBind (a,_,p)) = raise Fail "ConBind not implemented"
-        | d te ve se (StructDec (l,p)) =  
+        | d te ve se (StructDec ([b],p)) =  
           let
-             val (te',ve',se',_) = 
-               List.foldl (fn (b,(te',ve',se',_)) => d te' ve' se' b) 
-                                                         (te,ve,se,A.DNULL p) l
-             (* FIXME: these declarations are not making it through to
-                  code generation! *)
+             val (te',ve',se',b') = d te ve se b
           in
-             (te',ve',se',A.DNULL p)
+             (te,ve,se',b')
           end
-
+        | d te ve se (StructDec (l,p)) =
+          let
+             val (te',ve',se',l') = convert te ve se l
+          in
+             (te,ve,se',A.DMUTUAL (Vector.fromList l',p))
+          end
         | d te ve se (StructBind (a,Structure (l,p1),p2)) =
           let
              val a' = case (s te ve se a) of A.EID (n,t,p) => n
