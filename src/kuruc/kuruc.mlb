@@ -22,6 +22,9 @@ ast/ast_parse_tree.sml
 ast/convert_parse_tree.sml
 semant/unify.sml
 semant/constrain.sml
+intermediate/temp.sml
+intermediate/intermediate.sml
+intermediate/translate.sml
 compile.sml
 version.sml
 main.sml
