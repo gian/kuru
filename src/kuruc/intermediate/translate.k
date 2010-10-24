@@ -88,7 +88,7 @@ struct
                end) v
             ))
          in
-            l
+            l @ [I.JUMP (I.NAME t,[t])]
          end)
      | tr_pat (A.PCONSTR (s,popt,t,p)) = raise Fail ("tr_pat: PCONSTR not impl.")
      | tr_pat (A.PID (s,ty,p)) = 
