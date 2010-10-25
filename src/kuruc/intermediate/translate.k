@@ -122,7 +122,7 @@ struct
                   val f' = tr_pat ve se e
                   val (ve',se',l') = (f' (I.TUPLE_IND (c,i),nlab,f)) 
                in
-                  (ve',se',l@[I.LABEL nlab]@l')
+                  (ve',se',l@l'@[I.LABEL nlab])
                end) (ve,se,[]) v
 
             val (ve',se',fl) = mkt (c,t,f) 
@@ -210,7 +210,9 @@ struct
           val p = Temp.newtemp (tr_ty it)
           val ve' = S.enter (ve,s,I.TEMP p)
           val (ve'',se',e',instr) = tr_exp ve' se e
-          val _ = add_fragment (FFN (fid,[I.TEMP p],instr @ 
+          val _ = add_fragment (FFN (fid,[I.TEMP p],
+                                            [I.LABEL (Temp.newlabel ())] @
+                                                   instr @ 
                                                    [I.RET e'],tr_ty rt))
        in
           (ve,se,I.NAME fid, [])
@@ -241,7 +243,8 @@ struct
 
 
           val rt = Temp.newtemp (tr_ty t)
-          val instr' = instr @ 
+          val instr' = in1 @
+                       instr @ 
                         [I.JUMP (I.NAME el, [el]),
                          I.LABEL el, 
                          I.PHI (I.TEMP rt, labs)]
