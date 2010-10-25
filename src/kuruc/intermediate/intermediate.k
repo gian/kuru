@@ -50,4 +50,54 @@ struct
    (* Some built-in calls *)
    fun kstreq l1 l2 = raise Fail ("kstreq not implemented") 
 
+   val ppt = Temp.prettyPrint
+
+   fun ppr EQ = "EQ"
+     | ppr NEQ = "NEQ"
+     | ppr LT = "LT" 
+     | ppr GT = "GT" 
+     | ppr LE = "LE" 
+     | ppr GE = "GE" 
+     | ppr ULT = "ULT" 
+     | ppr ULE = "ULE" 
+     | ppr UGT = "UGT" 
+     | ppr UGE = "UGE" 
+     | ppr REQ = "REQ" 
+     | ppr RNEQ = "RNEQ" 
+
+   fun ppe (CONST i) = Int.toString i
+     | ppe (RCONST i) = Real.toString i
+     | ppe (NAME l) = ppt l
+     | ppe (TEMP t) = ppt t
+     | ppe (MEM e) = "MEM " ^ ppe e
+     | ppe (CALL (t,e1,e2)) = "CALL " ^ ppe e1 ^ " (" ^ ppe e2 ^ ")"
+     | ppe (SEQ l) = "SEQ (" ^ String.concatWith "; " (map ppe l) ^ ")"
+     | ppe (TUPLE (tl,el)) = "TUPLE (" ^ String.concatWith ","
+                                             (map ppe el) ^ ")"
+     | ppe (TUPLE_IND (e,i)) = ppe e ^ "[" ^ Int.toString i ^ "]"
+     | ppe VOID = "void"
+
+   fun ppstm (MOVE (e1,e2)) = ppe e1 ^ " <- " ^ ppe e2
+     | ppstm (EXP e) = "EXP " ^ ppe e
+     | ppstm (JUMP (e,ll)) = "JUMP " ^ ppe e
+     | ppstm (CJUMP (r,e1,e2,l)) = "CJUMP " ^ ppr r ^ " " ^
+                                       ppe e1 ^ " " ^ 
+                                       ppe e2 ^ " " ^
+                                       ppt l
+     | ppstm (CJUMP2 (r,e1,e2,l1,l2)) = "CJUMP2 " ^ ppr r ^ " " ^
+                                            ppe e1 ^ " " ^
+                                            ppe e2 ^ " " ^
+                                            ppt l1 ^ " " ^
+                                            ppt l2
+     | ppstm (PHI (e1, l)) = ppe e1 ^ " <- PHI [" ^
+                              String.concatWith ", " (
+                                map (fn (e,ll) => 
+                                   ppe e ^ " " ^ ppt ll) l) ^
+                                           "]"
+     | ppstm (LABEL l) = ppt l ^ ":"
+     | ppstm (RET e) = "RET " ^ ppe e
+
+   fun prettyPrint [] = ""
+     | prettyPrint (h::t) = ppstm h ^ "\n" ^ prettyPrint t
+
 end

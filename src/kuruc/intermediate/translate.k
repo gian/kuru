@@ -39,7 +39,36 @@ struct
    fun add_fragments f = fragments := !fragments @ f
    fun reset_fragments () = fragments := []
 
-   fun tr_ty _ = Temp.i32 (* FIXME *)
+   fun printFragment (FSTRING (l,s)) = 
+      Temp.prettyPrint l ^ ": \"" ^ s ^ "\""
+     | printFragment (FFN (l,el,sl,t)) =
+      "function " ^ Temp.prettyPrint l ^ " (" ^
+         String.concatWith "," (map I.ppe el) ^
+       ") {\n   " ^
+         String.concatWith "\n   " (map I.ppstm sl) ^ "\n}\n"
+
+   fun printFragments [] = ""
+     | printFragments (h::t) = printFragment h ^ "\n" ^ 
+                                 printFragments t
+
+   fun tr_ty (T.NAME s) = 
+      let
+         val s' = Symbol.name s
+      in
+         (case s' of 
+            "int" => Temp.i32
+          | "real" => Temp.r64
+          | "char" => Temp.i32
+          | "string" => Temp.string_ptr
+          | "bool" => Temp.i1
+          | "unit" => Temp.void
+          | _ => raise Fail "tr_ty: unhandled NAME type.")
+      end
+     | tr_ty (T.FN (a,b)) =
+         Temp.fn_ptr (tr_ty a, tr_ty b)
+     | tr_ty (T.CONSTR (tl,t)) = raise Fail "tr_ty: CONSTR not impl."
+     | tr_ty (T.TUPLE l) = Temp.aggr (map tr_ty l)
+     | tr_ty _ = raise Fail "tr_ty: unhandled type"
 
    fun tr_val (A.LINT (v,p)) = I.CONST v (* FIXME: negative numbers? *) 
      | tr_val (A.LREAL (v,p)) = I.RCONST v
@@ -214,7 +243,7 @@ struct
           val rt = Temp.newtemp (tr_ty t)
           val instr' = instr @ 
                         [I.JUMP (I.NAME el, [el]),
-                         I.LABEL rt, 
+                         I.LABEL el, 
                          I.PHI (I.TEMP rt, labs)]
        in
           (ve,se,I.TEMP rt,instr')
@@ -250,12 +279,55 @@ struct
        end
      | tr_exp ve se (A.ELET _) = raise Fail "tr_exp: ELET remains!" 
      | tr_exp ve se (A.EANN (e,t,p)) = tr_exp ve se e 
-(*                 
-   and      tast = DVAL of S.symbol * texp * T.ty * pos
-                 | DVALREC of tast * T.ty * pos
-                 | DMUTUAL of tast vector * pos
-                 | DSTRUCTURE of S.symbol * tast vector * pos
-                 | DSTRUCTASSIGN of S.symbol * S.symbol * pos
-                 | DNULL of pos *)
+                 
+   and tr_ast ve se (A.DVAL (s,e,t,p)) =
+       let
+          val rt = Temp.newtemp (tr_ty t)
+          val _ = Debug.print Debug.debug ("tr_ast: DVAL\n")
+          val (_,_,e',in1) = tr_exp ve se e
+          val ve' = S.enter (ve,s,I.TEMP rt)
+       in
+          (ve',se,in1 @ [I.MOVE (I.TEMP rt, e')])
+       end
+     | tr_ast ve se (A.DVALREC (a,t,p)) =
+         tr_ast ve se a
+     | tr_ast ve se (A.DMUTUAL (v,p)) = 
+         Vector.foldl (fn (e,(ve,se,b)) =>
+            let
+               val (ve',se',b') = tr_ast ve se e
+            in
+               (ve',se',b@b')
+            end) (ve,se,[]) v 
+     | tr_ast ve se (A.DSTRUCTURE (s,v,p)) = 
+       let
+          val (ve',se',instr) =
+            Vector.foldl (fn (e,(ve,se,b)) =>
+            let
+               val (ve',se',b') = tr_ast ve se e
+            in
+               (ve',se',b@b')
+            end) (ve,se,[]) v 
+          val se'' = S.enter (se,s,StructEntry (ve',se'))
+       in
+          (ve,se'',instr)
+       end
+     | tr_ast ve se (A.DSTRUCTASSIGN (s1,s2,p)) =
+         raise Fail "tr_ast: DSTRUCTASSIGN not impl."
+         (* FIXME: DSTRUCTASSIGN needs to accept long ids on RHS. *)
+     | tr_ast ve se (A.DNULL p) = (ve,se,[]) 
 
+   fun translate ast =
+      let
+         val (ve,se,ast') =
+            List.foldl (fn (a,(ve,se,b)) =>
+                    let
+                       val (ve',se',a') = tr_ast ve se a
+                    in
+                       (ve',se',b@a')
+                    end) (S.empty,S.empty,[]) ast
+         val fr = !fragments
+         val _ = fragments := []
+      in
+         (ve,se,ast',fr)
+      end
 end

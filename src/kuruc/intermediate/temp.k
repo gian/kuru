@@ -27,7 +27,13 @@ struct
                | i16
                | i32
                | i64
+               | r32
+               | r64
                | label of string
+               | string_ptr
+               | void
+               | fn_ptr of ty * ty
+               | aggr of ty list
 
    type temp = int * ty
    type label = temp
@@ -45,5 +51,8 @@ struct
    fun labelFromString s = (0,label s)
    fun tempFromSymbol s t = (S.hash s, t)
    fun getType (_,t) = t : ty
+
+   fun prettyPrint (i,label s) = "@" ^ s
+     | prettyPrint (i,_) = "%t" ^ Int.toString i
 end
 

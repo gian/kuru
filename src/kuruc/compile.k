@@ -95,11 +95,18 @@ struct
          val d = Unify.apply cs' fl'''
 
          val _ = Debug.print Debug.internal ("Typed program:\n")
-         val _ = Debug.print Debug.internal (TypedAST.prettyPrint d ^ "\n")
+         val _ = Debug.print Debug.internal ("\n" ^ TypedAST.prettyPrint d ^ "\n")
 
          (* Stage 4 - Optimisation *)
 
          (* Stage 5 - Typed Intermediate Representation *)
+
+         val (ve''',se''',d',fragments) = Translate.translate d
+
+         val _ = Debug.print Debug.internal ("Translated Program:\n")
+         val _ = Debug.print Debug.internal ("\n" ^ 
+                              Translate.printFragments fragments ^ "\n" ^
+                              Intermediate.prettyPrint d' ^ "\n")
 
          (* Stage 6 - Code Generation (LLVM) *)
 
