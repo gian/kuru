@@ -35,12 +35,14 @@ struct
                 | TUPLE_IND of exp * int
                 | VOID
    
-   datatype stm = MOVE of exp * exp
+        and stm = MOVE of exp * exp
                 | EXP of exp
                 | JUMP of exp * Temp.label list
                 | CJUMP of relop * exp * exp * Temp.label
                 | CJUMP2 of relop * exp * exp * Temp.label * Temp.label
+                | PHI of exp * (exp * Temp.label) list
                 | LABEL of Temp.label
+                | RET of exp
    
       and relop = EQ | NEQ | LT | GT | LE | GE | ULT | ULE | UGT | UGE
                 | REQ | RNEQ

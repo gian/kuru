@@ -26,8 +26,11 @@ struct
 	structure A = TypedAST
    structure I = Intermediate
 
+   datatype structentry = StructEntry of I.exp S.table * structentry S.table
+
    datatype fragment = 
       FSTRING of Temp.label * string
+    | FFN of Temp.label * I.exp list * I.stm list * Temp.ty
 
 
    val fragments = ref [] : fragment list ref
@@ -103,32 +106,151 @@ struct
        (fn (c,t,f) =>
        let
           val ts = Temp.newtemp (tr_ty ty)
-          val ve' = S.enter (ve, s,ts)
+          val ve' = S.enter (ve, s, I.TEMP ts)
        in
          (ve',se,
-            [I.MOVE (I.NAME ts, c),
+            [I.MOVE (I.TEMP ts, c),
              I.JUMP (I.NAME t,[t])])
        end)
      | tr_pat ve se (A.PINFIX (a,b,c,t,p)) = 
             raise Fail "tr_pat: Infix not impl." 
-(*
-   and      texp = ELIT of tval * T.ty * pos
-	              | EID of S.symbol * T.ty * pos
-					  | ELID of S.symbol list * T.ty * pos
-                 | ELIST of texp vector * T.ty * pos
-                 | ETUPLE of texp vector * T.ty * pos
-                 | EIF of texp * texp * texp * T.ty * pos
-                 | EWHILE of texp * texp * T.ty * pos
-                 | EFN of S.symbol * texp * T.ty * pos
-                 | ECASE of texp * (tpat * texp) vector * T.ty * pos
-                 | EAPP of texp * texp * T.ty * pos
-                 | EEXN of texp * T.ty * pos
-                 | ERAISE of texp * pos
-                 | EHANDLE of tpat * texp * T.ty * pos
-                 | ESEQ of texp vector * T.ty * pos
-                 | ELET of tast vector * texp * T.ty * pos
-                 | EANN of texp * T.ty * pos
-                 
+
+   and tr_exp ve se (A.ELIT (v,t,p)) = (ve,se,tr_val v,[])
+	  | tr_exp ve se (A.EID (s,t,p)) = 
+         (case S.look (ve,s) of NONE => raise Fail ("Unknown EID in tr_exp")
+                              | SOME tm => (ve,se,tm,[]))
+	  | tr_exp ve se (A.ELID (l,t,p)) = 
+       let
+          fun res vtbl stbl [] = raise Fail "tr_exp: BUG: empty long id?"
+            | res vtbl stbl [id] = (case S.look (vtbl,id) of
+                               NONE => raise Fail "tr_exp: BUG: unknown id?" 
+                             | SOME k => k)
+            | res vtbl stbl (h::rest) = 
+                                   (case S.look (stbl,h) of
+                               NONE => 
+                                 raise Fail "tr_exp: BUG: unknown str id?"
+                             | SOME (StructEntry (ve',se')) =>
+                                       res ve' se' rest)
+          val t' = res ve se l
+       in
+          (ve,se,t',[]) 
+       end
+     | tr_exp ve se (A.ELIST (v,t,p)) = raise Fail "tr_exp list not impl." 
+     | tr_exp ve se (A.ETUPLE (v,T.TUPLE t,p)) = 
+       let
+          val (v',instr) = 
+            Vector.foldl (fn (a,(b',c')) =>
+               let
+                  val (ve',se',a',c) = tr_exp ve se a
+               in
+                  (b'@[a'],c' @ c)
+               end) ([],[]) v
+       in
+          (ve,se,I.TUPLE (map tr_ty t, v'),instr) 
+       end
+     | tr_exp ve se (A.EIF (e1,e2,e3,t,p)) =
+       let
+          val (_,_,r1,in1) = tr_exp ve se e1
+
+          val tlab = Temp.newlabel ()
+          val (_,_,r2,in2) = tr_exp ve se e2
+
+          val flab = Temp.newlabel ()
+          val (_,_,r3,in3) = tr_exp ve se e3
+
+          val rlab = Temp.newlabel ()
+
+          val rv = I.TEMP (Temp.newtemp (tr_ty t))
+          val phi = [I.LABEL rlab, I.PHI (rv,[(r2,tlab),(r3,flab)])]
+       in
+          (ve,se,rv,
+          in1 @
+          [I.CJUMP2 (I.EQ, I.CONST 1, r1, tlab, flab),
+           I.LABEL tlab] @
+          in2 @
+          [I.JUMP (I.NAME rlab, [rlab]),
+           I.LABEL flab] @
+          in3 @
+          [I.JUMP (I.NAME rlab, [rlab])] @
+          phi)
+       end
+     | tr_exp ve se (A.EWHILE (c,e,t,p)) = raise Fail "tr_exp while not impl." 
+     | tr_exp ve se (A.EFN (s,e,T.FN(it,rt),p)) =
+       let
+          val fid = Temp.newlabel ()
+          val p = Temp.newtemp (tr_ty it)
+          val ve' = S.enter (ve,s,I.TEMP p)
+          val (ve'',se',e',instr) = tr_exp ve' se e
+          val _ = add_fragment (FFN (fid,[I.TEMP p],instr @ 
+                                                   [I.RET e'],tr_ty rt))
+       in
+          (ve,se,I.NAME fid, [])
+       end
+     | tr_exp ve se (A.ECASE (e,v,t,p)) =
+       let
+          val (_,_,e',in1) = tr_exp ve se e
+
+          val el = Temp.newlabel ()
+          
+          val (instr,labs) =
+            Vector.foldl (
+               fn ((p,e),(ins,labs)) =>
+               let
+                  val tlab = Temp.newlabel ()
+                  val flab = Temp.newlabel ()
+                  val (ve',se',p') = (tr_pat ve se p) (e',tlab,flab)
+                  val (_,_,e'',eins) = tr_exp ve' se' e
+               in
+                  (ins @ 
+                    p' @ 
+                    [I.LABEL tlab] @ 
+                    eins @
+                    [I.JUMP (I.NAME el, [el]),
+                     I.LABEL flab],
+                  labs @ [(e'',tlab)])
+               end) ([],[]) v
+
+
+          val rt = Temp.newtemp (tr_ty t)
+          val instr' = instr @ 
+                        [I.JUMP (I.NAME el, [el]),
+                         I.LABEL rt, 
+                         I.PHI (I.TEMP rt, labs)]
+       in
+          (ve,se,I.TEMP rt,instr')
+       end
+     | tr_exp ve se (A.EAPP (a,b,t,p)) = 
+       let
+          val (_,_,b',instr1) = tr_exp ve se b
+          val (_,_,a',instr2) = tr_exp ve se a
+          val rt = Temp.newtemp (tr_ty t)
+          val instr3 = [
+                 I.MOVE (I.TEMP rt,
+                         I.CALL (tr_ty t,a',b'))
+              ]
+       in
+          (ve,se,I.TEMP rt, instr1 @ instr2 @ instr3)
+       end
+     | tr_exp ve se (A.EEXN (e,t,p)) = raise Fail "tr_exp: EEXN not impl." 
+     | tr_exp ve se (A.ERAISE (e,p)) = raise Fail "tr_exp: ERAISE not impl." 
+     | tr_exp ve se (A.EHANDLE (pa,e,t,p)) = raise Fail "tr_exp: EHANDLE"
+     | tr_exp ve se (A.ESEQ (v,t,p)) =
+       let
+          val (rt,v') =
+            Vector.foldl (
+                fn (e,(rt,v)) =>
+                  let
+                     val (_,_,rt',instr) = tr_exp ve se e
+                  in
+                     (rt',v@instr)
+                  end
+            ) (I.TEMP (Temp.newtemp (tr_ty t)),[]) v
+       in
+          (ve,se,rt,v')
+       end
+     | tr_exp ve se (A.ELET _) = raise Fail "tr_exp: ELET remains!" 
+     | tr_exp ve se (A.EANN (e,t,p)) = tr_exp ve se e 
+(*                 
    and      tast = DVAL of S.symbol * texp * T.ty * pos
                  | DVALREC of tast * T.ty * pos
                  | DMUTUAL of tast vector * pos
