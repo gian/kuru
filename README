@@ -11,6 +11,7 @@ lib/ - Output directory for libraries
 include/ - Output directory for include files
 src/
    kil/ - Crude bootstrap interpreter for Kuru written in SML
+   koffers/ - Package installation tool.
    kuruc/ - Kuru compiler, written in Kuru
    kupeg/ - KuPEG parser generator, written in Kuru.
    tests/ - Automated test programs
