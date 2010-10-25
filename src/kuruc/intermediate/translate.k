@@ -50,17 +50,18 @@ struct
        end
      | tr_val (A.LUNIT p) = I.VOID 
 
-   fun tr_pat (A.PCONST (A.ELIT (v,t,_),_,_)) =
+   fun tr_pat ve se (A.PCONST (A.ELIT (v,t,_),_,_)) =
+      (fn (c,t,f) =>
        let
           val v' = tr_val v
-       in
-         case v of 
-            A.LINT _ => (fn (c,t,f) => 
+          val v'' =
+          case v of 
+            A.LINT _ => ( 
                [I.CJUMP2 (I.EQ,c,v',t,f)])
           | A.LREAL _ => raise Fail ("tr_pat: Invalid real pattern")
-          | A.LCHAR _ => (fn (c,t,f) =>
+          | A.LCHAR _ => (
                [I.CJUMP2 (I.EQ,c,v',t,f)])
-          | A.LSTRING _ => (fn (c,t,f) =>
+          | A.LSTRING _ => (
                let
                   val k = Temp.newtemp (Temp.i1)
                in
@@ -71,31 +72,45 @@ struct
                             t,
                             f)]
                end)
-          | A.LUNIT _ => (fn (c,t,f) => [I.JUMP (I.NAME t,[t])])
-       end
-     | tr_pat (A.PCONST (_,_,p)) = raise Fail ("tr_pat: Invalid constant pattern!")
-     | tr_pat (A.PLIST (v,t,p)) = raise Fail ("tr_pat: List pat not implemented") 
-     | tr_pat (A.PTUPLE (v,t,p)) =
-      (fn (c,t,f) =>
+          | A.LUNIT _ => ([I.JUMP (I.NAME t,[t])])
+       in
+          (ve,se,v'')
+       end)
+     | tr_pat ve se (A.PCONST (_,_,p)) = 
+            raise Fail ("tr_pat: Invalid constant pattern!")
+     | tr_pat ve se (A.PLIST (v,t,p)) = 
+            raise Fail ("tr_pat: List pat not implemented") 
+     | tr_pat ve se (A.PTUPLE (v,t,p)) =
+       (fn (c,t,f) =>
          let
-            val l = List.concat ( 
-            A.vtol (
-               Vector.mapi (fn (i,e) =>
+            fun mkt (c,t,f) =  
+               Vector.foldli (fn (i,e,(ve,se,l)) =>
                let
                   val nlab = Temp.newlabel ()
+                  val f' = tr_pat ve se e
+                  val (ve',se',l') = (f' (I.TUPLE_IND (c,i),nlab,f)) 
                in
-                  ((tr_pat e) (I.TUPLE_IND (c,i),nlab,f)) @ [I.LABEL nlab]
-               end) v
-            ))
+                  (ve',se',l@[I.LABEL nlab]@l')
+               end) (ve,se,[]) v
+
+            val (ve',se',fl) = mkt (c,t,f) 
          in
-            l @ [I.JUMP (I.NAME t,[t])]
+            (ve',se',fl @ [I.JUMP (I.NAME t,[t])])
          end)
-     | tr_pat (A.PCONSTR (s,popt,t,p)) = raise Fail ("tr_pat: PCONSTR not impl.")
-     | tr_pat (A.PID (s,ty,p)) = 
-        (fn (c,t,f) => 
-            [I.MOVE (I.NAME (Temp.tempFromSymbol s (tr_ty ty)), c),
+     | tr_pat ve se (A.PCONSTR (s,popt,t,p)) = 
+            raise Fail ("tr_pat: PCONSTR not impl.")
+     | tr_pat ve se (A.PID (s,ty,p)) =
+       (fn (c,t,f) =>
+       let
+          val ts = Temp.newtemp (tr_ty ty)
+          val ve' = S.enter (ve, s,ts)
+       in
+         (ve',se,
+            [I.MOVE (I.NAME ts, c),
              I.JUMP (I.NAME t,[t])])
-     | tr_pat (A.PINFIX (a,b,c,t,p)) = raise Fail "tr_pat: Infix not impl." 
+       end)
+     | tr_pat ve se (A.PINFIX (a,b,c,t,p)) = 
+            raise Fail "tr_pat: Infix not impl." 
 (*
    and      texp = ELIT of tval * T.ty * pos
 	              | EID of S.symbol * T.ty * pos
