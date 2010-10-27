@@ -2,48 +2,57 @@ BIN=../../bin
 COMPILER=mlton -profile time
 KUPEG=$(BIN)/kupeg
 
+SMLDEPS= \
+	lib/set.sml lib/table.sml lib/symbol.sml \
+	semant/unify.sml semant/constrain.sml semant/env.sml \
+	frontend/kuru.kpg.sml frontend/parsetree.sml frontend/error.sml \
+ 	ast/typed_ast.sml ast/ast_parse_tree.sml ast/ast_app_apply.sml \
+	ast/type.sml ast/ast_datatype_unfold.sml ast/ast_infix_apply.sml \
+	ast/ast_typedec_eval.sml ast/ast_fun_curry.sml \
+	ast/ast_match_compile.sml ast/convert_parse_tree.sml \
+	intermediate/temp.sml intermediate/intermediate.sml \
+	intermediate/translate.sml \
+	debug.sml main.sml compile.sml version.sml
+
 all: $(BIN)/kuruc
 
 tests: $(BIN)/kuruc
-	make -C tests
+	$(MAKE) -C tests
 
-$(BIN)/kuruc: lib semant frontend ast intermediate compile.sml debug.sml kuruc.mlb main.sml 
-	./version.sh > version.k
-	cp version.k version.sml
+$(BIN)/kuruc: $(SMLDEPS) kuruc.mlb
 	$(COMPILER) -output $(BIN)/kuruc kuruc.mlb
 
-main.sml: main.k
-	cp main.k main.sml
+frontend/kuru.kpg.k:
+	$(MAKE) -C frontend kuru.kpg.k
 
-compile.sml: compile.k
-	cp compile.k compile.sml
+%.sml: %.k
+	ln -sf $(notdir $<) $@
 
-debug.sml: debug.k
-	cp debug.k debug.sml
+version.k: version.sh
+	./version.sh > version.k
 
-frontend: force
-	make -C frontend
+frontend: 
+	$(MAKE) -C frontend
 
-lib: force
-	make -C lib
+lib: 
+	$(MAKE) -C lib
 
-semant: force
-	make -C semant
+semant: 
+	$(MAKE) -C semant
 
-ast: force
-	make -C ast
+ast: 
+	$(MAKE) -C ast
 
-intermediate: force
-	make -C intermediate
+intermediate: 
+	$(MAKE) -C intermediate
 
 clean:
 	rm -f $(BIN)/kuruc main.sml compile.sml debug.sml version.sml 
-	make -C frontend clean
-	make -C lib clean
-	make -C ast clean
-	make -C semant clean
-	make -C intermediate clean
+	$(MAKE) -C frontend clean
+	$(MAKE) -C lib clean
+	$(MAKE) -C ast clean
+	$(MAKE) -C semant clean
+	$(MAKE) -C intermediate clean
 
-force:
-	true
-
+.PHONY: clean intermediate ast semant lib frontend 
+.INTERMEDIATE: $(SMLDEPS)
