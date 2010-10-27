@@ -41,18 +41,20 @@ struct
    val lc = ref 0
    val tc = ref 0
 
-   (* FIXME: There's something broken here.
-      we use symbol hashes to generate temporaries,
-      but also just increment tc.  Should check for collisions,
-      or come up with a better mechanism for temporaries. *)
    fun newtemp  t = (tc := !tc + 1; (!tc,t))
    fun newlabel () = newtemp (label ("l" ^ Int.toString (lc := !lc + 1; !lc)))
 
    fun labelFromString s = (0,label s)
-   fun tempFromSymbol s t = (S.hash s, t)
+   (* fun tempFromSymbol s t = (S.hash s, t) *)
    fun getType (_,t) = t : ty
 
    fun prettyPrint (i,label s) = "@" ^ s
      | prettyPrint (i,_) = "%t" ^ Int.toString i
+
+   fun prettyPrintNoPrefix (i,label s) = s
+     | prettyPrintNoPrefix (i,_) = "t" ^ Int.toString i
+
+
+
 end
 

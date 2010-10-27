@@ -241,7 +241,6 @@ struct
                   labs @ [(e'',tlab)])
                end) ([],[]) v
 
-
           val rt = Temp.newtemp (tr_ty t)
           val instr' = in1 @
                        instr @ 
@@ -289,6 +288,14 @@ struct
           val _ = Debug.print Debug.debug ("tr_ast: DVAL\n")
           val (_,_,e',in1) = tr_exp ve se e
           val ve' = S.enter (ve,s,I.TEMP rt)
+       in
+          (ve',se,in1 @ [I.MOVE (I.TEMP rt, e')])
+       end
+     | tr_ast ve se (A.DVALREC (A.DVAL (s,e,t1,p1),t2,p2)) =
+       let
+          val rt = Temp.newtemp (tr_ty t1)
+          val ve' = S.enter (ve,s,I.TEMP rt)
+          val (_,_,e',in1) = tr_exp ve' se e
        in
           (ve',se,in1 @ [I.MOVE (I.TEMP rt, e')])
        end

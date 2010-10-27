@@ -290,7 +290,11 @@ struct
           (te,ve',se,cs'',t',A.DVAL (s,e',t',p))
        end
      | constr_dec te ve se b (A.DVALREC (a,t,p)) =
-         constr_dec te ve se true a
+       let
+          val (te',ve',se',cs,t',a') = constr_dec te ve se true a
+       in
+          (te',ve',se',cs,t',A.DVALREC (a',t',p))
+       end
      | constr_dec te ve se _ (A.DNULL p) = (te,ve,se,[],T.UNKNOWN,A.DNULL p)
      | constr_dec te ve se b (A.DSTRUCTURE (s,v,p)) =
        let
