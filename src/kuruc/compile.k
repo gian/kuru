@@ -114,7 +114,7 @@ struct
          val _ = Debug.print Debug.internal ("Generated code:\n" ^ code ^ "\n")
       
          (* Stage 7 - LLVM invokation *)
-
+         val _ = LLVMOperations.assemble code
       in
          ()
       end

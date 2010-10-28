@@ -40,6 +40,7 @@ struct
      | cg_ty Temp.r32 = "r32"
      | cg_ty Temp.r64 = "r64"
      | cg_ty (Temp.label _) = raise Fail "CodeGen: taking type of label"
+     | cg_ty (Temp.global _) = raise Fail "CodeGen: taking type of global"
      | cg_ty Temp.string_ptr = "i32*"
      | cg_ty Temp.void = "void"
      | cg_ty (Temp.fn_ptr (t1,t2)) = j [cg_ty t2,

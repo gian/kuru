@@ -30,6 +30,7 @@ struct
                | r32
                | r64
                | label of string
+               | global of string
                | string_ptr
                | void
                | fn_ptr of ty * ty
@@ -40,18 +41,22 @@ struct
 
    val lc = ref 0
    val tc = ref 0
+   val gc = ref 0
 
    fun newtemp  t = (tc := !tc + 1; (!tc,t))
    fun newlabel () = newtemp (label ("l" ^ Int.toString (lc := !lc + 1; !lc)))
+   fun newglobal () = newtemp (global ("g" ^ Int.toString (gc := !gc + 1; !gc)))
 
    fun labelFromString s = (0,label s)
    (* fun tempFromSymbol s t = (S.hash s, t) *)
    fun getType (_,t) = t : ty
 
    fun prettyPrint (i,label s) = "%" ^ s
+     | prettyPrint (i,global s) = "@" ^ s
      | prettyPrint (i,_) = "%t" ^ Int.toString i
 
    fun prettyPrintNoPrefix (i,label s) = s
+     | prettyPrintNoPrefix (i,global s) = s
      | prettyPrintNoPrefix (i,_) = "t" ^ Int.toString i
 
 

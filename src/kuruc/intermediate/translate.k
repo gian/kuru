@@ -210,7 +210,7 @@ struct
      | tr_exp ve se (A.EWHILE (c,e,t,p)) = raise Fail "tr_exp while not impl." 
      | tr_exp ve se (A.EFN (s,e,T.FN(it,rt),p)) =
        let
-          val fid = Temp.newlabel ()
+          val fid = Temp.newglobal ()
           val p = Temp.newtemp (tr_ty it)
           val ve' = S.enter (ve,s,I.TEMP p)
           val (ve'',se',e',instr) = tr_exp ve' se e
@@ -248,8 +248,7 @@ struct
           val rt = Temp.newtemp (tr_ty t)
           val instr' = in1 @
                        instr @ 
-                        [I.JUMP (I.NAME el, [el]),
-                         I.LABEL el, 
+                        [I.LABEL el, 
                          I.PHI (I.TEMP rt, tr_ty t, labs)]
        in
           (ve,se,I.TEMP rt,instr')
