@@ -25,6 +25,7 @@ semant/constrain.sml
 intermediate/temp.sml
 intermediate/intermediate.sml
 intermediate/translate.sml
+codegen/codegen.sml
 compile.sml
 version.sml
 main.sml

@@ -11,7 +11,7 @@ SMLDEPS= \
 	ast/ast_typedec_eval.sml ast/ast_fun_curry.sml \
 	ast/ast_match_compile.sml ast/convert_parse_tree.sml \
 	intermediate/temp.sml intermediate/intermediate.sml \
-	intermediate/translate.sml \
+	intermediate/translate.sml codegen/codegen.sml \
 	debug.sml main.sml compile.sml version.sml
 
 all: $(BIN)/kuruc
@@ -46,6 +46,9 @@ ast:
 intermediate: 
 	$(MAKE) -C intermediate
 
+codegen:
+	$(MAKE) -C codegen
+
 clean:
 	rm -f $(BIN)/kuruc main.sml compile.sml debug.sml version.sml 
 	$(MAKE) -C frontend clean
@@ -53,6 +56,7 @@ clean:
 	$(MAKE) -C ast clean
 	$(MAKE) -C semant clean
 	$(MAKE) -C intermediate clean
+	$(MAKE) -C codegen clean
 
-.PHONY: clean intermediate ast semant lib frontend 
+.PHONY: clean intermediate ast semant codegen lib frontend 
 .INTERMEDIATE: $(SMLDEPS)

@@ -33,6 +33,8 @@ struct
                 | SEQ of exp list
                 | TUPLE of Temp.ty list * exp list
                 | TUPLE_IND of exp * int
+                | TUPLE_INS of exp * exp * int (* exp1[int] <- exp2 *)
+                | UNDEF of Temp.ty
                 | VOID
    
         and stm = MOVE of exp * exp
@@ -40,7 +42,7 @@ struct
                 | JUMP of exp * Temp.label list
                 | CJUMP of relop * exp * exp * Temp.label
                 | CJUMP2 of relop * exp * exp * Temp.label * Temp.label
-                | PHI of exp * (exp * Temp.label) list
+                | PHI of exp * Temp.ty * (exp * Temp.label) list
                 | LABEL of Temp.label
                 | RET of exp
    
@@ -75,6 +77,9 @@ struct
      | ppe (TUPLE (tl,el)) = "TUPLE (" ^ String.concatWith ","
                                              (map ppe el) ^ ")"
      | ppe (TUPLE_IND (e,i)) = ppe e ^ "[" ^ Int.toString i ^ "]"
+     | ppe (TUPLE_INS (e1,e2,i)) = ppe e1 ^ "[" ^ Int.toString i ^ "] <- " ^
+                                     ppe e2
+     | ppe (UNDEF _) = "UNDEF"
      | ppe VOID = "void"
 
    fun ppstm (MOVE (e1,e2)) = ppe e1 ^ " <- " ^ ppe e2
@@ -89,7 +94,7 @@ struct
                                             ppe e2 ^ " " ^
                                             ppt l1 ^ " " ^
                                             ppt l2
-     | ppstm (PHI (e1, l)) = ppe e1 ^ " <- PHI [" ^
+     | ppstm (PHI (e1, t, l)) = ppe e1 ^ " <- PHI [" ^
                               String.concatWith ", " (
                                 map (fn (e,ll) => 
                                    ppe e ^ " " ^ ppt ll) l) ^

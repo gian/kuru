@@ -110,6 +110,9 @@ struct
 
          (* Stage 6 - Code Generation (LLVM) *)
 
+         val code = CodeGen.codegen (d',fragments)
+         val _ = Debug.print Debug.internal ("Generated code:\n" ^ code ^ "\n")
+      
          (* Stage 7 - LLVM invokation *)
 
       in

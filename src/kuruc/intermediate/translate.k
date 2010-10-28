@@ -112,7 +112,7 @@ struct
             raise Fail ("tr_pat: Invalid constant pattern!")
      | tr_pat ve se (A.PLIST (v,t,p)) = 
             raise Fail ("tr_pat: List pat not implemented") 
-     | tr_pat ve se (A.PTUPLE (v,t,p)) =
+     | tr_pat ve se (A.PTUPLE (v,T.TUPLE types,p)) =
        (fn (c,t,f) =>
          let
             fun mkt (c,t,f) =  
@@ -120,9 +120,11 @@ struct
                let
                   val nlab = Temp.newlabel ()
                   val f' = tr_pat ve se e
-                  val (ve',se',l') = (f' (I.TUPLE_IND (c,i),nlab,f)) 
+                  val rt = Temp.newtemp (tr_ty (List.nth (types,i)))
+                  val l' = l @ [I.MOVE (I.TEMP rt,I.TUPLE_IND(c,i))]
+                  val (ve',se',l'') = (f' (I.TEMP rt,nlab,f))
                in
-                  (ve',se',l@l'@[I.LABEL nlab])
+                  (ve',se',l'@l''@[I.LABEL nlab])
                end) (ve,se,[]) v
 
             val (ve',se',fl) = mkt (c,t,f) 
@@ -167,15 +169,17 @@ struct
      | tr_exp ve se (A.ELIST (v,t,p)) = raise Fail "tr_exp list not impl." 
      | tr_exp ve se (A.ETUPLE (v,T.TUPLE t,p)) = 
        let
-          val (v',instr) = 
-            Vector.foldl (fn (a,(b',c')) =>
+          val (instr,rt) = 
+            Vector.foldli (fn (i,a,(c',rt)) =>
                let
                   val (ve',se',a',c) = tr_exp ve se a
+                  val rt' = Temp.newtemp (tr_ty (T.TUPLE t))
+                  val ins = [I.MOVE(I.TEMP rt', I.TUPLE_INS (rt,a',i))]
                in
-                  (b'@[a'],c' @ c)
-               end) ([],[]) v
+                  (c' @ c @ ins,I.TEMP rt')
+               end) ([],I.UNDEF (tr_ty (T.TUPLE t))) v
        in
-          (ve,se,I.TUPLE (map tr_ty t, v'),instr) 
+          (ve,se,rt,instr) 
        end
      | tr_exp ve se (A.EIF (e1,e2,e3,t,p)) =
        let
@@ -190,7 +194,7 @@ struct
           val rlab = Temp.newlabel ()
 
           val rv = I.TEMP (Temp.newtemp (tr_ty t))
-          val phi = [I.LABEL rlab, I.PHI (rv,[(r2,tlab),(r3,flab)])]
+          val phi = [I.LABEL rlab, I.PHI (rv,tr_ty t,[(r2,tlab),(r3,flab)])]
        in
           (ve,se,rv,
           in1 @
@@ -246,7 +250,7 @@ struct
                        instr @ 
                         [I.JUMP (I.NAME el, [el]),
                          I.LABEL el, 
-                         I.PHI (I.TEMP rt, labs)]
+                         I.PHI (I.TEMP rt, tr_ty t, labs)]
        in
           (ve,se,I.TEMP rt,instr')
        end

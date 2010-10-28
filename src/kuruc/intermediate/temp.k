@@ -48,7 +48,7 @@ struct
    (* fun tempFromSymbol s t = (S.hash s, t) *)
    fun getType (_,t) = t : ty
 
-   fun prettyPrint (i,label s) = "@" ^ s
+   fun prettyPrint (i,label s) = "%" ^ s
      | prettyPrint (i,_) = "%t" ^ Int.toString i
 
    fun prettyPrintNoPrefix (i,label s) = s

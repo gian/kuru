@@ -30,39 +30,131 @@ struct
    val dquote = "\""
 
    fun ind 0 = ""
-     | ind n = "   " ^ ind n
+     | ind n = "   " ^ ind (n-1)
 
-   fun ppty Temp.i1 = "i1"
-     | ppty Temp.i8 = "i8"
-     | ppty Temp.i16 = "i16"
-     | ppty Temp.i32 = "i32"
-     | ppty Temp.i64 = "i64"
-     | ppty Temp.r32 = "r32"
-     | ppty Temp.r64 = "r64"
-     | ppty (Temp.label _) = raise Fail "CodeGen: taking type of label"
-     | ppty Temp.string_ptr = "i32*"
-     | ppty Temp.void = "void"
-     | ppty (Temp.fn_ptr (t1,t2)) = j [ppty t2,
+   fun cg_ty Temp.i1 = "i1"
+     | cg_ty Temp.i8 = "i8"
+     | cg_ty Temp.i16 = "i16"
+     | cg_ty Temp.i32 = "i32"
+     | cg_ty Temp.i64 = "i64"
+     | cg_ty Temp.r32 = "r32"
+     | cg_ty Temp.r64 = "r64"
+     | cg_ty (Temp.label _) = raise Fail "CodeGen: taking type of label"
+     | cg_ty Temp.string_ptr = "i32*"
+     | cg_ty Temp.void = "void"
+     | cg_ty (Temp.fn_ptr (t1,t2)) = j [cg_ty t2,
                                        " (",
-                                       ppty t1,
+                                       cg_ty t1,
                                        ") *"]
-     | ppty (Temp.aggr l) = j ["{ ",
-                               jc (map ppty l),
+     | cg_ty (Temp.aggr l) = j ["{ ",
+                               jc (map cg_ty l),
                                " }"]
    val ppt = Temp.prettyPrint
    val ppt_np = Temp.prettyPrintNoPrefix 
 
-   fun cg_frag (T.FSTRING (l,s)) = j [ppt_np l, ": ", dquote, s, dquote]
-     | cg_frag (T.FFN (l,exps,stms,t)) =
-         j [
-            jsp ["define fastcc",ppty t,ppt l,"("],
-            cg_param
+   fun opt_t (true,s) = s ^ " "
+     | opt_t (false,s) = ""
 
+   fun cg_frag' (T.FSTRING (l,s)) = j [ppt_np l, ": ", dquote, s, dquote]
+     | cg_frag' (T.FFN (l,exps,stms,t)) =
+         j [
+            jsp ["define fastcc",cg_ty t,ppt l,"("],
+            jc (map cg_exp_t exps), ") {\n",
+            jnl (map (cg_stm 2) stms),
+            "\n}\n"
          ]
+   and cg_frag l = (cg_frag' l)
+
+   and cg_cmp t (I.REQ) _ _ = raise Fail "cg_cmp: REQ not implemented"
+     | cg_cmp t (I.RNEQ) _ _ = raise Fail "cg_cmp: RNEQ not implemented"
+     | cg_cmp t opr e1 e2 =
+       let
+          val opr' = 
+           (case opr of 
+               I.EQ => "eq"
+             | I.NEQ => "ne"
+             | I.LT => "slt"
+             | I.GT => "sgt"
+             | I.LE => "sle"
+             | I.GE => "sge"
+             | I.ULT => "ult"
+             | I.ULE => "ule"
+             | I.UGT => "ugt"
+             | I.UGE => "uge"
+             | _ => "???")
+       in
+          j [ppt t, " = icmp ", opr', " ",
+             cg_exp_t e1, ", ", cg_exp e2]
+       end
+
+   and cg_exp' b (I.CONST i) = j [opt_t (b,"i32"), Int.toString i]
+     | cg_exp' b (I.RCONST i) = j [opt_t (b,"r32"), Real.toString i]
+     | cg_exp' b (I.NAME l) = ppt l
+     | cg_exp' b (I.TEMP t) = j [opt_t (b,cg_ty (Temp.getType t)), ppt t]
+     | cg_exp' b (I.CALL (ty,e1,e2)) = 
+         jsp ["tail call fastcc",cg_ty ty,cg_exp e1,
+                j ["(", cg_exp_t e2, ")"]
+             ]
+     | cg_exp' b (I.TUPLE_IND (e,i)) =
+         j [
+            "extractvalue ", cg_exp_t e, ", ", Int.toString i 
+         ]
+     | cg_exp' b (I.TUPLE_INS (e1,e2,i)) =
+         j [
+            "insertvalue ", cg_exp_t e1, ", ", cg_exp_t e2, ", ", Int.toString i
+         ]
+     | cg_exp' b (I.VOID) = 
+         j [opt_t (b,"void"), "void"]
+     | cg_exp' b (I.UNDEF t) =
+         j [opt_t (b,cg_ty t), "undef"]
+     | cg_exp' b _ = raise Fail "cg_exp' b: Not implemented"
+
+   and cg_exp_t e = (cg_exp' true e)
+   
+   and cg_exp e = (cg_exp' false e)
+
+   and cg_stm i (I.MOVE (e1,e2)) = 
+          j [ind i, cg_exp e1, " = ", cg_exp e2]
+     | cg_stm i (I.EXP e1) =
+          raise Fail ("cg_stm: EXP not implemented")
+     | cg_stm i (I.JUMP (e,l)) =
+          j [ind i, "br label ", cg_exp e]
+     | cg_stm i (I.CJUMP (r,e1,e2,l)) =
+          raise Fail "cg_stm: CJUMP not implemented"
+     | cg_stm i (I.CJUMP2 (r,e1,e2,l1,l2)) =
+       let
+          val c = Temp.newtemp (Temp.i1)
+       in
+          jnl [
+             j [ind i, cg_cmp c r e1 e2],
+             j [ind i, "br i1 ", ppt c, ", ",
+                jc [
+                   j ["label ", ppt l1],
+                   j ["label ", ppt l2]
+                ]
+             ]
+          ]
+       end
+     | cg_stm i (I.PHI (e, t, el)) =
+       let
+          val el' = 
+            map (fn (ex,la) => j [ "[", cg_exp ex, ", ", ppt la, "]" ]) el
+       in
+          j [ ind i,
+             cg_exp e, " = phi ", cg_ty t, " ", jc el' 
+          ]
+       end
+     | cg_stm i (I.LABEL l) =
+          j [ind (i-1), ppt_np l, ":"]
+     | cg_stm i (I.RET e) =
+          j [ind i, "ret ", cg_exp_t e]
 
    fun codegen (stms, frags) =
       jnl [
          jnl (map cg_frag frags),
-         jnl (map (cg_stm 1) stms)
+         "define fastcc i32 @main (i32 %argc, i8** %argv) {\nentry:\n",
+         jnl (map (cg_stm 2) stms),
+         "\n   exit:\n",
+         "      ret 0\n}\n"
       ]
 end
