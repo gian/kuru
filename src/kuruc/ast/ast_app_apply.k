@@ -35,7 +35,7 @@ struct
         | s (Seq (a,b,p)) = Seq (s a, s b,p)
         | s (OpExp (a,p)) = OpExp (s a,p)
         | s (App (a,b,p)) = App (s a, s b,p)
-        | s (AppList ([e],p)) = e
+        | s (AppList ([e],p)) = s e
         | s (AppList (l,p)) =
             let
                fun a [] = raise Fail ("Invalid application near " ^ Int.toString p)

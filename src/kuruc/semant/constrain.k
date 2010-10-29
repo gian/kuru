@@ -184,6 +184,16 @@ struct
        in
           (te,ve,se,cs',t,A.ETUPLE(v'',t,p))
        end
+     | constr_exp te ve se (A.EIF (e1,e2,e3,t,p)) =
+       let
+          val t' = T.fresh ()
+          val (_,_,_,c1,t1,e1') = constr_exp te ve se e1
+          val (_,_,_,c2,t2,e2') = constr_exp te ve se e2
+          val (_,_,_,c3,t3,e3') = constr_exp te ve se e3
+          val cs = c1 @ c2 @ c3 @ [(t1,T.t_bool),(t',t2),(t',t3)]
+       in
+          (te,ve,se,cs,t',A.EIF (e1',e2',e3',t',p))
+       end
      | constr_exp te ve se (A.EFN (s,e,t,p)) =
        let
           val t' = T.fresh ()

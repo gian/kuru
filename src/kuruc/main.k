@@ -22,9 +22,10 @@
 structure Main =
 struct
    val args = CommandLine.arguments ()
+   val outputFile = ref "a.out"
 
 	fun printUsage () =
-		print ("Usage: kuruc [-vdqh] file1.k ... fileN.k\n" ^
+		print ("Usage: kuruc [-vdqh] [-o outputFile] file1.k ... fileN.k\n" ^
 		       "\tOptions:\n" ^
 				 "\t\t-h\tDisplay this help information and exit.\n" ^
 				 "\t\t-q\tQuiet mode - show only fatal errors.\n" ^
@@ -60,6 +61,7 @@ struct
                               parseArgs t)
 	  | parseArgs ("-V"::t) = (printVersion (); Unix.exit 0w0; raise Fail "")
 	  | parseArgs ("-h"::t) = (printUsage (); Unix.exit 0w0; raise Fail "")
+     | parseArgs ("-o"::f::t) = (outputFile := f; parseArgs t)
      | parseArgs (h::t) = h :: parseArgs t
   
    fun main () =
@@ -70,7 +72,7 @@ struct
             raise Fail "Missing filename") else ()
 	
 	in
-		Compile.compile args'
+		Compile.compile (!outputFile) args'
    end
 end   
    

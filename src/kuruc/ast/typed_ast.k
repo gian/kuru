@@ -208,7 +208,9 @@ struct
 	  | ppe (ELID(s,ty,p)) = String.concatWith "." (map Symbol.name s)
      | ppe (ELIST(v,ty,p)) = "[" ^ (String.concatWith "," (map ppe (vtol v))) ^ "]"
      | ppe (ETUPLE(v,ty,p)) = "(" ^ (String.concatWith "," (map ppe (vtol v))) ^ ")"
-     | ppe (EFN(s,e,ty,p)) = "fn " ^ S.name s ^  
+     | ppe (EIF(e1,e2,e3,t,p)) = "if " ^ ppe e1 ^ " then " ^ ppe e2 ^ " else " ^ 
+	  											ppe e3
+	  | ppe (EFN(s,e,ty,p)) = "fn " ^ S.name s ^  
                              " => (" ^ ppe e ^ ")"
      | ppe (ECASE(e1,m,ty,p)) = "case " ^ ppe e1 ^ " of [\n" ^
                                 (String.concatWith "\n" (map

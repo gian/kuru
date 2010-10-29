@@ -21,6 +21,7 @@
 structure Env =
 struct
 	structure T = Type
+   structure S = Symbol
 
 	datatype enventry = 
 					  VarEntry of T.ty
@@ -41,7 +42,20 @@ struct
 
 	type env = enventry Symbol.table
 
-	val tenv_base = Symbol.empty : T.ty Symbol.table
-	val venv_base = Symbol.empty : enventry Symbol.table
+	val tenv_base = 
+      let
+         val b = Symbol.empty : T.ty Symbol.table
+      in
+         b
+      end
+
+	val venv_base = 
+      let
+         val b = Symbol.empty : enventry Symbol.table
+         val b'   = S.enter (b,    S.symbol "true",  VarEntry (T.t_bool))
+         val b''  = S.enter (b',   S.symbol "false", VarEntry (T.t_bool))
+      in
+         b''
+      end
 end
 

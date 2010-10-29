@@ -23,7 +23,7 @@ struct
    (* FIXME: This should be in an external platform-independent file *)
    fun exec cmd args = Unix.execute (cmd, args)
    
-   fun assemble (llvmSource) = 
+   fun llvmas (llvmSource) = 
       let
          val llas = exec "/opt/local/bin/llvm-as" []
          val (fi,fo) = (fn x => (Unix.binInstreamOf x, Unix.textOutstreamOf x)) llas
@@ -39,5 +39,49 @@ struct
       in
          asm
       end
-      
+   
+   fun opt (llvmBytecode) =
+      let
+         val llo = exec "/opt/local/bin/opt" ["-tailcallelim","-O2"]
+         val (fi,fo) = (fn x => (Unix.binInstreamOf x, Unix.binOutstreamOf x)) llo
+         val _ = BinIO.output (fo,llvmBytecode)
+         val _ = BinIO.closeOut fo
+         val bc = BinIO.inputAll fi
+         val _ = BinIO.closeIn fi
+
+         val _ = if not (OS.Process.isSuccess (Unix.reap llo))
+                     then raise Fail 
+                        ("opt failed with error status code")
+                     else ()
+      in
+         bc
+      end
+
+   fun llc (llvmBytecode,filename) =
+      let
+         val llc = exec "/opt/local/bin/llc" ["-f","-o",filename]
+         val (fi,fo) = (fn x => (Unix.binInstreamOf x, Unix.binOutstreamOf x)) llc
+         val _ = BinIO.output (fo,llvmBytecode)
+         val _ = BinIO.closeOut fo
+         val bc = BinIO.inputAll fi
+         val _ = BinIO.closeIn fi
+
+         val _ = if not (OS.Process.isSuccess (Unix.reap llc))
+                     then raise Fail 
+                        ("llc failed with error status code")
+                     else ()
+      in
+         true
+      end
+
+   (* TODO: This needs to finish linking against the runtime *)
+   fun compile (llvmSource,filename) =
+      let
+         val bc = llvmas llvmSource
+         val bc' = opt bc
+         val _ = llc (bc',filename) 
+      in
+         true
+      end
+
 end

@@ -26,6 +26,7 @@ struct
 
    datatype exp = CONST of int
                 | RCONST of real
+                | BCONST of bool
                 | NAME of Temp.label
                 | TEMP of Temp.temp
                 | MEM of exp
@@ -40,7 +41,7 @@ struct
         and stm = MOVE of exp * exp
                 | EXP of exp
                 | JUMP of exp * Temp.label list
-                | CJUMP of relop * exp * exp * Temp.label
+                | CJUMP of exp * Temp.label * Temp.label
                 | CJUMP2 of relop * exp * exp * Temp.label * Temp.label
                 | PHI of exp * Temp.ty * (exp * Temp.label) list
                 | LABEL of Temp.label
@@ -69,6 +70,8 @@ struct
 
    fun ppe (CONST i) = Int.toString i
      | ppe (RCONST i) = Real.toString i
+     | ppe (BCONST true) = "true"
+     | ppe (BCONST false) = "false"
      | ppe (NAME l) = ppt l
      | ppe (TEMP t) = ppt t
      | ppe (MEM e) = "MEM " ^ ppe e
@@ -85,10 +88,9 @@ struct
    fun ppstm (MOVE (e1,e2)) = ppe e1 ^ " <- " ^ ppe e2
      | ppstm (EXP e) = "EXP " ^ ppe e
      | ppstm (JUMP (e,ll)) = "JUMP " ^ ppe e
-     | ppstm (CJUMP (r,e1,e2,l)) = "CJUMP " ^ ppr r ^ " " ^
-                                       ppe e1 ^ " " ^ 
-                                       ppe e2 ^ " " ^
-                                       ppt l
+     | ppstm (CJUMP (e,l1,l2)) = "CJUMP " ^ ppe e ^ " " ^
+                                       ppt l1 ^ " " ^
+                                       ppt l2
      | ppstm (CJUMP2 (r,e1,e2,l1,l2)) = "CJUMP2 " ^ ppr r ^ " " ^
                                             ppe e1 ^ " " ^
                                             ppe e2 ^ " " ^

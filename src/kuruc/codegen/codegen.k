@@ -90,6 +90,7 @@ struct
 
    and cg_exp' b (I.CONST i) = j [opt_t (b,"i32"), Int.toString i]
      | cg_exp' b (I.RCONST i) = j [opt_t (b,"r32"), Real.toString i]
+     | cg_exp' b (I.BCONST i) = j [opt_t (b, "i1"), if i then "true" else "false"]
      | cg_exp' b (I.NAME l) = ppt l
      | cg_exp' b (I.TEMP t) = j [opt_t (b,cg_ty (Temp.getType t)), ppt t]
      | cg_exp' b (I.CALL (ty,e1,e2)) = 
@@ -120,8 +121,8 @@ struct
           raise Fail ("cg_stm: EXP not implemented")
      | cg_stm i (I.JUMP (e,l)) =
           j [ind i, "br label ", cg_exp e]
-     | cg_stm i (I.CJUMP (r,e1,e2,l)) =
-          raise Fail "cg_stm: CJUMP not implemented"
+     | cg_stm i (I.CJUMP (e,l1,l2)) =
+       j [ind i, "br ", cg_exp_t e, ", label ", ppt l1, ", label ", ppt l2]
      | cg_stm i (I.CJUMP2 (r,e1,e2,l1,l2)) =
        let
           val c = Temp.newtemp (Temp.i1)
@@ -153,9 +154,10 @@ struct
    fun codegen (stms, frags) =
       jnl [
          jnl (map cg_frag frags),
-         "define fastcc i32 @main (i32 %argc, i8** %argv) {\nentry:\n",
+         "define fastcc i32 @main (i32 %argc, i8** %argv) {\n   entry:\n",
          jnl (map (cg_stm 2) stms),
-         "\n   exit:\n",
-         "      ret 0\n}\n"
+         "      br label %finalise",
+         "   finalise:",
+         "      ret i32 0\n}\n"
       ]
 end

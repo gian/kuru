@@ -51,6 +51,12 @@ struct
      | printFragments (h::t) = printFragment h ^ "\n" ^ 
                                  printFragments t
 
+   fun is_simple (I.NAME _) = true
+     | is_simple (I.TEMP _) = true
+     | is_simple (I.CONST _) = true
+     | is_simple (I.BCONST _) = true
+     | is_simple _ = false
+
    fun tr_ty (T.NAME s) = 
       let
          val s' = Symbol.name s
@@ -136,12 +142,12 @@ struct
      | tr_pat ve se (A.PID (s,ty,p)) =
        (fn (c,t,f) =>
        let
-          val ts = Temp.newtemp (tr_ty ty)
-          val ve' = S.enter (ve, s, I.TEMP ts)
+          val ts = if is_simple c then c else I.TEMP (Temp.newtemp (tr_ty ty))
+          val ve' = S.enter (ve, s, ts)
+          val mv = if is_simple c then [] else [I.MOVE (ts,c)]
        in
          (ve',se,
-            [I.MOVE (I.TEMP ts, c),
-             I.JUMP (I.NAME t,[t])])
+            mv @ [I.JUMP (I.NAME t,[t])])
        end)
      | tr_pat ve se (A.PINFIX (a,b,c,t,p)) = 
             raise Fail "tr_pat: Infix not impl." 
@@ -198,7 +204,7 @@ struct
        in
           (ve,se,rv,
           in1 @
-          [I.CJUMP2 (I.EQ, I.CONST 1, r1, tlab, flab),
+          [I.CJUMP (r1, tlab, flab),
            I.LABEL tlab] @
           in2 @
           [I.JUMP (I.NAME rlab, [rlab]),
@@ -287,12 +293,14 @@ struct
                  
    and tr_ast ve se (A.DVAL (s,e,t,p)) =
        let
-          val rt = Temp.newtemp (tr_ty t)
           val _ = Debug.print Debug.debug ("tr_ast: DVAL\n")
           val (_,_,e',in1) = tr_exp ve se e
-          val ve' = S.enter (ve,s,I.TEMP rt)
+          
+          val rt = if is_simple e' then e' else I.TEMP (Temp.newtemp (tr_ty t))
+          val ve' = S.enter (ve,s,rt)
+          val mv = if is_simple e' then [] else [I.MOVE (rt,e')]
        in
-          (ve',se,in1 @ [I.MOVE (I.TEMP rt, e')])
+          (ve',se,in1 @ mv)
        end
      | tr_ast ve se (A.DVALREC (A.DVAL (s,e,t1,p1),t2,p2)) =
        let
@@ -329,6 +337,15 @@ struct
          (* FIXME: DSTRUCTASSIGN needs to accept long ids on RHS. *)
      | tr_ast ve se (A.DNULL p) = (ve,se,[]) 
 
+   val tr_venv_base =
+      let
+         val b = S.empty
+         val b' = S.enter (b, S.symbol "true", I.BCONST true)
+         val b'' = S.enter (b', S.symbol "false", I.BCONST false)
+      in
+         b''
+      end
+
    fun translate ast =
       let
          val (ve,se,ast') =
@@ -337,7 +354,7 @@ struct
                        val (ve',se',a') = tr_ast ve se a
                     in
                        (ve',se',b@a')
-                    end) (S.empty,S.empty,[]) ast
+                    end) (tr_venv_base,S.empty,[]) ast
          val fr = !fragments
          val _ = fragments := []
       in
