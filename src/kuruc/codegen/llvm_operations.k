@@ -42,7 +42,9 @@ struct
    
    fun opt (llvmBytecode) =
       let
-         val llo = exec "/opt/local/bin/opt" ["-tailcallelim","-O2"]
+         val llo = exec "/opt/local/bin/opt" ["-tailcallelim",
+                                              "-O" ^ (Int.toString
+                                                (Config.getOptimiser ()))]
          val (fi,fo) = (fn x => (Unix.binInstreamOf x, Unix.binOutstreamOf x)) llo
          val _ = BinIO.output (fo,llvmBytecode)
          val _ = BinIO.closeOut fo
@@ -78,7 +80,7 @@ struct
    fun compile (llvmSource,filename) =
       let
          val bc = llvmas llvmSource
-         val bc' = opt bc
+         val bc' = if Config.getOptimiser() = 0 then bc else opt bc
          val _ = llc (bc',filename) 
       in
          true

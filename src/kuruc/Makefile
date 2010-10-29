@@ -13,7 +13,7 @@ SMLDEPS= \
 	intermediate/temp.sml intermediate/intermediate.sml \
 	intermediate/translate.sml codegen/codegen.sml \
 	codegen/llvm_operations.sml \
-	debug.sml main.sml compile.sml version.sml
+	config.sml debug.sml main.sml compile.sml version.sml
 
 all: $(BIN)/kuruc
 
@@ -51,7 +51,7 @@ codegen:
 	$(MAKE) -C codegen
 
 clean:
-	rm -f $(BIN)/kuruc main.sml compile.sml debug.sml version.sml 
+	rm -f $(BIN)/kuruc config.sml main.sml compile.sml debug.sml version.sml 
 	$(MAKE) -C frontend clean
 	$(MAKE) -C lib clean
 	$(MAKE) -C ast clean

@@ -66,8 +66,8 @@ struct
    fun deserialiseFile f = raise Fail "deserialiseFile not implemented"
 
 
-   fun compile output [] = raise Fail "No input files given"
-     | compile output fl = 
+   fun compile [] = raise Fail "No input files given"
+     | compile fl = 
       let
          (* Stage 1 - Parse/Deserialise files *)
          val fl' = map (fn f => if String.isSuffix ".k" f then parseFile f
@@ -114,7 +114,7 @@ struct
          val _ = Debug.print Debug.internal ("Generated code:\n" ^ code ^ "\n")
       
          (* Stage 7 - LLVM invokation *)
-         val _ = LLVMOperations.compile (code,output)
+         val _ = LLVMOperations.compile (code,Config.getOutputFile ())
       in
          ()
       end

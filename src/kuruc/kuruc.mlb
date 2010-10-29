@@ -1,5 +1,6 @@
 $(SML_LIB)/basis/basis.mlb
 $(SML_LIB)/smlnj-lib/Util/smlnj-lib.mlb
+config.sml
 debug.sml
 frontend/error.sml
 lib/set.sml

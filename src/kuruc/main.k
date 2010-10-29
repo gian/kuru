@@ -22,19 +22,23 @@
 structure Main =
 struct
    val args = CommandLine.arguments ()
-   val outputFile = ref "a.out"
 
 	fun printUsage () =
 		print ("Usage: kuruc [-vdqh] [-o outputFile] file1.k ... fileN.k\n" ^
 		       "\tOptions:\n" ^
-				 "\t\t-h\tDisplay this help information and exit.\n" ^
-				 "\t\t-q\tQuiet mode - show only fatal errors.\n" ^
-				 "\t\t-qq\tSilent mode - don't even show errors.\n" ^
-				 "\t\t-v\tVerbose mode.\n" ^
-				 "\t\t-vv\tBe more verbose.\n" ^
-				 "\t\t-d\tEnable debugging output.\n" ^
-				 "\t\t-dd\tEnable noisy debugging mode.\n" ^
-				 "\t\t-V\tOutput version information and exit.\n")
+             "\t\t-o file\t\tSpecify the output file.\n" ^
+             "\t\t-O0\t\tDisable all optimisations.\n" ^ 
+             "\t\t-O1\t\tEnable basic optimisations.\n" ^ 
+             "\t\t-O2\t\t(Default) Enable most optimisations.\n" ^ 
+             "\t\t-O3\t\tEnable all optimisations.\n" ^ 
+				 "\t\t-h\t\tDisplay this help information and exit.\n" ^
+				 "\t\t-q\t\tQuiet mode - show only fatal errors.\n" ^
+				 "\t\t-qq\t\tSilent mode - don't even show errors.\n" ^
+				 "\t\t-v\t\tVerbose mode.\n" ^
+				 "\t\t-vv\t\tBe more verbose.\n" ^
+				 "\t\t-d\t\tEnable debugging output.\n" ^
+				 "\t\t-dd\t\tEnable noisy debugging mode.\n" ^
+				 "\t\t-V\t\tOutput version information and exit.\n")
 
 	fun printVersion () =
 		print ("kuruc version " ^ Version.major ^ "." ^ Version.minor ^
@@ -61,7 +65,11 @@ struct
                               parseArgs t)
 	  | parseArgs ("-V"::t) = (printVersion (); Unix.exit 0w0; raise Fail "")
 	  | parseArgs ("-h"::t) = (printUsage (); Unix.exit 0w0; raise Fail "")
-     | parseArgs ("-o"::f::t) = (outputFile := f; parseArgs t)
+     | parseArgs ("-O0"::t) = (Config.setOptimiser 0; parseArgs t)
+     | parseArgs ("-O1"::t) = (Config.setOptimiser 1; parseArgs t)
+     | parseArgs ("-O2"::t) = (Config.setOptimiser 2; parseArgs t)
+     | parseArgs ("-O3"::t) = (Config.setOptimiser 3; parseArgs t)
+     | parseArgs ("-o"::f::t) = (Config.setOutputFile f; parseArgs t)
      | parseArgs (h::t) = h :: parseArgs t
   
    fun main () =
@@ -72,7 +80,7 @@ struct
             raise Fail "Missing filename") else ()
 	
 	in
-		Compile.compile (!outputFile) args'
+		Compile.compile args'
    end
 end   
    
