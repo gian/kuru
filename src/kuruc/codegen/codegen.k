@@ -41,7 +41,7 @@ struct
      | cg_ty Temp.r64 = "r64"
      | cg_ty (Temp.label _) = raise Fail "CodeGen: taking type of label"
      | cg_ty (Temp.global _) = raise Fail "CodeGen: taking type of global"
-     | cg_ty Temp.string_ptr = "i32*"
+     | cg_ty (Temp.ptr t) = cg_ty t ^ "*"
      | cg_ty Temp.void = "void"
      | cg_ty (Temp.fn_ptr (t1,t2)) = j [cg_ty t2,
                                        " (",
@@ -50,13 +50,18 @@ struct
      | cg_ty (Temp.aggr l) = j ["{ ",
                                jc (map cg_ty l),
                                " }"]
+     | cg_ty (Temp.array (i,t)) = j [ "[", Int.toString i, " x ", cg_ty t, "]" ]
+
    val ppt = Temp.prettyPrint
    val ppt_np = Temp.prettyPrintNoPrefix 
 
    fun opt_t (true,s) = s ^ " "
      | opt_t (false,s) = ""
 
-   fun cg_frag' (T.FSTRING (l,s)) = j [ppt_np l, ": ", dquote, s, dquote]
+   fun cg_frag' (T.FSTRING (l,s)) = 
+      j [ppt l, " = ", 
+         "private constant [", Int.toString (size s + 1), " x i8] c",
+          dquote, s, "\\00", dquote]
      | cg_frag' (T.FFN (l,exps,stms,t)) =
          j [
             jsp ["define fastcc",cg_ty t,ppt l,"("],
@@ -104,6 +109,11 @@ struct
      | cg_exp' b (I.TUPLE_INS (e1,e2,i)) =
          j [
             "insertvalue ", cg_exp_t e1, ", ", cg_exp_t e2, ", ", Int.toString i
+         ]
+     | cg_exp' b (I.ELEM_PTR (ty,e1,i)) =
+         j [
+            "getelementptr ", cg_ty ty, "* ", cg_exp e1, ", i32 0, i32 ",
+            Int.toString i
          ]
      | cg_exp' b (I.VOID) = 
          j [opt_t (b,"void"), "void"]

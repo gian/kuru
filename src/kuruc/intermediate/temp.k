@@ -31,10 +31,11 @@ struct
                | r64
                | label of string
                | global of string
-               | string_ptr
+               | ptr of ty
                | void
                | fn_ptr of ty * ty
                | aggr of ty list
+               | array of int * ty
 
    type temp = int * ty
    type label = temp

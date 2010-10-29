@@ -35,6 +35,7 @@ struct
                 | TUPLE of Temp.ty list * exp list
                 | TUPLE_IND of exp * int
                 | TUPLE_INS of exp * exp * int (* exp1[int] <- exp2 *)
+                | ELEM_PTR of Temp.ty * exp * int
                 | UNDEF of Temp.ty
                 | VOID
    
@@ -82,6 +83,7 @@ struct
      | ppe (TUPLE_IND (e,i)) = ppe e ^ "[" ^ Int.toString i ^ "]"
      | ppe (TUPLE_INS (e1,e2,i)) = ppe e1 ^ "[" ^ Int.toString i ^ "] <- " ^
                                      ppe e2
+     | ppe (ELEM_PTR (t,e,i)) = "ELEM_PTR [" ^ ppe e ^ ", " ^ Int.toString i ^ "]"
      | ppe (UNDEF _) = "UNDEF"
      | ppe VOID = "void"
 

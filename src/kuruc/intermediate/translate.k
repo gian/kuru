@@ -57,6 +57,11 @@ struct
      | is_simple (I.BCONST _) = true
      | is_simple _ = false
 
+   (* "Contingent label" - used to prevent adding of labels 
+      to create empty blocks. *)
+   fun cont_lab ([],_) = []
+     | cont_lab (x,l) = l
+
    fun tr_ty (T.NAME s) = 
       let
          val s' = Symbol.name s
@@ -65,7 +70,7 @@ struct
             "int" => Temp.i32
           | "real" => Temp.r64
           | "char" => Temp.i32
-          | "string" => Temp.string_ptr
+          | "string" => Temp.ptr (Temp.i8)
           | "bool" => Temp.i1
           | "unit" => Temp.void
           | _ => raise Fail "tr_ty: unhandled NAME type.")
@@ -76,22 +81,24 @@ struct
      | tr_ty (T.TUPLE l) = Temp.aggr (map tr_ty l)
      | tr_ty _ = raise Fail "tr_ty: unhandled type"
 
-   fun tr_val (A.LINT (v,p)) = I.CONST v (* FIXME: negative numbers? *) 
-     | tr_val (A.LREAL (v,p)) = I.RCONST v
-     | tr_val (A.LCHAR (v,p)) = I.CONST (Char.ord v) 
+   fun tr_val (A.LINT (v,p)) =   (I.CONST v,[]) (* FIXME: negative numbers? *) 
+     | tr_val (A.LREAL (v,p)) =  (I.RCONST v,[])
+     | tr_val (A.LCHAR (v,p)) =  (I.CONST (Char.ord v),[])
      | tr_val (A.LSTRING (v,p)) =
        let
-          val n = Temp.newlabel ()
+          val n = Temp.newglobal ()
           val _ = add_fragment (FSTRING (n, v))
+          val m = I.ELEM_PTR (Temp.array (size v + 1, Temp.i8),I.NAME n,0)
+          val t = I.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
        in
-          I.NAME n
+          (t, [I.MOVE (t,m)])
        end
-     | tr_val (A.LUNIT p) = I.VOID 
+     | tr_val (A.LUNIT p) = (I.VOID,[]) 
 
    fun tr_pat ve se (A.PCONST (A.ELIT (v,t,_),_,_)) =
       (fn (c,t,f) =>
        let
-          val v' = tr_val v
+          val (v',ins) = tr_val v
           val v'' =
           case v of 
             A.LINT _ => ( 
@@ -112,7 +119,7 @@ struct
                end)
           | A.LUNIT _ => ([I.JUMP (I.NAME t,[t])])
        in
-          (ve,se,v'')
+          (ve,se,ins@v'')
        end)
      | tr_pat ve se (A.PCONST (_,_,p)) = 
             raise Fail ("tr_pat: Invalid constant pattern!")
@@ -152,7 +159,12 @@ struct
      | tr_pat ve se (A.PINFIX (a,b,c,t,p)) = 
             raise Fail "tr_pat: Infix not impl." 
 
-   and tr_exp ve se (A.ELIT (v,t,p)) = (ve,se,tr_val v,[])
+   and tr_exp ve se (A.ELIT (v,t,p)) = 
+       let 
+          val (v',ins) = tr_val v
+       in
+          (ve,se,v',ins)
+       end
 	  | tr_exp ve se (A.EID (s,t,p)) = 
          (case S.look (ve,s) of NONE => raise Fail ("Unknown EID in tr_exp")
                               | SOME tm => (ve,se,tm,[]))
