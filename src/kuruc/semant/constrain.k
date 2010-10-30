@@ -122,6 +122,8 @@ struct
        in
           (te,ve'',se,cs'',t',A.PINFIX (l',s,r',t',p))
        end
+     | constr_pat te ve se (A.PWILD p) =
+         (te,ve,se,[],T.fresh (),A.PWILD p)
      | constr_pat _ _ _ _ = raise Fail "constr_pat not implemented"
 
    and constr_exp te ve se (A.ELIT(tv,_,p)) = 
@@ -276,6 +278,13 @@ struct
           val cs' = cs @ [(t',t)]
        in
           (te,ve,se,cs',t',e)
+       end
+     | constr_exp te ve se (A.ERAISE (e,p)) = 
+       let
+          val (te',ve',se',cs,t',e') = constr_exp te ve se e
+          val cs' = cs @ [(t',T.t_exn)]
+       in
+          (te,ve,se,cs',T.fresh (),A.ERAISE (e',p))
        end
      | constr_exp _ _ _ e = raise Fail ("Unhandled constr_exp:" ^ A.ppe e)
 

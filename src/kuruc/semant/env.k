@@ -25,7 +25,6 @@ struct
 
 	datatype enventry = 
 					  VarEntry of T.ty
-	            | FunEntry of T.ty list * T.ty (* formal parameters * result *)
 
    datatype structentry =
                  StructEntry of T.ty Symbol.table * 
@@ -33,10 +32,6 @@ struct
                          structentry Symbol.table
 
 	fun pp (VarEntry t) = T.prettyPrint t
-	  | pp (FunEntry ([t1],t2)) = T.prettyPrint t1 ^ " -> " ^ T.prettyPrint t2
-	  | pp (FunEntry (t1,t2)) = 
-	  		(String.concatWith " -> " (map T.prettyPrint t1)) ^ 
-				" -> " ^ T.prettyPrint t2
 
 	val prettyPrint = pp
 
@@ -51,11 +46,30 @@ struct
 
 	val venv_base = 
       let
-         val b = Symbol.empty : enventry Symbol.table
-         val b'   = S.enter (b,    S.symbol "true",  VarEntry (T.t_bool))
-         val b''  = S.enter (b',   S.symbol "false", VarEntry (T.t_bool))
+         val benv =
+          [
+            ("true",        T.t_bool),
+            ("false",       T.t_bool),
+            ("Match",       T.t_exn),
+            ("+",           T.FN(T.TUPLE [T.t_int,T.t_int],T.t_int)),
+            ("-",           T.FN(T.TUPLE [T.t_int,T.t_int],T.t_int)),
+            ("*",           T.FN(T.TUPLE [T.t_int,T.t_int],T.t_int)),
+            ("/",           T.FN(T.TUPLE [T.t_int,T.t_int],T.t_int)),
+            ("=",           T.FN(T.TUPLE [T.fresh(),T.fresh()],T.t_bool)),
+            ("<>",          T.FN(T.TUPLE [T.fresh(),T.fresh()],T.t_bool)),
+            ("<",           T.FN(T.TUPLE [T.t_int,T.t_int],T.t_int)),
+            (">",           T.FN(T.TUPLE [T.t_int,T.t_int],T.t_int)),
+            ("<=",          T.FN(T.TUPLE [T.t_int,T.t_int],T.t_int)),
+            (">=",          T.FN(T.TUPLE [T.t_int,T.t_int],T.t_int)),
+            ("_andalso",    T.FN(T.TUPLE [T.t_bool,T.t_bool],T.t_bool)),
+            ("_orelse",     T.FN(T.TUPLE [T.t_bool,T.t_bool],T.t_bool))
+          ]
+         val b = 
+            List.foldl (fn ((s,t),st) => 
+               S.enter (st,  S.symbol s, VarEntry t))
+                  Symbol.empty benv
       in
-         b''
+         b
       end
 end
 

@@ -27,6 +27,7 @@ struct
    datatype exp = CONST of int
                 | RCONST of real
                 | BCONST of bool
+                | EXN of string * exp list
                 | NAME of Temp.label
                 | TEMP of Temp.temp
                 | MEM of exp
@@ -37,6 +38,7 @@ struct
                 | TUPLE_INS of exp * exp * int (* exp1[int] <- exp2 *)
                 | ELEM_PTR of Temp.ty * exp * int
                 | UNDEF of Temp.ty
+                | BINOP of string * exp * exp
                 | VOID
    
         and stm = MOVE of exp * exp
@@ -47,6 +49,7 @@ struct
                 | PHI of exp * Temp.ty * (exp * Temp.label) list
                 | LABEL of Temp.label
                 | RET of exp
+                | UNWIND
    
       and relop = EQ | NEQ | LT | GT | LE | GE | ULT | ULE | UGT | UGE
                 | REQ | RNEQ
@@ -86,6 +89,8 @@ struct
      | ppe (ELEM_PTR (t,e,i)) = "ELEM_PTR [" ^ ppe e ^ ", " ^ Int.toString i ^ "]"
      | ppe (UNDEF _) = "UNDEF"
      | ppe VOID = "void"
+     | ppe (BINOP (s,a,b)) = "BINOP " ^ s ^ " [" ^ ppe a ^ ", " ^ ppe b ^ "]"
+     | ppe _ = "???"
 
    fun ppstm (MOVE (e1,e2)) = ppe e1 ^ " <- " ^ ppe e2
      | ppstm (EXP e) = "EXP " ^ ppe e
@@ -105,6 +110,8 @@ struct
                                            "]"
      | ppstm (LABEL l) = ppt l ^ ":"
      | ppstm (RET e) = "RET " ^ ppe e
+     | ppstm (UNWIND) = "UNWIND"
+     | ppstm _ = "???"
 
    fun prettyPrint [] = ""
      | prettyPrint (h::t) = ppstm h ^ "\n" ^ prettyPrint t

@@ -55,6 +55,7 @@ struct
      | is_simple (I.TEMP _) = true
      | is_simple (I.CONST _) = true
      | is_simple (I.BCONST _) = true
+     | is_simple (I.UNDEF _) = true
      | is_simple _ = false
 
    (* "Contingent label" - used to prevent adding of labels 
@@ -73,6 +74,7 @@ struct
           | "string" => Temp.ptr (Temp.i8)
           | "bool" => Temp.i1
           | "unit" => Temp.void
+          | "exn" => Temp.void
           | _ => raise Fail "tr_ty: unhandled NAME type.")
       end
      | tr_ty (T.FN (a,b)) =
@@ -93,12 +95,14 @@ struct
        in
           (t, [I.MOVE (t,m)])
        end
-     | tr_val (A.LUNIT p) = (I.VOID,[]) 
+     | tr_val (A.LUNIT p) = (I.VOID,[])
+     | tr_val _ = raise Fail "tr_val: Not implemented"
 
    fun tr_pat ve se (A.PCONST (A.ELIT (v,t,_),_,_)) =
-      (fn (c,t,f) =>
+      (fn (c,_,f) =>
        let
           val (v',ins) = tr_val v
+          val t = Temp.newlabel ()
           val v'' =
           case v of 
             A.LINT _ => ( 
@@ -110,7 +114,7 @@ struct
                let
                   val k = Temp.newtemp (Temp.i1)
                in
-                  [I.MOVE (I.NAME k,I.kstreq c v'),
+                  [I.MOVE (I.TEMP k,I.kstreq c v'),
                    I.CJUMP2 (I.NEQ,
                             I.NAME k,
                             I.CONST 1,
@@ -119,7 +123,7 @@ struct
                end)
           | A.LUNIT _ => ([I.JUMP (I.NAME t,[t])])
        in
-          (ve,se,ins@v'')
+          (ve,se,ins@v''@[I.LABEL t])
        end)
      | tr_pat ve se (A.PCONST (_,_,p)) = 
             raise Fail ("tr_pat: Invalid constant pattern!")
@@ -136,13 +140,14 @@ struct
                   val rt = Temp.newtemp (tr_ty (List.nth (types,i)))
                   val l' = l @ [I.MOVE (I.TEMP rt,I.TUPLE_IND(c,i))]
                   val (ve',se',l'') = (f' (I.TEMP rt,nlab,f))
+                  val nl = if length l'' = 0 then [] else [I.LABEL nlab]
                in
-                  (ve',se',l'@l''@[I.LABEL nlab])
+                  (ve',se',l'@l''@nl)
                end) (ve,se,[]) v
 
             val (ve',se',fl) = mkt (c,t,f) 
          in
-            (ve',se',fl @ [I.JUMP (I.NAME t,[t])])
+            (ve',se',fl)
          end)
      | tr_pat ve se (A.PCONSTR (s,popt,t,p)) = 
             raise Fail ("tr_pat: PCONSTR not impl.")
@@ -153,11 +158,15 @@ struct
           val ve' = S.enter (ve, s, ts)
           val mv = if is_simple c then [] else [I.MOVE (ts,c)]
        in
-         (ve',se,
-            mv @ [I.JUMP (I.NAME t,[t])])
+         (ve',se,mv)
        end)
      | tr_pat ve se (A.PINFIX (a,b,c,t,p)) = 
-            raise Fail "tr_pat: Infix not impl." 
+            raise Fail "tr_pat: Infix not impl."
+     | tr_pat ve se (A.PWILD p) =
+       (fn (c,t,f) =>
+            (ve,se,[])
+       )
+     | tr_pat ve se _ = raise Fail "tr_pat: Not implemented"
 
    and tr_exp ve se (A.ELIT (v,t,p)) = 
        let 
@@ -244,34 +253,151 @@ struct
           val (_,_,e',in1) = tr_exp ve se e
 
           val el = Temp.newlabel ()
-          
-          val (instr,labs) =
+          val fst = Temp.newlabel ()
+
+          val (instr,labs,_) =
             Vector.foldl (
-               fn ((p,e),(ins,labs)) =>
+               fn ((p,e),(ins,labs,lst)) =>
                let
                   val tlab = Temp.newlabel ()
                   val flab = Temp.newlabel ()
+                  
                   val (ve',se',p') = (tr_pat ve se p) (e',tlab,flab)
                   val (_,_,e'',eins) = tr_exp ve' se' e
                in
                   (ins @ 
                     p' @ 
-                    [I.LABEL tlab] @ 
                     eins @
-                    [I.JUMP (I.NAME el, [el]),
-                     I.LABEL flab],
-                  labs @ [(e'',tlab)])
-               end) ([],[]) v
+                    [I.JUMP (I.NAME el,[el])] @
+                    [I.LABEL flab],
+                  labs @ [(e'',lst)],flab)
+               end) ([],[],fst) v
 
           val rt = Temp.newtemp (tr_ty t)
           val instr' = in1 @
-                       instr @ 
+                       [I.JUMP (I.NAME fst,[fst])] @
+                       [I.LABEL fst] @
+                       instr @
+                        [I.UNWIND] @
                         [I.LABEL el, 
                          I.PHI (I.TEMP rt, tr_ty t, labs)]
        in
           (ve,se,I.TEMP rt,instr')
        end
-     | tr_exp ve se (A.EAPP (a,b,t,p)) = 
+     | tr_exp ve se (A.EAPP(A.EID((r as "+",_),t1,p1),A.ETUPLE (v,t2,p2),t3,p3)) =
+       let
+          val (_,_,a,ins1) = tr_exp ve se (Vector.sub (v,0))
+          val (_,_,b,ins2) = tr_exp ve se (Vector.sub (v,1))
+          val rt = Temp.newtemp (tr_ty t3)
+          val ins = ins1 @ ins2 @ [I.MOVE (I.TEMP rt, I.BINOP (r,a,b))]
+       in
+          (ve,se,I.TEMP rt,ins)
+       end
+     | tr_exp ve se (A.EAPP(A.EID((r as "-",_),t1,p1),A.ETUPLE (v,t2,p2),t3,p3)) =
+       let
+          val (_,_,a,ins1) = tr_exp ve se (Vector.sub (v,0))
+          val (_,_,b,ins2) = tr_exp ve se (Vector.sub (v,1))
+          val rt = Temp.newtemp (tr_ty t3)
+          val ins = ins1 @ ins2 @ [I.MOVE (I.TEMP rt, I.BINOP (r,a,b))]
+       in
+          (ve,se,I.TEMP rt,ins)
+       end
+     | tr_exp ve se (A.EAPP(A.EID((r as "*",_),t1,p1),A.ETUPLE (v,t2,p2),t3,p3)) =
+       let
+          val (_,_,a,ins1) = tr_exp ve se (Vector.sub (v,0))
+          val (_,_,b,ins2) = tr_exp ve se (Vector.sub (v,1))
+          val rt = Temp.newtemp (tr_ty t3)
+          val ins = ins1 @ ins2 @ [I.MOVE (I.TEMP rt, I.BINOP (r,a,b))]
+       in
+          (ve,se,I.TEMP rt,ins)
+       end
+     | tr_exp ve se (A.EAPP(A.EID((r as "/",_),t1,p1),A.ETUPLE (v,t2,p2),t3,p3)) =
+       let
+          val (_,_,a,ins1) = tr_exp ve se (Vector.sub (v,0))
+          val (_,_,b,ins2) = tr_exp ve se (Vector.sub (v,1))
+          val rt = Temp.newtemp (tr_ty t3)
+          val ins = ins1 @ ins2 @ [I.MOVE (I.TEMP rt, I.BINOP (r,a,b))]
+       in
+          (ve,se,I.TEMP rt,ins)
+       end
+     | tr_exp ve se (A.EAPP(A.EID((r as "=",_),t1,p1),A.ETUPLE (v,t2,p2),t3,p3)) =
+       let
+          val (_,_,a,ins1) = tr_exp ve se (Vector.sub (v,0))
+          val (_,_,b,ins2) = tr_exp ve se (Vector.sub (v,1))
+          val rt = Temp.newtemp (tr_ty t3)
+          val ins = ins1 @ ins2 @ [I.MOVE (I.TEMP rt, I.BINOP (r,a,b))]
+       in
+          (ve,se,I.TEMP rt,ins)
+       end
+      | tr_exp ve se (A.EAPP(A.EID((r as "<>",_),t1,p1),
+                      A.ETUPLE (v,t2,p2),t3,p3)) =
+       let
+          val (_,_,a,ins1) = tr_exp ve se (Vector.sub (v,0))
+          val (_,_,b,ins2) = tr_exp ve se (Vector.sub (v,1))
+          val rt = Temp.newtemp (tr_ty t3)
+          val ins = ins1 @ ins2 @ [I.MOVE (I.TEMP rt, I.BINOP (r,a,b))]
+       in
+          (ve,se,I.TEMP rt,ins)
+       end    
+      | tr_exp ve se (A.EAPP(A.EID((r as "<",_),t1,p1),A.ETUPLE (v,t2,p2),t3,p3)) =
+       let
+          val (_,_,a,ins1) = tr_exp ve se (Vector.sub (v,0))
+          val (_,_,b,ins2) = tr_exp ve se (Vector.sub (v,1))
+          val rt = Temp.newtemp (tr_ty t3)
+          val ins = ins1 @ ins2 @ [I.MOVE (I.TEMP rt, I.BINOP (r,a,b))]
+       in
+          (ve,se,I.TEMP rt,ins)
+       end    
+      | tr_exp ve se (A.EAPP(A.EID((r as ">",_),t1,p1),A.ETUPLE (v,t2,p2),t3,p3)) =
+       let
+          val (_,_,a,ins1) = tr_exp ve se (Vector.sub (v,0))
+          val (_,_,b,ins2) = tr_exp ve se (Vector.sub (v,1))
+          val rt = Temp.newtemp (tr_ty t3)
+          val ins = ins1 @ ins2 @ [I.MOVE (I.TEMP rt, I.BINOP (r,a,b))]
+       in
+          (ve,se,I.TEMP rt,ins)
+       end    
+      | tr_exp ve se (A.EAPP(A.EID((r as "<=",_),t1,p1),
+         A.ETUPLE (v,t2,p2),t3,p3)) =
+       let
+          val (_,_,a,ins1) = tr_exp ve se (Vector.sub (v,0))
+          val (_,_,b,ins2) = tr_exp ve se (Vector.sub (v,1))
+          val rt = Temp.newtemp (tr_ty t3)
+          val ins = ins1 @ ins2 @ [I.MOVE (I.TEMP rt, I.BINOP (r,a,b))]
+       in
+          (ve,se,I.TEMP rt,ins)
+       end    
+      | tr_exp ve se (A.EAPP(A.EID((r as ">=",_),t1,p1),
+         A.ETUPLE (v,t2,p2),t3,p3)) =
+       let
+          val (_,_,a,ins1) = tr_exp ve se (Vector.sub (v,0))
+          val (_,_,b,ins2) = tr_exp ve se (Vector.sub (v,1))
+          val rt = Temp.newtemp (tr_ty t3)
+          val ins = ins1 @ ins2 @ [I.MOVE (I.TEMP rt, I.BINOP (r,a,b))]
+       in
+          (ve,se,I.TEMP rt,ins)
+       end    
+      | tr_exp ve se (A.EAPP(A.EID((r as "_andalso",_),t1,p1),
+         A.ETUPLE (v,t2,p2),t3,p3)) =
+       let
+          val (_,_,a,ins1) = tr_exp ve se (Vector.sub (v,0))
+          val (_,_,b,ins2) = tr_exp ve se (Vector.sub (v,1))
+          val rt = Temp.newtemp (tr_ty t3)
+          val ins = ins1 @ ins2 @ [I.MOVE (I.TEMP rt, I.BINOP (r,a,b))]
+       in
+          (ve,se,I.TEMP rt,ins)
+       end    
+      | tr_exp ve se (A.EAPP(A.EID((r as "_orelse",_),t1,p1),
+         A.ETUPLE (v,t2,p2),t3,p3)) =
+       let
+          val (_,_,a,ins1) = tr_exp ve se (Vector.sub (v,0))
+          val (_,_,b,ins2) = tr_exp ve se (Vector.sub (v,1))
+          val rt = Temp.newtemp (tr_ty t3)
+          val ins = ins1 @ ins2 @ [I.MOVE (I.TEMP rt, I.BINOP (r,a,b))]
+       in
+          (ve,se,I.TEMP rt,ins)
+       end    
+       | tr_exp ve se (A.EAPP (a,b,t,p)) = 
        let
           val (_,_,b',instr1) = tr_exp ve se b
           val (_,_,a',instr2) = tr_exp ve se a
@@ -284,7 +410,6 @@ struct
           (ve,se,I.TEMP rt, instr1 @ instr2 @ instr3)
        end
      | tr_exp ve se (A.EEXN (e,t,p)) = raise Fail "tr_exp: EEXN not impl." 
-     | tr_exp ve se (A.ERAISE (e,p)) = raise Fail "tr_exp: ERAISE not impl." 
      | tr_exp ve se (A.EHANDLE (pa,e,t,p)) = raise Fail "tr_exp: EHANDLE"
      | tr_exp ve se (A.ESEQ (v,t,p)) =
        let
@@ -301,7 +426,10 @@ struct
           (ve,se,rt,v')
        end
      | tr_exp ve se (A.ELET _) = raise Fail "tr_exp: ELET remains!" 
-     | tr_exp ve se (A.EANN (e,t,p)) = tr_exp ve se e 
+     | tr_exp ve se (A.EANN (e,t,p)) = tr_exp ve se e
+     | tr_exp ve se (A.ERAISE (e,p)) =
+          (ve,se,I.UNDEF Temp.void,[])
+     | tr_exp ve se k = raise Fail ("tr_exp: Not implemented")
                  
    and tr_ast ve se (A.DVAL (s,e,t,p)) =
        let
@@ -347,15 +475,17 @@ struct
      | tr_ast ve se (A.DSTRUCTASSIGN (s1,s2,p)) =
          raise Fail "tr_ast: DSTRUCTASSIGN not impl."
          (* FIXME: DSTRUCTASSIGN needs to accept long ids on RHS. *)
-     | tr_ast ve se (A.DNULL p) = (ve,se,[]) 
+     | tr_ast ve se (A.DNULL p) = (ve,se,[])
+     | tr_ast ve se _ = raise Fail "tr_ast: Not implemented"
 
    val tr_venv_base =
       let
          val b = S.empty
          val b' = S.enter (b, S.symbol "true", I.BCONST true)
          val b'' = S.enter (b', S.symbol "false", I.BCONST false)
+         val b''' = S.enter (b'', S.symbol "Match", I.UNDEF (Temp.void))
       in
-         b''
+         b'''
       end
 
    fun translate ast =

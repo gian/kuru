@@ -37,6 +37,7 @@ struct
                  | PCONSTR of S.symbol * tpat option * T.ty * pos
                  | PID of S.symbol * T.ty * pos 
                  | PINFIX of tpat * S.symbol * tpat * T.ty * pos
+					  | PWILD of pos
 
    and      texp = ELIT of tval * T.ty * pos
 	              | EID of S.symbol * T.ty * pos
@@ -69,6 +70,7 @@ struct
 	  | getType (DVALREC (_,t,_)) = t
 	  | getType (DNULL _) = T.UNKNOWN
 	  | getType (DSTRUCTURE _) = T.UNKNOWN
+	  | getType (DMUTUAL _) = T.UNKNOWN
 	  | getType _ = raise Fail "Can't getType for non DVAL or DVALREC"
 
 	fun setType (DVAL (a,b,_,c)) t = DVAL (a,b,t,c)
@@ -98,6 +100,8 @@ struct
                     subst_ty_pat tn th b,
                     T.substinty tn th t,
                     p)
+     | subst_ty_pat tn th (PWILD p) = PWILD p
+	  | subst_ty_pat tn th _ = raise Fail "subst_ty_pat: not implemented"
 
    and subst_ty_exp tn th (ELIT (tv,t,p)) =
             ELIT (tv, T.substinty tn th t, p)
@@ -193,6 +197,7 @@ struct
      | ppv (LCHAR(c,p)) = "#\"" ^ String.str (c) ^ "\""
      | ppv (LSTRING(s,p)) = "\"" ^ s ^ "\""
      | ppv (LUNIT _) = "()"
+	  | ppv _ = "???ppv"
 
    fun ppp (PCONST(e,t,p)) = ppe e
      | ppp (PLIST(v,ty,p)) = "[" ^ (String.concatWith "," (map ppp (vtol v))) ^ "]"
@@ -201,6 +206,8 @@ struct
      | ppp (PCONSTR(s,SOME cp,ty,p)) = "???constr???"
      | ppp (PID(s,t,p)) = S.name s  
      | ppp (PINFIX (a,b,c,t,p)) = "(" ^ ppp a ^ S.name b ^ ppp c ^ ")"
+	  | ppp (PWILD p) = "_"
+	  | ppp _ = "???ppp"
 
    and ppe (ELIT(tv,ty,p)) =  
                              ppv tv 
@@ -221,6 +228,7 @@ struct
      | ppe (ELET (v,e,t,p)) = "let\n   " ^ prettyPrint (vtol v) ^ 
                               "in\n   " ^ ppe e ^ 
                               "\nend\n"
+	  | ppe (ERAISE (e,p)) = "raise " ^ ppe e
      | ppe _ = "???texp???"
 
 

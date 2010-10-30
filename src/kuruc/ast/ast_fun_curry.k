@@ -54,8 +54,8 @@ struct
         end
         | casefml l = 
          let
-            val (FunMatch (n,pat,_,_,pos)) = 
-               case hd l of FunMatch c => FunMatch c
+            val (n,pat,_,_,pos) = 
+               case hd l of FunMatch c => c
                           | _ => raise Fail "Non-funmatch"
             
             fun mkfn p e pos = 

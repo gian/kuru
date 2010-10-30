@@ -11,6 +11,7 @@ ast/type.sml
 semant/env.sml
 frontend/parsetree.sml
 frontend/kuru.kpg.sml
+semant/exceptions.sml
 ast/typed_ast.sml
 ast/ast_datatype_unfold.sml
 ast/ast_infix_apply.sml

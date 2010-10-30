@@ -91,7 +91,7 @@ struct
 	  | pp (VAR s) = Symbol.name s
 	  | pp (META i) = "?X" ^ Int.toString i 
 	  | pp (POLY i) = "'" ^ (String.str (Char.chr (i + (Char.ord #"a"))))
-     | pp (UNKNOWN) = "???"
+     | pp _ = "???"
 
 	val prettyPrint = pp
 
@@ -106,7 +106,7 @@ struct
    val t_char   = NAME (Symbol.symbol "char")
    val t_unit   = NAME (Symbol.symbol "unit")
    val t_bool   = NAME (Symbol.symbol "bool")
-
+   val t_exn    = NAME (Symbol.symbol "exn")
    val t_list   = NAME (Symbol.symbol "list")
 end
 

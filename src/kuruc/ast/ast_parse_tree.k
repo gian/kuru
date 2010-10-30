@@ -87,7 +87,6 @@ struct
           in
              (te,ve,A.PCONSTR (S.symbol "_DUMMY_CONSTR",NONE,t,p))
           end
-
         | cpat te ve se (TyAnnPat (a,b,p)) = raise Fail "TyAnnPat not impl"
         | cpat te ve se (IdPat (Ident (n,_),p)) =
           let
@@ -97,6 +96,8 @@ struct
              (te,ve',A.PID (s',T.UNKNOWN,p))
           end
         | cpat te ve se (IdPat (_,p)) = raise IllegalParseTree ("IdPat",p)
+        | cpat te ve se (WildcardPat p) = 
+            (te,ve,A.PWILD p)
         | cpat te ve se p = 
             raise IllegalParseTree ("cpat Match: " ^ prettyPrint p,0)
 
@@ -132,7 +133,10 @@ struct
              val m' = Vector.fromList(map (fn (Match (a,b,_)) =>
                                let
                                   val (te',ve',a') = cpat te ve se a
-                               in (a', s te' ve' se b) end) m)
+                               in (a', s te' ve' se b) end
+                                             | _ => 
+                                               raise Fail 
+                                                "non-Match in case expression") m)
           in
              A.ECASE (s te ve se a, m', T.UNKNOWN, p)
           end
@@ -235,8 +239,8 @@ struct
         | d te ve se (FunDec (ll,p)) = raise IllegalParseTree ("FunDec",p)
         | d te ve se (ValBind (a,b,p)) =
           let
-             val (te',ve',A.PID(s',_,_)) = 
-               case (cpat te ve se a) of (t,v,A.PID x) => (t,v,A.PID x)
+             val (te',ve',(s',_,_)) = 
+               case (cpat te ve se a) of (t,v,A.PID x) => (t,v,x)
                                     | _ => raise IllegalParseTree ("ValBind",p)
              val e = s te' ve' se b
           in

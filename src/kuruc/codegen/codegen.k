@@ -96,6 +96,7 @@ struct
    and cg_exp' b (I.CONST i) = j [opt_t (b,"i32"), Int.toString i]
      | cg_exp' b (I.RCONST i) = j [opt_t (b,"r32"), Real.toString i]
      | cg_exp' b (I.BCONST i) = j [opt_t (b, "i1"), if i then "true" else "false"]
+     | cg_exp' b (I.EXN _) = j [opt_t (b, "i32"), "123456"] (* FIXME *)
      | cg_exp' b (I.NAME l) = ppt l
      | cg_exp' b (I.TEMP t) = j [opt_t (b,cg_ty (Temp.getType t)), ppt t]
      | cg_exp' b (I.CALL (ty,e1,e2)) = 
@@ -119,6 +120,26 @@ struct
          j [opt_t (b,"void"), "void"]
      | cg_exp' b (I.UNDEF t) =
          j [opt_t (b,cg_ty t), "undef"]
+     | cg_exp' _ (I.BINOP (opr,a,b)) =
+        let
+           val opr' = 
+           (case opr of
+               "+" => "add"
+             | "-" => "sub"
+             | "*" => "mul"
+             | "/" => "sdiv"
+             | "=" => "icmp eq"
+             | "<>" => "icmp ne"
+             | "<" => "icmp slt"
+             | ">" => "icmp sgt"
+             | "<=" => "icmp sle"
+             | ">=" => "icmp sge"
+             | "_andalso" => "and"
+             | "_orelse" => "or"
+             | _ => raise Fail "Invalid BINOP in cg_exp")
+        in
+           j [opr', " ", cg_exp_t a, ", ", cg_exp b]
+        end
      | cg_exp' b _ = raise Fail "cg_exp' b: Not implemented"
 
    and cg_exp_t e = (cg_exp' true e)
@@ -160,6 +181,9 @@ struct
           j [ind (i-1), ppt_np l, ":"]
      | cg_stm i (I.RET e) =
           j [ind i, "ret ", cg_exp_t e]
+     | cg_stm i (I.UNWIND) =
+          j [ind i, "unwind"]
+     | cg_stm i _ = raise Fail "cg_stm: Not implemented"
 
    fun codegen (stms, frags) =
       jnl [

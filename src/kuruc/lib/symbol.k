@@ -41,7 +41,7 @@ sig
   val prettyPrint : ('a -> string) -> 'a table -> string
 end
 
-structure Symbol :> SYMBOL =
+structure Symbol : SYMBOL =
 struct
 
   type symbol = string * int

@@ -2,4 +2,4 @@ all:
 
 
 clean:
-	rm -f constrain.sml env.sml unify.sml
+	rm -f exceptions.sml constrain.sml env.sml unify.sml

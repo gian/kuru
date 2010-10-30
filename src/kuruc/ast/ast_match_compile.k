@@ -97,6 +97,7 @@ struct
       in
          ([(a,t')], IdPat (t',p))
       end
+    | genfree (WildcardPat p) = ([],WildcardPat p)
     | genfree _ = raise Fail ("genfree encountered non-pattern")
 
    fun apply tenv venv pt =
@@ -160,18 +161,27 @@ struct
 
              val (fr,pat') = genfree pat
 
-             val _ = List.app (fn (l,r) => print (
+             val _ = List.app (fn (l,r) => Debug.print Debug.debug (
                                              "Pat: " ^ prettyPrint l ^ " = " ^
                                                prettyPrint r ^ "\n"
                                            )) fr
-             val _ = print ("Orig: " ^ prettyPrint pat' ^ "\n")
+             val _ = Debug.print Debug.debug ("Orig: " ^ prettyPrint pat' ^ "\n")
 
              val newbindings =
                List.foldl (fn ((t,s),sq) => 
                          let
                             val b = ValBind (
                                        IdPat (t,p),
-                                       CaseExp (n,[Match (pat',s,p)],p),
+                                       CaseExp (n,[Match (pat',s,p),
+                                                   Match (WildcardPat p,
+                                                          Raise (
+                                                            Ident (
+                                                             "Match",
+                                                             p),
+                                                            p)
+                                                         , p)
+                                                                     
+                                                   ],p),
                                        p
                                     )
                          in
