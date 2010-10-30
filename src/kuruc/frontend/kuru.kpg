@@ -124,7 +124,7 @@ nonid          <- "(" / ")" / "[" / "]" / "." / ";" / "," / "|" /
 keyword        <- "val" / "let" / "if" / "then" / "else" / "datatype"
                 / "type" / "fn" / "fun" / "and" / "end" / "in" /
                   "structure" / "struct" / "of" / "case" /
-                  "handle" / "raise".
+                  "handle" / "raise" / "infixr" / "infix".
 
 id             <-  r1: reserved r2: (reserved*) -> 
                   (P.Ident(String.concat($r1 :: $r2),!pos))
@@ -258,6 +258,10 @@ dec            <- _ "val" _ v: valbind -> (P.ValDec($v,!pos))
                      (P.DatatypeDec ($d,!pos))
                 / _"fun" _ f: funbind -> (P.FunDec ($f,!pos))
                 / _"structure" _ s: strbind -> (P.StructDec ($s,!pos))
+                / _"infixr" _ d: digit _ i: id -> (P.InfixrDec ($d,$i,!pos))
+                / _"infixr" _ i: id -> (P.InfixrDec ("",$i,!pos))
+                / _"infix" _ d: digit _ i: id -> (P.InfixDec ($d,$i,!pos))
+                / _"infix" _ i: id -> (P.InfixDec ("",$i,!pos))
                 .
 
 valbind        <- "rec" _ v1: valbind ->

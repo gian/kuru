@@ -23,7 +23,7 @@ tests: $(BIN)/kuruc
 $(BIN)/kuruc: $(SMLDEPS) kuruc.mlb
 	$(COMPILER) -output $(BIN)/kuruc kuruc.mlb
 
-frontend/kuru.kpg.k:
+frontend/kuru.kpg.k: frontend/kuru.kpg
 	$(MAKE) -C frontend kuru.kpg.k
 
 %.sml: %.k

@@ -69,6 +69,8 @@ type pos = int
     | TyName of pt * pos
     | ValDec of pt list * pos
     | TypeDec of pt list * pos
+    | InfixrDec of string * pt * pos 
+    | InfixDec of string * pt * pos
     | DatatypeAssign of pt * pt * pos
     | DatatypeDec of pt list * pos
     | FunDec of pt list list * pos
@@ -141,6 +143,10 @@ type pos = int
          "ValDec [" ^ (String.concatWith "\nand " (map pp b)) ^ "]\n"
      | pp (TypeDec (b,_)) =
          "TypeDec [" ^ (String.concatWith "\nand " (map pp b)) ^ "]\n"
+     | pp (InfixrDec (p,opr,_)) = 
+         "Infixr [" ^ p ^ ", " ^ pp opr ^ "]\n"
+     | pp (InfixDec (p,opr,_)) = 
+         "Infix [" ^ p ^ ", " ^ pp opr ^ "]\n"
      | pp (DatatypeAssign (i1,i2,_)) = 
                      "DatatypeAssign [" ^ pp i1 ^ " = " ^ pp i2 ^ "]\n"
      | pp (DatatypeDec (d,_)) =
