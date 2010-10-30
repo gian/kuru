@@ -34,6 +34,70 @@ struct
   val fr = ref 0 (* To generate fresh names *)
   fun fresh () = (fr := !fr + 1; "_m" ^ Int.toString (!fr))
 
+  fun genfree (AsPat (a,b,p)) = 
+      let
+         val (fra,a') = genfree a
+         val (frb,b') = genfree b
+      in
+         (fra@frb,AsPat (a', b',p))
+      end
+    | genfree (InfixPat (a,b,c,pos)) = 
+      let
+         val (fra,a') = genfree a
+         val (frb,c') = genfree b
+      in
+         (fra@frb,InfixPat (a', b, c',pos))
+      end
+    | genfree (TuplePat (l,p)) = 
+      let
+         val (fr,l') = List.foldl (fn (e,(fr,l')) => 
+                                   let
+                                      val (fr',l'') = genfree e
+                                   in
+                                      (fr@fr',l'@[l''])
+                                   end) ([],[]) l
+      in
+         (fr,TuplePat (l',p))
+      end
+    | genfree (ListPat (l,p)) = 
+      let
+         val (fr,l') = List.foldl (fn (e,(fr,l')) => 
+                                   let
+                                      val (fr',l'') = genfree e
+                                   in
+                                      (fr@fr',l@[l''])
+                                   end) ([],[]) l
+
+      in
+         (fr,ListPat (l',p))
+      end
+    | genfree (ConPat (a,p)) = ([],ConPat (a,p))
+    | genfree (ConstrPat (a,NONE,p)) = 
+      let
+         val (fr,a') = genfree a
+      in
+         (fr,ConstrPat (a',NONE,p))
+      end
+    | genfree (ConstrPat (a,SOME b,p)) = 
+      let
+         val (fra,a') = genfree a
+         val (frb,b') = genfree b
+      in
+         (fra@frb,ConstrPat (a',SOME b',p))
+      end
+    | genfree (TyAnnPat (a,b,p)) = 
+      let
+         val (fr,a') = genfree a
+      in
+         (fr,TyAnnPat (a',b,p))
+      end
+    | genfree (IdPat (a,p)) = 
+      let
+         val t' = Ident (fresh (),p)
+      in
+         ([(a,t')], IdPat (t',p))
+      end
+    | genfree _ = raise Fail ("genfree encountered non-pattern")
 
    fun apply tenv venv pt =
    let
@@ -88,6 +152,37 @@ struct
         | s (ValBind (a as IdPat (i,_),b,p)) = ValBind (s a, s b,p)
         | s (ValBind (TyAnnPat (a,b1,p1),b2,p2)) =
             s (ValBind (a,TyAnn (b2,b1,p1),p2))
+        | s (ValBind (pat,e,p)) =
+          let
+             (* FIXME: This should be performance-tuned *)
+             val n = Ident (fresh (), p)
+             val l = ValBind (IdPat (n,p), e, p)
+
+             val (fr,pat') = genfree pat
+
+             val _ = List.app (fn (l,r) => print (
+                                             "Pat: " ^ prettyPrint l ^ " = " ^
+                                               prettyPrint r ^ "\n"
+                                           )) fr
+             val _ = print ("Orig: " ^ prettyPrint pat' ^ "\n")
+
+             val newbindings =
+               List.foldl (fn ((t,s),sq) => 
+                         let
+                            val b = ValBind (
+                                       IdPat (t,p),
+                                       CaseExp (n,[Match (pat',s,p)],p),
+                                       p
+                                    )
+                         in
+                             Seq (sq, b, p)
+                         end) l fr
+
+             val _ = Debug.print Debug.debug ("ast-match-compile binding: " ^
+                                              prettyPrint newbindings ^ "\n")
+          in
+             newbindings
+          end
         | s (TypeBind (l,a,b,p)) = TypeBind (map s l, s a, s b,p)
         | s (FunMatch (a,l,NONE,c,p)) = FunMatch (s a,map s l, NONE, s c, p)
         | s (FunMatch (a,l,SOME b,c,p)) = 

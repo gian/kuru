@@ -97,7 +97,8 @@ struct
              (te,ve',A.PID (s',T.UNKNOWN,p))
           end
         | cpat te ve se (IdPat (_,p)) = raise IllegalParseTree ("IdPat",p)
-        | cpat te ve se _ = raise IllegalParseTree ("cpat Match",0)
+        | cpat te ve se p = 
+            raise IllegalParseTree ("cpat Match: " ^ prettyPrint p,0)
 
       and s te ve se ((TupleExp (l,p)) : pt) : A.texp = 
             A.ETUPLE (Vector.fromList (map (s te ve se) l),T.UNKNOWN,p) : A.texp
@@ -166,35 +167,58 @@ struct
                      List.foldl (fn (bind, (te',ve',r)) => 
                                  let
                                     val (te'',ve'',se'',r') = d te' ve' se bind
-                                 in (te'',ve'',r@[r']) end)
+                                 in (te'',ve'',r@r') end)
                                     (te,ve,[]) l
              
-                 in (te',ve',se,A.DMUTUAL(Vector.fromList r, p)) end
+                 in (te',ve',se,[A.DMUTUAL(Vector.fromList r, p)]) end
           in
              prc l
+          end
+        | d te ve se (Seq (a,b,p)) =
+          let
+             fun f (Seq (a,b,p)) = f a @ f b
+               | f a = [a]
+
+             val l = f a @ f b
+
+             val (te',ve',se',l') = 
+               List.foldl (fn (e,(te,ve,se,m)) => 
+                              let
+                                 val (te',ve',se',m') = d te ve se e
+                              in
+                                 (te',ve',se',m @ m')
+                              end) (te,ve,se,[]) l
+
+             val _ = Debug.print Debug.debugmore ("ast-parse-tree: Seq: " ^
+                                                   Int.toString (length l) ^ "\n")
+
+          in
+             (te',ve',se',l')
           end
         | d te ve se (ValRec ([],p)) = raise IllegalParseTree ("ValRec[]",p)
         | d te ve se (ValRec ([b],p)) = 
           let
              val (te',ve',se',b') = d te ve se b
-          in (te',ve',se,A.DVALREC (b',T.UNKNOWN,p)) end
+          in (te',ve',se,[A.DVALREC (hd b',T.UNKNOWN,p)]) end
         | d te ve se (ValRec (l,p)) =
           let
              val (te',ve',r) =  
                      List.foldl (fn (bind, (te',ve',r)) => 
                                  let
                                     val (te'',ve'',se'',r') = d te' ve' se bind
-                                 in (te'',ve'',r@[r']) end)
+                                 in (te'',ve'',r@r') end)
                                     (te,ve,[]) l
              
-          in (te',ve',se,A.DVALREC(A.DMUTUAL(Vector.fromList r, p),T.UNKNOWN,p)) end
+          in 
+             (te',ve',se,[A.DVALREC(A.DMUTUAL(Vector.fromList r, p),T.UNKNOWN,p)]) 
+          end
         | d te ve se (TypeDec (l,p)) =
           let
              val (te',ve',_,_) = 
                       List.foldl (fn (b,(te',ve',se',_)) => d te' ve' se b) 
-                        (te,ve,se,A.DNULL p) l
+                        (te,ve,se,[]) l
           in
-             (te',ve',se,A.DNULL p)
+             (te',ve',se,[])
           end
         | d te ve se (DatatypeAssign (a,b,p)) = 
                raise Fail "DatatypeAssign not implemented"
@@ -204,10 +228,10 @@ struct
                      List.foldl (fn (bind, (te',ve',r)) => 
                                  let
                                     val (te'',ve'',se'',r') = d te' ve' se bind
-                                 in (te'',ve'',r@[r']) end)
+                                 in (te'',ve'',r@r') end)
                                     (te,ve,[]) l
              
-          in (te',ve',se,A.DMUTUAL(Vector.fromList r,p)) end
+          in (te',ve',se,[A.DMUTUAL(Vector.fromList r,p)]) end
         | d te ve se (FunDec (ll,p)) = raise IllegalParseTree ("FunDec",p)
         | d te ve se (ValBind (a,b,p)) =
           let
@@ -216,7 +240,7 @@ struct
                                     | _ => raise IllegalParseTree ("ValBind",p)
              val e = s te' ve' se b
           in
-             (te',ve',se,A.DVAL (s',e,T.UNKNOWN,p))
+             (te',ve',se,[A.DVAL (s',e,T.UNKNOWN,p)])
           end
         | d te ve se (TypeBind ([],a,b,p)) =  
           let
@@ -225,7 +249,7 @@ struct
              val b' = t te ve se b
              val te' = Symbol.enter (te,a',b')
           in
-             (te',ve,se,A.DNULL p)
+             (te',ve,se,[])
           end
 
         | d te ve se (TypeBind (l,a,b,p)) = 
@@ -236,7 +260,7 @@ struct
              val b' = T.CONSTR(l',t te ve se b)
              val te' = Symbol.enter (te,a',b')
           in
-             (te',ve,se,A.DNULL p)
+             (te',ve,se,[])
           end
         | d te ve se (FunMatch (a,l,_,c,p)) =
              raise IllegalParseTree ("FunMatch",p)
@@ -253,7 +277,7 @@ struct
           let
              val (te',ve',se',l') = convert te ve se l
           in
-             (te,ve,se',A.DMUTUAL (Vector.fromList l',p))
+             (te,ve,se',[A.DMUTUAL (Vector.fromList l',p)])
           end
         | d te ve se (StructBind (a,Structure (l,p1),p2)) =
           let
@@ -263,7 +287,7 @@ struct
 
              val se'' = S.enter (se,a',Env.StructEntry (te',ve',se'))
           in
-             (te,ve,se'',A.DSTRUCTURE (a',Vector.fromList l',p1))
+             (te,ve,se'',[A.DSTRUCTURE (a',Vector.fromList l',p1)])
           end
         | d te ve se t = raise Fail "decl match"
    in
@@ -271,7 +295,7 @@ struct
                      let
                         val (te'',ve'',se'',k') = d te' ve' se' a 
                      in
-                        (te'',ve'',se'',k@[k'])
+                        (te'',ve'',se'',k@k')
                      end) (tenv,venv,senv,[]) pt
    end handle IllegalParseTree (m,p) => raise Fail ("Illegal Parse Tree: " ^ m ^
 																	 " near " ^ Int.toString p)

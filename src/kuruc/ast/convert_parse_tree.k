@@ -46,7 +46,9 @@ struct
 
    fun convertPasses tenv (venv : Env.enventry S.table) p =
       List.foldl 
-         (fn (f,(tenv',venv',p')) => convertPass f tenv' venv' p')
+         (fn (f,(tenv',venv',p')) => (
+               Debug.print Debug.debugmore (ParseTree.prettyPrintAll p')
+               ; convertPass f tenv' venv' p'))
             (tenv,venv,p)
                passes
 

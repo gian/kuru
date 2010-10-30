@@ -80,6 +80,10 @@ struct
                        let
                           val (te',ve',se',r') = 
                               ConvertParseTree.convert te ve se l 
+                          val _ = Debug.print Debug.debugmore (
+                                       "Converted Typed AST:\n" ^ 
+                                       TypedAST.prettyPrint r'
+                                    )
                        in
                           (te',ve',se',r @ r')
                        end) (Env.tenv_base, Env.venv_base, S.empty, []) fl'

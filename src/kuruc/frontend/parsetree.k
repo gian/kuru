@@ -174,6 +174,8 @@ type pos = int
                   (String.concatWith "\n   " (map pp l)) ^ "]"
 
    fun prettyPrint p = pp p
+  
+   fun prettyPrintAll l = String.concatWith "\n" (map prettyPrint l)
 
    fun sanitise x = x
 end

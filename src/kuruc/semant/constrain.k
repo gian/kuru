@@ -306,6 +306,18 @@ struct
           (te',ve',se',cs,t',A.DVALREC (a',t',p))
        end
      | constr_dec te ve se _ (A.DNULL p) = (te,ve,se,[],T.UNKNOWN,A.DNULL p)
+     | constr_dec te ve se b (A.DMUTUAL (v,p)) =
+       let
+          val (te',ve',se',cs,t',v') = 
+            Vector.foldl (fn (v,(te',ve',se',cs',t',v')) =>
+                           let
+                              val (te,ve,se,cs,t,v'') = constr_dec te' ve' se' b v
+                           in
+                              (te,ve,se,cs'@cs,t,v' @ [v''])
+                           end) (te,ve,se,[],T.UNKNOWN,[]) v
+       in
+          (te',ve',se',cs,t',A.DMUTUAL (Vector.fromList v',p))
+       end
      | constr_dec te ve se b (A.DSTRUCTURE (s,v,p)) =
        let
           val (te',ve',se',cn,v') = generateConstraints' te ve se (vtol v)
@@ -313,7 +325,8 @@ struct
        in
           (te,ve,se'',cn,T.UNKNOWN,A.DSTRUCTURE (s,Vector.fromList v',p))
        end
-     | constr_dec _ _ _ _ _ = raise Fail "Unhandled constr_dec"
+     | constr_dec _ _ _ _ k = raise 
+               Fail ("Unhandled constr_dec: " ^ A.prettyPrint [k])
 
    and substinenv (tn,tr) ve =
       let
@@ -392,7 +405,7 @@ struct
       let
          val (te,ve,se,cn,k) = generateConstraints' tenv venv senv c
 
-         val _ = print (A.prettyPrint k)
+         val _ = Debug.print Debug.debugmore (A.prettyPrint k)
       in
          (te,ve,se,cn,k)
       end handle IdUnknown (s,p) => raise Fail ("Unknown identifier: " ^
