@@ -18,7 +18,7 @@ void channel_put(channel_t *chan, void *value)
 	}
 	chan->value = value;
 	pthread_cond_signal(&chan->value_ready);
-	pthread_mutex_unlock(&chan-<mutex);
+	pthread_mutex_unlock(&chan->mutex);
 }
 
 void *channel_get(channel_t *chan)
@@ -30,6 +30,6 @@ void *channel_get(channel_t *chan)
 	}
 	ret = chan->value;
 	pthread_cond_signal(&chan->value_empty);
-	pthread_mutex_unlock(&chan-<mutex);
+	pthread_mutex_unlock(&chan->mutex);
 	return ret;
 }

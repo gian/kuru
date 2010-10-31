@@ -10,5 +10,5 @@ typedef struct channel_t {
 channel_t *channel_create(void);
 
 void channel_put(channel_t *channel, void *value);
-void *channel_get(channel_T *channel);
+void *channel_get(channel_t *channel);
 
