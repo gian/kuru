@@ -68,10 +68,10 @@ struct
          val s' = Symbol.name s
       in
          (case s' of 
-            "int" => Temp.i32
+            "int" => Temp.getMachineWord ()
           | "real" => Temp.r64
           | "char" => Temp.i32
-          | "string" => Temp.ptr (Temp.i8)
+          | "string" => Temp.aggr [Temp.getMachineWord (), Temp.ptr (Temp.i8)]
           | "bool" => Temp.i1
           | "unit" => Temp.void
           | "exn" => Temp.void
@@ -90,10 +90,16 @@ struct
        let
           val n = Temp.newglobal ()
           val _ = add_fragment (FSTRING (n, v))
-          val m = I.ELEM_PTR (Temp.array (size v + 1, Temp.i8),I.NAME n,0)
-          val t = I.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
+          val strty = Temp.aggr [Temp.getMachineWord (),Temp.ptr Temp.i8]
+          val m = I.ELEM_PTR (Temp.array (size v, Temp.i8),I.NAME n,0)
+          val t0 = I.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
+          val t1 = I.TEMP (Temp.newtemp (strty))
+          val t2 = I.TEMP (Temp.newtemp (strty))
+          val m' = [I.MOVE (t0,m),
+                    I.MOVE (t1,I.TUPLE_INS (I.UNDEF strty, I.CONST (size v), 0)),
+                    I.MOVE (t2,I.TUPLE_INS (t1, t0, 1))]
        in
-          (t, [I.MOVE (t,m)])
+          (t2, m')
        end
      | tr_val (A.LUNIT p) = (I.VOID,[])
      | tr_val _ = raise Fail "tr_val: Not implemented"

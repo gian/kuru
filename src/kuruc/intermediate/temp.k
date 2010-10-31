@@ -60,7 +60,10 @@ struct
      | prettyPrintNoPrefix (i,global s) = s
      | prettyPrintNoPrefix (i,_) = "t" ^ Int.toString i
 
-
-
+   fun getMachineWord () = 
+      case Config.getMachineWord () of 16 => i16
+                                     | 32 => i32
+                                     | 64 => i64
+                                     | _ => raise Fail "invalid machine word size"
 end
 

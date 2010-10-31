@@ -24,7 +24,7 @@ struct
    val args = CommandLine.arguments ()
 
 	fun printUsage () =
-		print ("Usage: kuruc [-vdqh] [-o outputFile] file1.k ... fileN.k\n" ^
+		print ("Usage: kuruc [options] [-o outputFile] file1.k ... fileN.k\n" ^
 		       "\tOptions:\n" ^
              "\t\t-o file\t\tSpecify the output file.\n" ^
              "\t\t-O0\t\tDisable all optimisations.\n" ^ 
@@ -38,6 +38,9 @@ struct
 				 "\t\t-vv\t\tBe more verbose.\n" ^
 				 "\t\t-d\t\tEnable debugging output.\n" ^
 				 "\t\t-dd\t\tEnable noisy debugging mode.\n" ^
+				 "\t\t-m16\t\tSet machine word size to 16 bits.\n" ^
+				 "\t\t-m32\t\t(Default) Set machine word size to 32 bits.\n" ^
+				 "\t\t-m64\t\tSet machine word size to 64 bits.\n" ^
 				 "\t\t-V\t\tOutput version information and exit.\n")
 
 	fun printVersion () =
@@ -69,6 +72,9 @@ struct
      | parseArgs ("-O1"::t) = (Config.setOptimiser 1; parseArgs t)
      | parseArgs ("-O2"::t) = (Config.setOptimiser 2; parseArgs t)
      | parseArgs ("-O3"::t) = (Config.setOptimiser 3; parseArgs t)
+     | parseArgs ("-m16"::t) = (Config.setMachineWord 16; parseArgs t)
+     | parseArgs ("-m32"::t) = (Config.setMachineWord 32; parseArgs t)
+     | parseArgs ("-m64"::t) = (Config.setMachineWord 64; parseArgs t)
      | parseArgs ("-o"::f::t) = (Config.setOutputFile f; parseArgs t)
      | parseArgs (h::t) = h :: parseArgs t
   

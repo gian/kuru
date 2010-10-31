@@ -60,8 +60,9 @@ struct
 
    fun cg_frag' (T.FSTRING (l,s)) = 
       j [ppt l, " = ", 
-         "private constant [", Int.toString (size s + 1), " x i8] c",
-          dquote, s, "\\00", dquote]
+         "private constant ",
+           "[", Int.toString (size s), " x i8] c",
+          dquote, s, dquote]
      | cg_frag' (T.FFN (l,exps,stms,t)) =
          j [
             jsp ["define fastcc",cg_ty t,ppt l,"("],
@@ -93,7 +94,9 @@ struct
              cg_exp_t e1, ", ", cg_exp e2]
        end
 
-   and cg_exp' b (I.CONST i) = j [opt_t (b,"i32"), Int.toString i]
+   and cg_exp' b (I.CONST i) = j [opt_t (b,
+                                         cg_ty (Temp.getMachineWord ())),
+                                  Int.toString i]
      | cg_exp' b (I.RCONST i) = j [opt_t (b,"r32"), Real.toString i]
      | cg_exp' b (I.BCONST i) = j [opt_t (b, "i1"), if i then "true" else "false"]
      | cg_exp' b (I.EXN _) = j [opt_t (b, "i32"), "123456"] (* FIXME *)
