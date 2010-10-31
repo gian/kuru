@@ -28,6 +28,7 @@ intermediate/temp.sml
 intermediate/intermediate.sml
 intermediate/builtins.sml
 intermediate/translate.sml
+codegen/codegen_decs.sml
 codegen/codegen.sml
 codegen/llvm_operations.sml
 compile.sml

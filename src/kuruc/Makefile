@@ -11,7 +11,7 @@ SMLDEPS= \
 	ast/ast_typedec_eval.sml ast/ast_fun_curry.sml \
 	ast/ast_match_compile.sml ast/convert_parse_tree.sml \
 	intermediate/temp.sml intermediate/intermediate.sml \
-	intermediate/translate.sml codegen/codegen.sml \
+	intermediate/translate.sml codegen/codegen.sml codegen/codegen_decs.sml \
 	intermediate/builtins.sml codegen/llvm_operations.sml semant/exceptions.sml \
 	config.sml debug.sml main.sml compile.sml version.sml
 

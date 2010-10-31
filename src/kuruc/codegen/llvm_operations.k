@@ -61,7 +61,8 @@ struct
 
    fun llc (llvmBytecode,filename) =
       let
-         val llc = exec "/opt/local/bin/llc" ["-f","-o",filename]
+         val filename' = filename ^ ".s"
+         val llc = exec "/opt/local/bin/llc" ["-f","-o",filename']
          val (fi,fo) = (fn x => (Unix.binInstreamOf x, Unix.binOutstreamOf x)) llc
          val _ = BinIO.output (fo,llvmBytecode)
          val _ = BinIO.closeOut fo
@@ -76,12 +77,26 @@ struct
          true
       end
 
+   fun gcc (asmfile,filename) =
+      let
+         val files = [asmfile,"../../lib/libkuru.a"]
+         val gcc = exec "/usr/bin/gcc" (["-o",filename] @ files)
+
+         val _ = if not (OS.Process.isSuccess (Unix.reap gcc))
+                     then raise Fail 
+                        ("gcc failed with error status code")
+                     else ()
+      in
+         true
+      end
+
    (* TODO: This needs to finish linking against the runtime *)
    fun compile (llvmSource,filename) =
       let
          val bc = llvmas llvmSource
          val bc' = if Config.getOptimiser() = 0 then bc else opt bc
-         val _ = llc (bc',filename) 
+         val _ = llc (bc',filename)
+         val _ = gcc (filename ^ ".s",filename)
       in
          true
       end

@@ -35,7 +35,6 @@ static void *io_thread(void *dummy)
 	(void)dummy; /* force usage */
 	do {
 		io_message_t *msg = channel_get(iochan);
-		printf("Message %d\n",msg->type);
 		running = io_handle_message(msg);
 		free(msg);
 	} while(running);

@@ -153,7 +153,7 @@ struct
    and cg_stm i (I.MOVE (e1,e2)) = 
           j [ind i, cg_exp e1, " = ", cg_exp e2]
      | cg_stm i (I.EXP e1) =
-          raise Fail ("cg_stm: EXP not implemented")
+          j [ind i, cg_exp e1]
      | cg_stm i (I.JUMP (e,l)) =
           j [ind i, "br label ", cg_exp e]
      | cg_stm i (I.CJUMP (e,l1,l2)) =
@@ -191,11 +191,14 @@ struct
 
    fun codegen (stms, frags) =
       jnl [
+         jnl CodeGenDecs.decs,
          jnl (map cg_frag frags),
          "define fastcc i32 @main (i32 %argc, i8** %argv) {\n   entry:\n",
+         "      call fastcc void @io_init ()",
          jnl (map (cg_stm 2) stms),
          "      br label %finalise",
          "   finalise:",
+         "      call fastcc void @io_done ()",
          "      ret i32 0\n}\n"
       ]
 end
