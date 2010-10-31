@@ -484,15 +484,7 @@ struct
      | tr_ast ve se (A.DNULL p) = (ve,se,[])
      | tr_ast ve se _ = raise Fail "tr_ast: Not implemented"
 
-   val tr_venv_base =
-      let
-         val b = S.empty
-         val b' = S.enter (b, S.symbol "true", I.BCONST true)
-         val b'' = S.enter (b', S.symbol "false", I.BCONST false)
-         val b''' = S.enter (b'', S.symbol "Match", I.UNDEF (Temp.void))
-      in
-         b'''
-      end
+   val tr_venv_base = Builtins.builtins
 
    fun translate ast =
       let

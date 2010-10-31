@@ -12,7 +12,7 @@ SMLDEPS= \
 	ast/ast_match_compile.sml ast/convert_parse_tree.sml \
 	intermediate/temp.sml intermediate/intermediate.sml \
 	intermediate/translate.sml codegen/codegen.sml \
-	codegen/llvm_operations.sml semant/exceptions.sml \
+	intermediate/builtins.sml codegen/llvm_operations.sml semant/exceptions.sml \
 	config.sml debug.sml main.sml compile.sml version.sml
 
 all: $(BIN)/kuruc

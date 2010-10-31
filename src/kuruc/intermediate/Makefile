@@ -1,4 +1,4 @@
 all: 
 
 clean:
-	rm -f temp.sml intermediate.sml translate.sml 
+	rm -f builtins.sml temp.sml intermediate.sml translate.sml 

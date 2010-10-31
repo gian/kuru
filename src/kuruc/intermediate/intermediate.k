@@ -39,6 +39,7 @@ struct
                 | ELEM_PTR of Temp.ty * exp * int
                 | UNDEF of Temp.ty
                 | BINOP of string * exp * exp
+                | BUILTIN of string 
                 | VOID
    
         and stm = MOVE of exp * exp
@@ -90,6 +91,7 @@ struct
      | ppe (UNDEF _) = "UNDEF"
      | ppe VOID = "void"
      | ppe (BINOP (s,a,b)) = "BINOP " ^ s ^ " [" ^ ppe a ^ ", " ^ ppe b ^ "]"
+     | ppe (BUILTIN s) = "BUILTIN " ^ s
      | ppe _ = "???"
 
    fun ppstm (MOVE (e1,e2)) = ppe e1 ^ " <- " ^ ppe e2

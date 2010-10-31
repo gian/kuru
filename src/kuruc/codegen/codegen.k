@@ -101,6 +101,7 @@ struct
      | cg_exp' b (I.BCONST i) = j [opt_t (b, "i1"), if i then "true" else "false"]
      | cg_exp' b (I.EXN _) = j [opt_t (b, "i32"), "123456"] (* FIXME *)
      | cg_exp' b (I.NAME l) = ppt l
+     | cg_exp' b (I.BUILTIN s) = "@" ^ s
      | cg_exp' b (I.TEMP t) = j [opt_t (b,cg_ty (Temp.getType t)), ppt t]
      | cg_exp' b (I.CALL (ty,e1,e2)) = 
          jsp ["tail call fastcc",cg_ty ty,cg_exp e1,

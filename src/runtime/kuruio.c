@@ -49,12 +49,13 @@ void io_init(void)
 	pthread_create(&iothread, NULL, io_thread, NULL);
 }
 
-void io_puts(const char *message)
+int io_puts(const kuru_string_t message)
 {
 	io_message_t *msg = malloc(sizeof(io_message_t));
 	msg->type = IO_PUTS;
-	msg->data = strdup(message);
+	msg->data = strdup(message.data);
 	channel_put(iochan, msg);
+   return 0;
 }
 
 void io_done(void)
