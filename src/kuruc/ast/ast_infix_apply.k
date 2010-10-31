@@ -68,6 +68,8 @@ struct
         | s (TyCon (a,b,p)) = TyCon (s a, s b,p)
         | s (TyName (a,p)) = TyName (s a,p)
         | s (ValDec (l,p)) = ValDec (map s l,p)
+        | s (InfixrDec (prec,opr,p)) = raise Fail "Infixr not impl."
+        | s (InfixDec (prec,opr,p)) = raise Fail "Infix not impl."
         | s (ValRec (l,p)) = ValRec (map s l,p)
         | s (TypeDec (l,p)) = TypeDec (map s l,p)
         | s (DatatypeAssign (a,b,p)) = DatatypeAssign (s a, s b,p)

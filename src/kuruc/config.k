@@ -23,11 +23,19 @@ structure Config =
 struct
    val outputFile = ref "a.out"
    val optimiserLevel = ref 2
+   val machineWord = ref 32
 
    (* Setters and getters *)
    fun setOutputFile s = outputFile := s
    fun setOptimiser l = optimiserLevel := l
 
+   fun setMachineWord 16 = machineWord := 16
+     | setMachineWord 32 = machineWord := 32
+     | setMachineWord 64 = machineWord := 64
+     | setMachineWord x = 
+         raise Fail ("Invalid machine word size: " ^ Int.toString x)
+
    fun getOutputFile () = !outputFile
    fun getOptimiser () = !optimiserLevel
+   fun getMachineWord () = !machineWord
 end
