@@ -24,10 +24,12 @@ struct
    val outputFile = ref "a.out"
    val optimiserLevel = ref 2
    val machineWord = ref 32
+   val keepLLVM = ref false
 
    (* Setters and getters *)
    fun setOutputFile s = outputFile := s
    fun setOptimiser l = optimiserLevel := l
+   fun setKeepLLVM l = keepLLVM := l
 
    fun setMachineWord 16 = machineWord := 16
      | setMachineWord 32 = machineWord := 32
@@ -38,4 +40,5 @@ struct
    fun getOutputFile () = !outputFile
    fun getOptimiser () = !optimiserLevel
    fun getMachineWord () = !machineWord
+   fun getKeepLLVM () = !keepLLVM
 end

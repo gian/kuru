@@ -61,11 +61,11 @@ struct
    fun cg_frag' (T.FSTRING (l,s)) = 
       j [ppt l, " = ", 
          "private constant ",
-           "[", Int.toString (size s), " x i8] c",
-          dquote, s, dquote]
+           "[", Int.toString (size s + 1), " x i8] c",
+          dquote, s, "\\00", dquote]
      | cg_frag' (T.FFN (l,exps,stms,t)) =
          j [
-            jsp ["define fastcc",cg_ty t,ppt l,"("],
+            jsp ["define ",cg_ty t,ppt l,"("],
             jc (map cg_exp_t exps), ") {\n",
             jnl (map (cg_stm 2) stms),
             "\n}\n"
@@ -104,7 +104,7 @@ struct
      | cg_exp' b (I.BUILTIN s) = "@" ^ s
      | cg_exp' b (I.TEMP t) = j [opt_t (b,cg_ty (Temp.getType t)), ppt t]
      | cg_exp' b (I.CALL (ty,e1,e2)) = 
-         jsp ["tail call fastcc",cg_ty ty,cg_exp e1,
+         jsp ["call ",cg_ty ty,cg_exp e1,
                 j ["(", cg_exp_t e2, ")"]
              ]
      | cg_exp' b (I.TUPLE_IND (e,i)) =
@@ -193,12 +193,12 @@ struct
       jnl [
          jnl CodeGenDecs.decs,
          jnl (map cg_frag frags),
-         "define fastcc i32 @main (i32 %argc, i8** %argv) {\n   entry:\n",
-         "      call fastcc void @io_init ()",
+         "define i32 @main (i32 %argc, i8** %argv) {\n   entry:\n",
+         "      call void @io_init ()",
          jnl (map (cg_stm 2) stms),
          "      br label %finalise",
          "   finalise:",
-         "      call fastcc void @io_done ()",
+         "      call void @io_done ()",
          "      ret i32 0\n}\n"
       ]
 end

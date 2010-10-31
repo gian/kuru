@@ -91,12 +91,12 @@ struct
           val n = Temp.newglobal ()
           val _ = add_fragment (FSTRING (n, v))
           val strty = Temp.aggr [Temp.getMachineWord (),Temp.ptr Temp.i8]
-          val m = I.ELEM_PTR (Temp.array (size v, Temp.i8),I.NAME n,0)
+          val m = I.ELEM_PTR (Temp.array (size v + 1, Temp.i8),I.NAME n,0)
           val t0 = I.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
           val t1 = I.TEMP (Temp.newtemp (strty))
           val t2 = I.TEMP (Temp.newtemp (strty))
           val m' = [I.MOVE (t0,m),
-                    I.MOVE (t1,I.TUPLE_INS (I.UNDEF strty, I.CONST (size v), 0)),
+                    I.MOVE (t1,I.TUPLE_INS(I.UNDEF strty, I.CONST (size v + 1),0)),
                     I.MOVE (t2,I.TUPLE_INS (t1, t0, 1))]
        in
           (t2, m')

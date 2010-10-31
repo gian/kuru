@@ -42,7 +42,7 @@ struct
    
    fun opt (llvmBytecode) =
       let
-         val llo = exec "/opt/local/bin/opt" ["-tailcallelim",
+         val llo = exec "/opt/local/bin/opt" [
                                               "-O" ^ (Int.toString
                                                 (Config.getOptimiser ()))]
          val (fi,fo) = (fn x => (Unix.binInstreamOf x, Unix.binOutstreamOf x)) llo
@@ -61,6 +61,13 @@ struct
 
    fun llc (llvmBytecode,filename) =
       let
+         val _ = if Config.getKeepLLVM () then
+                 let
+                    val fp = BinIO.openOut (filename ^ ".bc")
+                    val _ = BinIO.output (fp,llvmBytecode)
+                    val _ = BinIO.closeOut fp
+                 in  () end else ()
+
          val filename' = filename ^ ".s"
          val llc = exec "/opt/local/bin/llc" ["-f","-o",filename']
          val (fi,fo) = (fn x => (Unix.binInstreamOf x, Unix.binOutstreamOf x)) llc
@@ -77,12 +84,28 @@ struct
          true
       end
 
-   fun gcc (asmfile,filename) =
-      let
-         val files = [asmfile,"../../lib/libkuru.a"]
-         val gcc = exec "/usr/bin/gcc" (["-o",filename] @ files)
 
-         val _ = if not (OS.Process.isSuccess (Unix.reap gcc))
+   fun gcc (files,filename) =
+      let
+         val files' = files @ ["../../lib/libkuru.a"]
+         val ld = exec "/usr/bin/llvm-gcc" ([
+                                                  "-o",filename] @ files')
+
+         val _ = if not (OS.Process.isSuccess (Unix.reap ld))
+                     then raise Fail 
+                        ("gcc failed with error status code")
+                     else ()
+      in
+         true
+      end
+
+   fun llvmld (files,filename) =
+      let
+         val files' = files @ ["../../lib/libkuru.a"]
+         val ld = exec "/opt/local/bin/llvm-ld" (["-native",
+                                                  "-o",filename] @ files')
+
+         val _ = if not (OS.Process.isSuccess (Unix.reap ld))
                      then raise Fail 
                         ("gcc failed with error status code")
                      else ()
@@ -96,7 +119,7 @@ struct
          val bc = llvmas llvmSource
          val bc' = if Config.getOptimiser() = 0 then bc else opt bc
          val _ = llc (bc',filename)
-         val _ = gcc (filename ^ ".s",filename)
+         val _ = gcc ([filename ^ ".s"],filename)
       in
          true
       end

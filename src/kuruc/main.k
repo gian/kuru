@@ -41,6 +41,7 @@ struct
 				 "\t\t-m16\t\tSet machine word size to 16 bits.\n" ^
 				 "\t\t-m32\t\t(Default) Set machine word size to 32 bits.\n" ^
 				 "\t\t-m64\t\tSet machine word size to 64 bits.\n" ^
+             "\t\t-keep-llvm\t\tKeep intermediate LLVM bitcode files.\n" ^
 				 "\t\t-V\t\tOutput version information and exit.\n")
 
 	fun printVersion () =
@@ -75,6 +76,7 @@ struct
      | parseArgs ("-m16"::t) = (Config.setMachineWord 16; parseArgs t)
      | parseArgs ("-m32"::t) = (Config.setMachineWord 32; parseArgs t)
      | parseArgs ("-m64"::t) = (Config.setMachineWord 64; parseArgs t)
+     | parseArgs ("-keep-llvm"::t) = (Config.setKeepLLVM true; parseArgs t)
      | parseArgs ("-o"::f::t) = (Config.setOutputFile f; parseArgs t)
      | parseArgs (h::t) = h :: parseArgs t
   
