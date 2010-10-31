@@ -5,7 +5,10 @@ int main(int argc, char *argv[])
 	(void) argc;
 	(void) argv;
 	io_init();
-	io_puts("Hello World\n");
+	kuru_string_t s;
+	s.length = 13;
+	s.data = "Hello World\n";
+	io_puts(s);
 	io_done();
 
 	return 0;
