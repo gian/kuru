@@ -42,6 +42,11 @@ struct
      | add_infix (p,opr,d) = (print ("add infix!\n"); infixes :=
             ins(!infixes,valOf(Int.fromString p),opr,d))
 
+   fun is_operator (Ident (i,_)) = 
+         List.exists (fn (_,Ident (x,_),_) => x = i
+                       | _ => false) (!infixes)
+     | is_operator _ = false
+
    fun apply tenv venv pt = 
    let
       fun s i (AndAlso (a,b,pos)) = AndAlso (s i a, s i b, pos) 
@@ -55,16 +60,67 @@ struct
         | s i (AppList (l,p)) =
           let
              val (opr,d) = i
+
+             fun fnapp (h1::h2::t) = 
+                 if not (is_operator h1) andalso not (is_operator h2) then
+                    fnapp ((AppList ([h1,h2],p)) :: t)
+                 else h1 :: h2 :: fnapp t
+               | fnapp [h] = [h]
+               | fnapp [] = []
+
+
              (* FIXME: This is always infixl!  Need to implement infixr *)
 
-             fun infixifyl (a::(Ident (b,p1))::c::t) =
-                  if b = opr then 
-                     infixifyl ((Infix (s i a,Ident (b,p1),s i c,p1)) :: t)
-                  else (s i a) :: (infixifyl ((Ident (b,p1)) :: c :: t))
-               | infixifyl (h::t) = (s i h) :: (infixifyl t)
-               | infixifyl [] = []
+             fun infixifyr [] = []
+               | infixifyr [h] = [h]
+               | infixifyr (h1::h2::t) =
+                  (case h2 of (Ident (h2',p')) =>
+                     (if h2' = opr then [Infix (s i h1,
+                                              h2,
+                                              AppList (infixifyr t,p),
+                                              p')]
+                                  else ((s i h1) :: (infixifyr (h2::t))))
+                            | _ => (s i h1) :: (infixifyr (h2 :: t)))
+
+             fun foldr2 f e [] = e
+               | foldr2 f e [x1] = e
+               | foldr2 f e (x1::x2::xr) = f(x1, x2, foldr2 f e xr)
+
+          (*   fun infixifyr [] = AppList ([],p) 
+               | infixifyr (h1::h2::h3) = 
+                  (case h2 of 
+                     Ident (h2',p) => 
+                        if h2' = opr 
+                          then 
+                             Infix (s i h1, h2, infixifyr h3, p)
+                          else
+                             AppList (s i h1 :: [infixifyr (h2 :: h3)],p)
+                    | x => (AppList ((App (s i h1, s i h2,p)) ::
+                                          [infixifyr h3], p)))
+               | infixifyr [h] = s i h *)
+
+                                         
+            (*       
+
+             fun infixifyr l =
+               let
+                  val l' = List.rev l
+                  val h = hd l'
+                  val t = List.rev (tl l')
+               in
+                  foldr2 (fn (a,(Ident (b,p1)),c) =>
+                           if opr = b then  
+                                           [Infix (s i a, Ident (b,p1), 
+                                            AppList (c,p1),p1)]
+                                      else s i a :: 
+                                             (infixifyr ((Ident (b,p1)) :: c))
+                           | (a,b,c) => s i a :: infixifyr (s i b :: c)) [h] t
+               end*)
           in
-             AppList (infixifyl l, p) 
+             case d of BLeft =>
+                        AppList (fnapp l, p)
+                    | BRight =>
+                        AppList (infixifyr (fnapp l), p) 
           end
         | s i (App (a,b,p)) = App (s i a, s i b,p)
         | s i (TyAnn (a,b,p)) = TyAnn (s i a, s i b,p)
