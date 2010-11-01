@@ -15,7 +15,7 @@ def type2llvmtype(ty):
 	if ty=="void":
 		return "void"
 	elif ty in ["kstring","string"]:
-		return "{ i32, i8 *}"
+		return "{ i32, i8 *}*"
 	elif ty == "int":
 		return "i32"
 	raise Exception("Unknown type %s" % ty)
