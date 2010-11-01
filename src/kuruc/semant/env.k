@@ -63,7 +63,7 @@ struct
             (">=",          T.FN(T.TUPLE [T.t_int,T.t_int],T.t_bool)),
             ("_andalso",    T.FN(T.TUPLE [T.t_bool,T.t_bool],T.t_bool)),
             ("_orelse",     T.FN(T.TUPLE [T.t_bool,T.t_bool],T.t_bool)),
-            ("print",       T.FN (T.t_string, T.t_int))
+            ("print",       T.FN (T.t_string, T.t_unit))
           ]
          val b = 
             List.foldl (fn ((s,t),st) => 

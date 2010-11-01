@@ -144,6 +144,8 @@ struct
         in
            j [opr', " ", cg_exp_t a, ", ", cg_exp b]
         end
+     | cg_exp' b (I.ALLOCA t) = 
+            j ["alloca ", cg_ty t]
      | cg_exp' b _ = raise Fail "cg_exp' b: Not implemented"
 
    and cg_exp_t e = (cg_exp' true e)
@@ -187,6 +189,8 @@ struct
           j [ind i, "ret ", cg_exp_t e]
      | cg_stm i (I.UNWIND) =
           j [ind i, "unwind"]
+     | cg_stm i (I.STORE (e1,e2)) =
+          j [ind i, "store ", cg_exp_t e1, ", ", cg_exp_t e2]
      | cg_stm i _ = raise Fail "cg_stm: Not implemented"
 
    fun codegen (stms, frags) =

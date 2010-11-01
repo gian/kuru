@@ -334,6 +334,26 @@ struct
        in
           (te,ve,se'',cn,T.UNKNOWN,A.DSTRUCTURE (s,Vector.fromList v',p))
        end
+     | constr_dec te ve se b (A.DSTRUCTASSIGN (s,e,p)) =
+       let
+          fun res se [] = raise Fail "constr_dec encountered empty long id"
+            | res se [h] = (case (S.look (se,h)) of
+                               SOME e => e
+                             | NONE => raise Fail "constr_dec unknown struct id")
+            | res se (h::t) = (case (S.look (se,h)) of
+                                 SOME (E.StructEntry (_,_,e)) => res e t
+                               | NONE => raise Fail "constr_dec: struct id")
+   
+          val rhs = (case e of 
+                        (A.EID (rhs,_,p)) =>
+                           (case (S.look (se,rhs)) of 
+                              NONE => raise Fail "DSTRUCTASSIGN"
+                            | SOME e' => e')
+                      | (A.ELID (l,t,p)) => res se l)
+          val se' = S.enter (se,s,rhs)
+       in
+          (te,ve,se',[],T.UNKNOWN,A.DSTRUCTASSIGN (s,e,p))
+       end
      | constr_dec _ _ _ _ k = raise 
                Fail ("Unhandled constr_dec: " ^ A.prettyPrint [k])
 

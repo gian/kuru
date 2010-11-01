@@ -39,7 +39,8 @@ struct
                 | ELEM_PTR of Temp.ty * exp * int
                 | UNDEF of Temp.ty
                 | BINOP of string * exp * exp
-                | BUILTIN of string 
+                | BUILTIN of string
+                | ALLOCA of Temp.ty
                 | VOID
    
         and stm = MOVE of exp * exp
@@ -50,6 +51,7 @@ struct
                 | PHI of exp * Temp.ty * (exp * Temp.label) list
                 | LABEL of Temp.label
                 | RET of exp
+                | STORE of exp * exp
                 | UNWIND
    
       and relop = EQ | NEQ | LT | GT | LE | GE | ULT | ULE | UGT | UGE
@@ -92,6 +94,7 @@ struct
      | ppe VOID = "void"
      | ppe (BINOP (s,a,b)) = "BINOP " ^ s ^ " [" ^ ppe a ^ ", " ^ ppe b ^ "]"
      | ppe (BUILTIN s) = "BUILTIN " ^ s
+     | ppe (ALLOCA t) = "ALLOCA"
      | ppe _ = "???"
 
    fun ppstm (MOVE (e1,e2)) = ppe e1 ^ " <- " ^ ppe e2
@@ -113,6 +116,7 @@ struct
      | ppstm (LABEL l) = ppt l ^ ":"
      | ppstm (RET e) = "RET " ^ ppe e
      | ppstm (UNWIND) = "UNWIND"
+     | ppstm (STORE (e1,e2)) = "STORE " ^ ppe e2 ^ " <- " ^ ppe e1
      | ppstm _ = "???"
 
    fun prettyPrint [] = ""
