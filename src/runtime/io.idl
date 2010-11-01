@@ -1,0 +1,16 @@
+c #include <stdio.h>
+c #include <unistd.h>
+
+c static void kuru_print(kuru_string_t *string)
+c {
+c   write(1, string->data, string->length);
+c }
+
+# export_as <kuruname> <cname> <returntype> [<argname:argtype>...]
+# valid argtypes:
+#  string -- standard C string (char *)
+#  kstring -- kuru_string_t
+#  int -- integer
+export_as print kuru_print void message:kstring
+export_as getch getchar int
+export_as cputs puts void message:string

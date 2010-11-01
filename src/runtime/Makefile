@@ -1,19 +1,21 @@
 CFLAGS=-g -Wall -O2 -Wextra -Wstrict-prototypes -pthread
-LDLIBS=-lpthread
+LDLIBS=-lpthread -lkuru
+LDFLAGS=-L$(LIB)
 LIB=../../lib
 
 LIBKURU= \
 	$(LIB)/libkuru.a(channels.o) \
-	$(LIB)/libkuru.a(kuruio.o)
+	$(LIB)/libkuru.a(io_kuru.o) \
+	$(LIB)/libkuru.a(kuru_types.o) \
+	#$(LIB)/libkuru.a(kuruio.o)
 
 all: $(LIBKURU)
 
-test_bin: LDLIBS+=-lkuru
-test_bin: LDFLAGS=-L.
-test_bin: \
-	io_test
+%_kuru.c %_kuru.h: %.idl kuruidl
+	./kuruidl $< -o $@
 
-io_test: io_test.c $(LIBKURU)
 
 clean:
-	rm -f $(LIB)/libkuru.a io_test
+	rm -f $(LIB)/libkuru.a io_test *_kuru.[ch] *.o io_test
+
+.SECONDARY: $(wildcard *_kuru.c) $(wildcard *_kuru.h)

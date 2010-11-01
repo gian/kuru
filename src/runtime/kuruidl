@@ -1,0 +1,248 @@
+#!/usr/bin/python
+import sys
+import os
+
+def type2ctype(ty):
+	if ty=="void":
+		return "void"
+	elif ty in ["kstring","string"]:
+		return "kuru_string_t *"
+	elif ty=="int":
+		return "int"
+	raise Exception("Unknown type %s" % ty)
+
+def ctype2nativectype(ty,expr):
+	if ty == "string":
+		return "(%s)->data" % expr
+	return expr
+
+# native c
+def type2nctype(ty):
+	if ty=="void":
+		return "void"
+	elif ty=="string":
+		return "char *"
+	elif ty=="kstring":
+		return "kuru_string_t *"
+	elif ty=="int":
+		return "int"
+	raise Exception("Unknown type %s" % ty)
+
+def spec2var(spec):
+	name,ty = spec.split(":")
+	return type2ctype(ty)+" "+name
+
+def spec2name(spec):
+	name,ty = spec.split(":")
+	return name
+
+def spec2type(spec):
+	name, ty = spec.split(":")
+	return ty
+
+f=open(sys.argv[1],"r")
+
+imports=[]
+exports=[]
+includes=[]
+
+for line in f:
+	if line.startswith("#"):
+		continue
+	word = line.strip().split()
+	if word==[]:
+		continue
+
+	elif word[0] == "export_as":
+		imports.append([word[1]]+word[3:])
+		exports.append([word[2]]+word[3:])
+
+	elif word[0] == "c":
+		includes.append(" ".join(word[1:]))
+
+	else:
+		print "Unknown declaration %r" % word
+		continue
+
+rootpath = os.path.splitext(sys.argv[1])[0]
+name = os.path.basename(rootpath).lower()
+
+kuru_h = open(rootpath+"_kuru.h","w")
+kuru_h.write("#ifndef %s_H\n" % name.upper())
+kuru_h.write("#define %s_H 1\n" % name.upper())
+kuru_h.write("#include \"kuru_types.h\"\n")
+kuru_h.write("void %s_init(void);\n" % name.lower())
+for i in imports:
+	if i[2:]!=[]:
+		kuru_h.write(type2ctype(i[1])+" k_"+name+"_"+i[0]+"("+",".join(map(spec2var,i[2:]))+");\n")
+	else:
+		kuru_h.write(type2ctype(i[1])+" k_"+name+"_"+i[0]+"(void);\n")
+kuru_h.write("void %s_done(void);\n" % name.lower())
+kuru_h.write("#endif\n")
+kuru_h.close()
+
+kuru_c = open(rootpath+"_kuru.c","w")
+kuru_c.write("""
+#include "channels.h"
+#include "kuru_types.h"
+#include <pthread.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+#include <assert.h>
+""")
+
+for i in includes:
+	kuru_c.write("%s\n" % i)
+
+kuru_c.write("""
+
+static pthread_t %(name)s_thread;
+channel_t *%(name)s_command_channel;
+channel_t *%(name)s_reply_channel;
+
+""" % {
+ "name" : name
+})
+
+# Write out all the message types
+for i in imports:
+	kuru_c.write("typedef struct %s_msg_t {\n" % i[0])
+	for arg in i[2:]:
+		kuru_c.write("\t%s;\n" % spec2var(arg))
+	kuru_c.write("} %s_msg_t;\n\n" % i[0])
+	if i[1] != "void":
+		kuru_c.write("typedef struct %s_reply_t {\n" % i[0])
+		kuru_c.write("	%s value;\n" % type2ctype(i[1]))
+		kuru_c.write("} %s_reply_t;\n\n" % i[0])
+
+# Now, write out the aggregate message
+kuru_c.write("typedef struct %s_t {\n" % name)
+kuru_c.write("\tenum {\n")
+kuru_c.write("\t\tMSG_DONE,\n")
+for i in imports:
+	kuru_c.write("\t\tMSG_C_%s,\n" % i[0].upper())
+	if i[1] != "void":
+		kuru_c.write("\t\tMSG_K_%s,\n" % i[0].upper())
+kuru_c.write("\t} msg_type;\n")
+kuru_c.write("\tunion {\n")
+for i in imports:
+	kuru_c.write("\t\t%s_msg_t %s_msg;\n" % (i[0],i[0]))
+	if i[1] != "void":
+		kuru_c.write("\t\t%s_reply_t %s_reply;\n" % (i[0],i[0]))
+kuru_c.write("\t};\n")
+kuru_c.write("} %s_t;\n\n" % name);
+
+kuru_c.write("""bool %(name)s_handle_message(channel_t *channel, 
+		%(name)s_t *message)
+{
+	switch(message->msg_type) {
+""" % { "name" : name })
+
+def spec2msgvar(funcname, spec):
+	varname = spec2name(spec)
+	return "message->%s_msg.%s" % (funcname, varname)
+
+for i,e in zip(imports,exports):
+	kuru_c.write("\t\tcase MSG_C_%s: {\n" % i[0].upper())
+	kuru_c.write("\t\t\t")
+	if i[1]!="void":
+		kuru_c.write(type2ctype(i[1])+" ret = ")
+	kuru_c.write(e[0]+"("+",".join(map(
+		lambda x: ctype2nativectype(spec2type(x),spec2msgvar(i[0],x)),
+		i[2:]))+");\n")
+	for spec in i[2:]:
+		if spec2type(spec) in ["kstring","string"]:
+			kuru_c.write("\t\t\tkuru_string_destroy(%s);\n" % 
+					spec2msgvar(i[0],spec))
+	#kuru_c.write("\t\t\tfree(message);\n")
+	if i[1]!="void":
+		kuru_c.write("\t\t\t%s_t *reply = malloc(sizeof(%s_t));\n" %
+				(name,name))
+		kuru_c.write("\t\t\treply->msg_type = MSG_K_%s;\n" %
+					i[0].upper())
+		kuru_c.write("\t\t\treply->%s_reply.value = ret;\n" % i[0])
+		kuru_c.write("\t\t\tchannel_put(channel,reply);\n")
+	kuru_c.write("\t\t\treturn true;\n")
+	kuru_c.write("\t\t}\n")
+
+kuru_c.write("""
+		case MSG_DONE:
+			return false;
+	}
+	assert(!"Unknown %(name)s message");
+	return false;
+}
+""" % { "name" : name })
+
+kuru_c.write("""
+static void *%(name)s_thread_func(void *dummy)
+{
+	bool running;
+	(void)dummy; /* force usage */
+	do {
+		%(name)s_t *msg = channel_get(%(name)s_command_channel);
+		running = %(name)s_handle_message(%(name)s_reply_channel, msg);
+		free(msg);
+	} while(running);
+
+	return NULL;
+}
+
+void %(name)s_init(void)
+{
+	%(name)s_command_channel = channel_create();
+	%(name)s_reply_channel = channel_create();
+	pthread_create(&%(name)s_thread, NULL, %(name)s_thread_func, NULL);
+}
+
+void %(name)s_done(void)
+{
+	%(name)s_t *msg = malloc(sizeof(%(name)s_t));
+	msg->msg_type = MSG_DONE;
+	channel_put(%(name)s_command_channel, msg);
+	pthread_join(%(name)s_thread,NULL);
+	channel_destroy(%(name)s_command_channel);
+	channel_destroy(%(name)s_reply_channel);
+}
+
+""" % {
+	"name" : name,
+})
+
+for i in imports:
+	kuru_c.write(type2ctype(i[1])+" k_"+name+"_"+i[0]+"(")
+	if i[2:]!=[]:
+		kuru_c.write(",".join(map(spec2var,i[2:])))
+	else:
+		kuru_c.write("void")
+	kuru_c.write(")\n")
+	kuru_c.write("{")
+	kuru_c.write("\t%s_t *k_msg = malloc(sizeof(%s_t));\n" % (name,name))
+	if i[1] != "void":
+		kuru_c.write("\t%s_t *k_reply = NULL;\n" % name)
+		kuru_c.write("\t%s k_ret;\n" % type2ctype(i[1]))
+	kuru_c.write("\tk_msg->msg_type = MSG_C_%s;\n" % i[0].upper())
+	for v in i[2:]:
+		if spec2type(v) in ["kstring","string"]:
+			kuru_c.write("\tk_msg->%s_msg.%s = ksdup(%s);\n" % (
+				i[0],
+				spec2name(v),
+				spec2name(v)))
+		else:
+			kuru_c.write("\tk_msg->%s_msg.%s = %s;\n" % (
+				i[0],
+				spec2name(v),
+				spec2name(v)))
+	kuru_c.write("\tchannel_put(%s_command_channel, k_msg);\n" % name)
+	if i[1] != "void":
+		kuru_c.write("\tk_reply = channel_get(%s_reply_channel);\n" % 
+				name)
+		kuru_c.write("\tassert(k_reply->msg_type == MSG_K_%s);\n" % 
+				i[0].upper())
+		kuru_c.write("\tk_ret = k_reply->%s_reply.value;\n" % i[0])
+		kuru_c.write("\tfree(k_reply);\n")
+		kuru_c.write("\treturn k_ret;\n")
+	else:
+		kuru_c.write("\treturn;\n")
+	kuru_c.write("}\n\n")

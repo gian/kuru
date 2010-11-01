@@ -1,15 +1,14 @@
-#include "kuruio.h"
+#include "io_kuru.h"
 
 int main(int argc, char *argv[])
 {
-	(void) argc;
-	(void) argv;
 	io_init();
-	kuru_string_t s;
-	s.length = 13;
-	s.data = "Hello World\n";
-	io_puts(s);
+	k_io_print(c2ks("Press enter"));
+	int ch = k_io_getch();
+	if (ch=='\n')
+		k_io_print(c2ks("Thank you\n"));
+	else
+		k_io_print(c2ks("You cannot follow instructions\n"));
 	io_done();
-
 	return 0;
 }
