@@ -7,7 +7,7 @@
 #include <assert.h>
 #include <string.h>
 
-channel_t *iochan;
+channel_t *iochan = NULL;
 pthread_t iothread;
 
 typedef struct io_message_t {
