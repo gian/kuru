@@ -60,7 +60,7 @@ struct
                  | DVALREC of tast * T.ty * pos
                  | DMUTUAL of tast vector * pos
                  | DSTRUCTURE of S.symbol * tast vector * pos
-                 | DSTRUCTASSIGN of S.symbol * S.symbol * pos
+                 | DSTRUCTASSIGN of S.symbol * texp * pos
                  | DNULL of pos (* For things we've removed *)
 
    val ppty = T.pp
@@ -71,6 +71,7 @@ struct
 	  | getType (DNULL _) = T.UNKNOWN
 	  | getType (DSTRUCTURE _) = T.UNKNOWN
 	  | getType (DMUTUAL _) = T.UNKNOWN
+     | getType (DSTRUCTASSIGN _) = T.UNKNOWN
 	  | getType _ = raise Fail "Can't getType for non DVAL or DVALREC"
 
 	fun setType (DVAL (a,b,_,c)) t = DVAL (a,b,t,c)
@@ -246,6 +247,9 @@ struct
 	  | prettyPrint ((DSTRUCTURE (s,l,p))::t) = "DSTRUCTURE " ^ S.name s ^ " [\n" ^
 	  																prettyPrint (vtol l)  ^ "]\n" ^
 																	prettyPrint t
+	  | prettyPrint ((DSTRUCTASSIGN (a,b,p))::t) = "DSTRUCTASSIGN " ^ S.name a ^ 
+	  															  " = " ^ ppe b ^ "\n" ^ 
+																  prettyPrint t
      | prettyPrint (_::t) = "???\n" ^ prettyPrint t
 end
 

@@ -32,11 +32,11 @@ struct
    fun resolveLongId te ve se (LongId (Ident (s,_),r,p)) = 
          (case (S.look (se,S.symbol s)) of
                NONE => raise Fail ("Unknown structure id: " ^ s)
-             | SOME (Env.StructEntry (te',ve',se')) => (Symbol.symbol s) :: 
-                                                      resolveLongId te' ve' se' r)
+             | SOME (Env.StructEntry (te',ve',se')) => 
+                     (Symbol.symbol s) :: 
+                        resolveLongId te' ve' se' r)
      | resolveLongId te ve se (Ident (s,_)) = [Symbol.symbol s] 
      | resolveLongId te ve se _ = raise Fail "Not implemented resolveLongId"
-
 
    fun convert tenv venv senv pt = 
    let
@@ -294,6 +294,36 @@ struct
              val se'' = S.enter (se,a',Env.StructEntry (te',ve',se'))
           in
              (te,ve,se'',[A.DSTRUCTURE (a',Vector.fromList l',p1)])
+          end
+        | d te ve se (StructBind (a,b,p)) =
+          let
+             fun sb se [] = raise Fail ("Empty long-id in struct assign near: " ^
+                                       Int.toString p)
+               | sb se [h] = (case (S.look (se,h)) of 
+                                 (SOME e) => e
+                               | NONE => raise Fail ("Invalid id in struct " ^
+                                                     "assign near: " ^
+                                                     Int.toString p))
+               | sb se (h::t) = (case (S.look (se,h)) of
+                                  (SOME (Env.StructEntry (_,_,e))) => sb e t
+                                | NONE => raise Fail ("Invalid id in struct " ^
+                                                      "assign near: " ^ 
+                                                      Int.toString p))
+
+
+
+             val a' = case (s te ve se a) of A.EID (n,t,p') => n
+                                           | A.ELID (nl,t,p') =>
+                                             raise Fail("Unexpected long-id: " ^
+                                                      Int.toString p)
+
+             val b' = s te ve se b
+             val b'' = case b' of A.EID (n,t,p') => sb se [n]
+                                | A.ELID (nl,t,p') => sb se nl
+
+             val se' = S.enter (se,a',b'')
+          in
+             (te,ve,se',[A.DSTRUCTASSIGN (a',b',p)])
           end
         | d te ve se t = raise Fail "decl match"
    in

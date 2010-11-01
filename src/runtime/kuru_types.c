@@ -1,6 +1,7 @@
 #include "kuru_types.h"
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 kuru_string_t *c2ks(const char *cstr)
 {

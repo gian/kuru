@@ -22,6 +22,6 @@ structure CodeGenDecs =
 struct
    val decs =
   ["declare void @io_init ()",
-   "declare i32 @io_puts ({ i32, i8* })",
+   "declare void @k_io_print ({ i32, i8* }*)",
    "declare void @io_done ()"] 
 end

@@ -29,10 +29,10 @@ struct
                     S.enter (st,S.symbol s,t)) 
       S.empty
       [
-         ("true",       I.BCONST true,       []),
-         ("false",      I.BCONST false,      []),
-         ("Match",      I.UNDEF (Temp.void), []),
-         ("print",      I.BUILTIN "io_puts", [])
+         ("true",       I.BCONST true,          []),
+         ("false",      I.BCONST false,         []),
+         ("Match",      I.UNDEF (Temp.void),    []),
+         ("print",      I.BUILTIN "k_io_print", [])
       ]
 end
 

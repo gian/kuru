@@ -56,6 +56,7 @@ struct
      | is_simple (I.CONST _) = true
      | is_simple (I.BCONST _) = true
      | is_simple (I.UNDEF _) = true
+     | is_simple (I.VOID) = true
      | is_simple _ = false
 
    (* "Contingent label" - used to prevent adding of labels 
@@ -95,11 +96,14 @@ struct
           val t0 = I.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
           val t1 = I.TEMP (Temp.newtemp (strty))
           val t2 = I.TEMP (Temp.newtemp (strty))
+          val t3 = I.TEMP (Temp.newtemp (Temp.ptr strty))
           val m' = [I.MOVE (t0,m),
                     I.MOVE (t1,I.TUPLE_INS(I.UNDEF strty, I.CONST (size v + 1),0)),
-                    I.MOVE (t2,I.TUPLE_INS (t1, t0, 1))]
+                    I.MOVE (t2,I.TUPLE_INS (t1, t0, 1)),
+                    I.MOVE (t3,I.ALLOCA (strty)),
+                    I.STORE (t2,t3)]
        in
-          (t2, m')
+          (t3, m')
        end
      | tr_val (A.LUNIT p) = (I.VOID,[])
      | tr_val _ = raise Fail "tr_val: Not implemented"
@@ -408,12 +412,13 @@ struct
           val (_,_,b',instr1) = tr_exp ve se b
           val (_,_,a',instr2) = tr_exp ve se a
           val rt = Temp.newtemp (tr_ty t)
-          val instr3 = [
-                 I.MOVE (I.TEMP rt,
-                         I.CALL (tr_ty t,a',b'))
-              ]
+          
+          val c = I.CALL (tr_ty t,a',b')
        in
-          (ve,se,I.TEMP rt, instr1 @ instr2 @ instr3)
+          if tr_ty t = Temp.void then 
+             (ve,se,I.VOID,instr1 @ instr2 @ [I.EXP c])
+          else
+             (ve,se,I.TEMP rt,instr1 @ instr2 @ [I.MOVE (I.TEMP rt,c)])
        end
      | tr_exp ve se (A.EEXN (e,t,p)) = raise Fail "tr_exp: EEXN not impl." 
      | tr_exp ve se (A.EHANDLE (pa,e,t,p)) = raise Fail "tr_exp: EHANDLE"
@@ -478,9 +483,26 @@ struct
        in
           (ve,se'',instr)
        end
-     | tr_ast ve se (A.DSTRUCTASSIGN (s1,s2,p)) =
-         raise Fail "tr_ast: DSTRUCTASSIGN not impl."
-         (* FIXME: DSTRUCTASSIGN needs to accept long ids on RHS. *)
+     | tr_ast ve se (A.DSTRUCTASSIGN (s,e,p)) =
+       let
+          fun res se [] = raise Fail "tr_ast encountered empty long id"
+            | res se [h] = (case (S.look (se,h)) of
+                               SOME e => e
+                             | NONE => raise Fail "tr_ast unknown struct id")
+            | res se (h::t) = (case (S.look (se,h)) of
+                                 SOME (StructEntry (_,e)) => res e t
+                               | NONE => raise Fail "tr_ast: struct id")
+   
+          val rhs = (case e of 
+                        (A.EID (rhs,_,p)) =>
+                           (case (S.look (se,rhs)) of 
+                              NONE => raise Fail "tr_ast: DSTRUCTASSIGN"
+                            | SOME e' => e')
+                      | (A.ELID (l,t,p)) => res se l)
+          val se' = S.enter (se,s,rhs)
+       in
+          (ve,se',[])
+       end
      | tr_ast ve se (A.DNULL p) = (ve,se,[])
      | tr_ast ve se _ = raise Fail "tr_ast: Not implemented"
 
