@@ -78,6 +78,12 @@ structure P = ParseTree
 
 val srcFileLineNum = ref 1
 
+fun escape "n" = "\n"
+  | escape "\\" = "\\"
+  | escape "0" = String.str (Char.chr 0)
+  | escape "t" = "\t"
+  | escape x = x
+
 %%
 
 sp             <- " " / "\n" -> ((srcFileLineNum := !srcFileLineNum + 1);"\n") / "\t".
@@ -106,7 +112,7 @@ charconst      <- "#" "\"" c: char "\"" -> (P.Char ($c,!pos)).
 string         <- "\"" s: stringcont "\"" _ -> (P.String ($s,!pos)).
 
 stringcont     <- !"\\" !"\"" c: char s: stringcont -> ($c ^ $s)
-                / b: "\\" c: char s: stringcont -> ($b ^ $c ^ $s)
+                / b: "\\" c: char s: stringcont -> ((escape ($c)) ^ $s)
                 / -> ("").
 
 con            <- real / int / charconst / string.
