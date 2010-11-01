@@ -29,8 +29,9 @@ struct
    (* TODO: could replace this static list with something that respects
     * various command line parameters *)
    val passes = [
-      ("ast-infix-apply",AstInfixApply.apply),
+      ("ast-infix-unflatten",AstInfixUnflatten.apply),
       ("ast-app-apply",AstAppApply.apply),
+      ("ast-infix-apply",AstInfixApply.apply),
       ("ast-fun-curry",AstFunCurry.apply),
       ("ast-typedec-eval",AstTypedecEval.apply),
       ("ast-match-compile", AstMatchCompile.apply),

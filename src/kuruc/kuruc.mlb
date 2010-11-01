@@ -14,6 +14,7 @@ frontend/kuru.kpg.sml
 semant/exceptions.sml
 ast/typed_ast.sml
 ast/ast_datatype_unfold.sml
+ast/ast_infix_unflatten.sml
 ast/ast_infix_apply.sml
 ast/ast_typedec_eval.sml
 ast/ast_app_apply.sml

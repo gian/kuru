@@ -9,6 +9,7 @@ SMLDEPS= \
  	ast/typed_ast.sml ast/ast_parse_tree.sml ast/ast_app_apply.sml \
 	ast/type.sml ast/ast_datatype_unfold.sml ast/ast_infix_apply.sml \
 	ast/ast_typedec_eval.sml ast/ast_fun_curry.sml \
+	ast/ast_infix_unflatten.sml \
 	ast/ast_match_compile.sml ast/convert_parse_tree.sml \
 	intermediate/temp.sml intermediate/intermediate.sml \
 	intermediate/translate.sml codegen/codegen.sml codegen/codegen_decs.sml \

@@ -1,7 +1,5 @@
-infix 3 +
-infixr 4 %
-
-infix *
+infix 7 *
+infix 6 +
 
 val p = 1 + 2
 

@@ -25,24 +25,24 @@ struct
 
 	fun printUsage () =
 		print ("Usage: kuruc [options] [-o outputFile] file1.k ... fileN.k\n" ^
-		       "\tOptions:\n" ^
-             "\t\t-o file\t\tSpecify the output file.\n" ^
-             "\t\t-O0\t\tDisable all optimisations.\n" ^ 
-             "\t\t-O1\t\tEnable basic optimisations.\n" ^ 
-             "\t\t-O2\t\t(Default) Enable most optimisations.\n" ^ 
-             "\t\t-O3\t\tEnable all optimisations.\n" ^ 
-				 "\t\t-h\t\tDisplay this help information and exit.\n" ^
-				 "\t\t-q\t\tQuiet mode - show only fatal errors.\n" ^
-				 "\t\t-qq\t\tSilent mode - don't even show errors.\n" ^
-				 "\t\t-v\t\tVerbose mode.\n" ^
-				 "\t\t-vv\t\tBe more verbose.\n" ^
-				 "\t\t-d\t\tEnable debugging output.\n" ^
-				 "\t\t-dd\t\tEnable noisy debugging mode.\n" ^
-				 "\t\t-m16\t\tSet machine word size to 16 bits.\n" ^
-				 "\t\t-m32\t\t(Default) Set machine word size to 32 bits.\n" ^
-				 "\t\t-m64\t\tSet machine word size to 64 bits.\n" ^
-             "\t\t-keep-llvm\t\tKeep intermediate LLVM bitcode files.\n" ^
-				 "\t\t-V\t\tOutput version information and exit.\n")
+		       "   Options:\n" ^
+             "\t-o file\t\tSpecify the output file.\n" ^
+             "\t-O0\t\tDisable all optimisations.\n" ^ 
+             "\t-O1\t\tEnable basic optimisations.\n" ^ 
+             "\t-O2\t\t(Default) Enable most optimisations.\n" ^ 
+             "\t-O3\t\tEnable all optimisations.\n" ^ 
+				 "\t-h\t\tDisplay this help information and exit.\n" ^
+				 "\t-q\t\tQuiet mode - show only fatal errors.\n" ^
+				 "\t-qq\t\tSilent mode - don't even show errors.\n" ^
+				 "\t-v\t\tVerbose mode.\n" ^
+				 "\t-vv\t\tBe more verbose.\n" ^
+				 "\t-d\t\tEnable debugging output.\n" ^
+				 "\t-dd\t\tEnable noisy debugging mode.\n" ^
+				 "\t-m16\t\tSet machine word size to 16 bits.\n" ^
+				 "\t-m32\t\t(Default) Set machine word size to 32 bits.\n" ^
+				 "\t-m64\t\tSet machine word size to 64 bits.\n" ^
+             "\t-keep-llvm\tKeep intermediate LLVM bitcode files.\n" ^
+				 "\t-V\t\tOutput version information and exit.\n")
 
 	fun printVersion () =
 		print ("kuruc version " ^ Version.major ^ "." ^ Version.minor ^
