@@ -71,6 +71,20 @@ struct
 
              (* FIXME: This is always infixl!  Need to implement infixr *)
 
+             (* 1 + 2 + 3 + 4 --> 
+                (((1 + 2) + 3) + 4) *)
+             fun infixifyl [] = []
+               | infixifyl [h] = [h]
+               | infixifyl (h1::h2::h3::t) =
+                  (case h2 of (Ident (h2',p')) =>
+                     (if h2' = opr then infixifyl ([Infix (s i h1,
+                                                    h2,
+                                                    s i h3,
+                                                    p)] @ t)
+                                   else ((s i h1) :: (infixifyl (h2 :: h3 :: t))))
+                            | _ => (s i h1) :: (infixifyl (h2 :: h3 :: t)))
+               | infixifyl (h::t) = s i h :: infixifyl t
+
              fun infixifyr [] = []
                | infixifyr [h] = [h]
                | infixifyr (h1::h2::t) =
@@ -118,7 +132,7 @@ struct
                end*)
           in
              case d of BLeft =>
-                        AppList (fnapp l, p)
+                        AppList (infixifyl (fnapp l), p)
                     | BRight =>
                         AppList (infixifyr (fnapp l), p) 
           end
