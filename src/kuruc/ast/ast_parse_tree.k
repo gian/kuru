@@ -266,6 +266,8 @@ struct
           in
              (te',ve,se,[])
           end
+        | d te ve se (InfixDec _) = (te, ve, se, [])
+        | d te ve se (InfixrDec _) = (te, ve, se, [])
         | d te ve se (FunMatch (a,l,_,c,p)) =
              raise IllegalParseTree ("FunMatch",p)
         | d te ve se (DataBind (l,a,b,p)) =
