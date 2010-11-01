@@ -11,6 +11,15 @@ def type2ctype(ty):
 		return "int"
 	raise Exception("Unknown type %s" % ty)
 
+def type2llvmtype(ty):
+	if ty=="void":
+		return "void"
+	elif ty in ["kstring","string"]:
+		return "{ i32, i8 *}"
+	elif ty == "int":
+		return "i32"
+	raise Exception("Unknown type %s" % ty)
+
 def ctype2nativectype(ty,expr):
 	if ty == "string":
 		return "(%s)->data" % expr
@@ -246,3 +255,17 @@ for i in imports:
 	else:
 		kuru_c.write("\treturn;\n")
 	kuru_c.write("}\n\n")
+kuru_c.close()
+
+kuru_ll = open(rootpath+"_kuru.ll","w")
+kuru_ll.write("declare void @%s_init ()\n" % name)
+kuru_ll.write("declare void @%s_done ()\n" % name)
+for i in imports:
+	kuru_ll.write("declare ")
+	kuru_ll.write(type2llvmtype(i[1]))
+	kuru_ll.write(" @")
+	kuru_ll.write("k_" + name + "_" + i[0])
+	kuru_ll.write("(")
+	kuru_ll.write(", ".join(map(lambda x:type2llvmtype(spec2type(x)),i[2:])))
+	kuru_ll.write(")\n")
+kuru_ll.close()

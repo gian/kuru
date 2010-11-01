@@ -11,11 +11,11 @@ LIBKURU= \
 
 all: $(LIBKURU)
 
-%_kuru.c %_kuru.h: %.idl kuruidl
+%_kuru.c %_kuru.h %_kuru.ll: %.idl kuruidl
 	./kuruidl $< -o $@
 
 
 clean:
-	rm -f $(LIB)/libkuru.a io_test *_kuru.[ch] *.o io_test
+	rm -f $(LIB)/libkuru.a io_test *_kuru.[ch] *_kuru.ll *.o io_test
 
-.SECONDARY: $(wildcard *_kuru.c) $(wildcard *_kuru.h)
+.SECONDARY: $(wildcard *_kuru.c) $(wildcard *_kuru.h) $(wildcard *_kuru.ll)
