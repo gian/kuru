@@ -40,8 +40,8 @@ struct
 					  | PWILD of pos
 
    and      texp = ELIT of tval * T.ty * pos
-	              | EID of S.symbol * T.ty * pos
-					  | ELID of S.symbol list * T.ty * pos
+                 | EID of S.symbol * T.ty * pos
+                 | ELID of S.symbol list * T.ty * pos
                  | ELIST of texp vector * T.ty * pos
                  | ETUPLE of texp vector * T.ty * pos
                  | EIF of texp * texp * texp * T.ty * pos

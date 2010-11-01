@@ -15,6 +15,7 @@ channel_t *channel_create(void)
 void channel_put(channel_t *chan, void *value)
 {
 	assert(value && "You cannot put NULL onto a channel");
+	assert(chan && "You cannot put onto a NULL channel");
 	pthread_mutex_lock(&chan->mutex);
 	while (chan->value) {
 		pthread_cond_wait(&chan->value_empty, &chan->mutex);
@@ -27,6 +28,7 @@ void channel_put(channel_t *chan, void *value)
 void *channel_get(channel_t *chan)
 {
 	void *ret;
+	assert(chan && "Cannot get on a NULL channel");
 	pthread_mutex_lock(&chan->mutex);
 	while (!chan->value) {
 		pthread_cond_wait(&chan->value_ready, &chan->mutex);
@@ -40,6 +42,7 @@ void *channel_get(channel_t *chan)
 
 void channel_destroy(channel_t *chan)
 {
+	assert(chan && "Cannot destroy a NULL channel");
 	pthread_mutex_lock(&chan->mutex);
 	assert(!chan->value);
 	pthread_mutex_destroy(&chan->mutex);
