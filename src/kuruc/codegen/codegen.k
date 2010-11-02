@@ -217,7 +217,11 @@ struct
               This is a bit dirty and hardcoded at the moment,
               so it qualifies for a FIXME *)
          val io = Config.resolveLibrary "io_kuru.ll"
+         val iolib = TextIO.openIn io
+         val iolib' = TextIO.input iolib
+         val _ = TextIO.closeIn iolib
 
+         val _ = TextIO.output (fp, iolib' ^ "\n")
          val _ = TextIO.output (fp, code)
          val _ = TextIO.closeOut (fp)
          val _ = Debug.print Debug.verbose ("Output LLVM asm file: " ^ 

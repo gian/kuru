@@ -21,77 +21,58 @@
 structure LLVMOperations =
 struct
    (* FIXME: This should be in an external platform-independent file *)
-   fun exec cmd args = Unix.execute (cmd, args)
+   fun exec cmd args = OS.Process.system (cmd ^ " " ^ String.concatWith " " args)
    
-   fun llvmas (llvmSource) = 
+   fun llvmas (llvmSourceLoc) = 
       let
-         val llas = exec "/opt/local/bin/llvm-as" []
-         val (fi,fo) = (fn x => (Unix.binInstreamOf x, Unix.textOutstreamOf x)) llas
-         val _ = TextIO.output (fo,llvmSource)
-         val _ = TextIO.closeOut fo
-         val asm = BinIO.inputAll fi
-         val _ = BinIO.closeIn fi
+         val llas = exec "llvm-as" [llvmSourceLoc ^ "/main.ll"]
 
-         val _ = if not (OS.Process.isSuccess (Unix.reap llas))
+         val _ = if not (OS.Process.isSuccess (llas))
                      then raise Fail 
                         ("llvm-as failed with error status code")
                      else ()
       in
-         asm
+         llvmSourceLoc ^ "/main.bc"
       end
    
    fun opt (llvmBytecode) =
       let
-         val llo = exec "/opt/local/bin/opt" [
+         val llo = exec "opt" [
                                               "-O" ^ (Int.toString
                                                 (Config.getOptimiser ()))]
-         val (fi,fo) = (fn x => (Unix.binInstreamOf x, Unix.binOutstreamOf x)) llo
-         val _ = BinIO.output (fo,llvmBytecode)
-         val _ = BinIO.closeOut fo
-         val bc = BinIO.inputAll fi
-         val _ = BinIO.closeIn fi
-
-         val _ = if not (OS.Process.isSuccess (Unix.reap llo))
+         val _ = if not (OS.Process.isSuccess (llo))
                      then raise Fail 
                         ("opt failed with error status code")
                      else ()
       in
-         bc
+         () 
       end
 
-   fun llc (llvmBytecode,filename) =
+   fun llc (llvmBytecodeLoc) =
       let
-         val _ = if Config.getKeepLLVM () then
-                 let
-                    val fp = BinIO.openOut (filename ^ ".bc")
-                    val _ = BinIO.output (fp,llvmBytecode)
-                    val _ = BinIO.closeOut fp
-                 in  () end else ()
-
-         val filename' = filename ^ ".s"
-         val llc = exec "/opt/local/bin/llc" ["-f","-o",filename']
-         val (fi,fo) = (fn x => (Unix.binInstreamOf x, Unix.binOutstreamOf x)) llc
-         val _ = BinIO.output (fo,llvmBytecode)
-         val _ = BinIO.closeOut fo
-         val bc = BinIO.inputAll fi
-         val _ = BinIO.closeIn fi
-
-         val _ = if not (OS.Process.isSuccess (Unix.reap llc))
+         val filename' = llvmBytecodeLoc ^ ".s"
+         val llc = exec "llc" 
+                    (["-f","-o",filename'] @ 
+                      (if (Config.getOptimiser () > 0) then
+                            ["-O" ^ Int.toString (Config.getOptimiser ())]
+                      else []) @ [llvmBytecodeLoc])
+         
+         val _ = if not (OS.Process.isSuccess (llc))
                      then raise Fail 
                         ("llc failed with error status code")
                      else ()
       in
-         true
+         filename'
       end
 
 
    fun gcc (files,filename) =
       let
-         val files' = files @ ["../../lib/libkuru.a"]
-         val ld = exec "/usr/bin/llvm-gcc" ([
+         val files' = files 
+         val ld = exec "llvm-gcc" ([
                                                   "-o",filename] @ files')
 
-         val _ = if not (OS.Process.isSuccess (Unix.reap ld))
+         val _ = if not (OS.Process.isSuccess (ld))
                      then raise Fail 
                         ("gcc failed with error status code")
                      else ()
@@ -101,11 +82,11 @@ struct
 
    fun llvmld (files,filename) =
       let
-         val files' = files @ ["../../lib/libkuru.a"]
-         val ld = exec "/opt/local/bin/llvm-ld" (["-native",
+         val files' = files 
+         val ld = exec "llvm-ld" (["-native",
                                                   "-o",filename] @ files')
 
-         val _ = if not (OS.Process.isSuccess (Unix.reap ld))
+         val _ = if not (OS.Process.isSuccess (ld))
                      then raise Fail 
                         ("gcc failed with error status code")
                      else ()
@@ -116,10 +97,18 @@ struct
    (* TODO: This needs to finish linking against the runtime *)
    fun compile (llvmSourceLocation,filename) =
       let
-         (* val bc = llvmas llvmSource
-         val bc' = if Config.getOptimiser() = 0 then bc else opt bc
-         val _ = llc (bc',filename)
-         val _ = gcc ([filename ^ ".s"],filename) *)
+         val _ = Debug.print Debug.internal 
+            ("LLVMOperations.compile: " ^ llvmSourceLocation ^ "\n")
+         val bc = (llvmas llvmSourceLocation)
+         val _ = Debug.print Debug.internal 
+            ("LLVMOperations.compile: bitcode: " ^ bc ^ "\n")
+         val sf = llc bc
+         val _ = Debug.print Debug.internal 
+            ("LLVMOperations.compile: asm: " ^ sf ^ "\n")
+         val libkuru = Config.resolveLibrary "libkuru.a"
+         val _ = Debug.print Debug.internal 
+            ("LLVMOperations.compile: libkuru.a: " ^ libkuru ^ "\n")
+         val _ = gcc ([sf,libkuru],filename) 
 
       in
          true

@@ -68,7 +68,9 @@ struct
    (* Resolve a full path to a library, based on the library path *)
 
    fun resolveLibrary n = 
-     (case (List.find (fn x => OS.FileSys.access (x,[OS.FileSys.A_READ]))
+     (case (List.find (fn x => 
+                  (Debug.print Debug.internal ("resolveLibrary: " ^ x ^ "\n");
+                   OS.FileSys.access (x,[OS.FileSys.A_READ])))
               (map (fn x => x ^ "/" ^ n) (getLibPath ()))) of
          NONE => raise Fail ("Could not locate library: " ^ n)
        | SOME l => l)
