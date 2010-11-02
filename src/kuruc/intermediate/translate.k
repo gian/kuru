@@ -31,7 +31,7 @@ struct
    datatype fragment = 
       FSTRING of Temp.label * string
     | FFN of Temp.label * I.exp list * I.stm list * Temp.ty
-
+    | FALIAS of I.exp * I.exp
 
    val fragments = ref [] : fragment list ref
 
@@ -46,6 +46,7 @@ struct
          String.concatWith "," (map I.ppe el) ^
        ") {\n   " ^
          String.concatWith "\n   " (map I.ppstm sl) ^ "\n}\n"
+     | printFragment (FALIAS _) = "FALIAS\n"
 
    fun printFragments [] = ""
      | printFragments (h::t) = printFragment h ^ "\n" ^ 
@@ -97,9 +98,9 @@ struct
      | tr_val (A.LCHAR (v,p)) =  (I.CONST (Char.ord v),[])
      | tr_val (A.LSTRING (v,p)) =
        let
-          val n = Temp.newglobal ()
-          val _ = add_fragment (FSTRING (n, v))
           val strty = Temp.aggr [Temp.getMachineWord (),Temp.ptr Temp.i8]
+          val n = Temp.newglobal (Temp.ptr strty)
+          val _ = add_fragment (FSTRING (n, v))
           val m = I.ELEM_PTR (Temp.array (size v + 1, Temp.i8),I.NAME n,0)
           val t0 = I.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
           val t1 = I.TEMP (Temp.newtemp (strty))
@@ -178,12 +179,49 @@ struct
        in
          (ve',se,mv)
        end)
-     | tr_pat ve se (A.PINFIX (a,b,c,t,p)) = 
-            raise Fail "tr_pat: Infix not impl."
+     | tr_pat ve se (A.PINFIX (a, b, r, T.CONSTR ([t1],t2),p2)) =
+       (fn (c,t,f) =>
+       let
+          (* FIXME: Check that t2 is t_list *)
+          val _ = case (S.name b) of 
+                     "::" => ()
+                   | _ => raise Fail ("tr_pat: Invalid pattern infix operator!")
+
+          (* FIXME: Output check for empty list. *)
+          
+          val ht = tr_ty t1
+          val h0 = I.TEMP (Temp.newtemp (Temp.aggr [Temp.ptr Temp.i8,
+                                                    Temp.ptr (Temp.self_ref 2)]))
+          val h1 = I.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
+          val h1' = I.TEMP (Temp.newtemp (Temp.ptr ht))
+          val h2 = I.TEMP (Temp.newtemp (ht))
+          val h3 = I.TEMP (Temp.newtemp (Temp.ptr (
+                                           Temp.aggr [Temp.ptr Temp.i8,
+                                                      Temp.ptr (Temp.self_ref 2)
+                                                     ]
+                                        )))
+          val headc = [I.MOVE (h0, I.LOAD c),
+                       I.MOVE (h1, I.TUPLE_IND (h0,0)),
+                       I.MOVE (h1', I.BITCAST (h1, Temp.ptr (ht))),
+                       I.MOVE (h2, I.LOAD h1'),
+                       I.MOVE (h3, I.TUPLE_IND (h0,1))]
+
+          val fh = tr_pat ve se a
+          val (ve',se',a') = fh (h2,t,f)
+
+          val ft = tr_pat ve' se r
+          val (ve'',se',b') = ft (h3,t,f)
+       in
+          (ve'',se,headc @ a' @ b' @ [I.JUMP (I.NAME t, [t])])
+       end)
      | tr_pat ve se (A.PWILD p) =
        (fn (c,t,f) =>
             (ve,se,[])
        )
+     | tr_pat ve se (A.PNIL p) =
+       (fn (c,t,f) =>
+            (ve,se,
+             [I.CJUMP2 (I.EQ,c,I.NULL,t,f)]))
      | tr_pat ve se _ = raise Fail "tr_pat: Not implemented"
 
    and tr_exp ve se (A.ELIT (v,t,p)) = 
@@ -256,9 +294,9 @@ struct
      | tr_exp ve se (A.EWHILE (c,e,t,p)) = raise Fail "tr_exp while not impl." 
      | tr_exp ve se (A.EFN (s,e,T.FN(it,rt),p)) =
        let
-          val fid = Temp.newglobal ()
+          val fid = Temp.newglobal (Temp.fn_ptr (tr_ty it,tr_ty rt))
           val p = Temp.newtemp (tr_ty it)
-          val ve' = S.enter (ve,s,I.TEMP p)
+          val ve' = S.enter (ve,s,I.NAME fid)
           val (ve'',se',e',instr) = tr_exp ve' se e
           val _ = add_fragment (FFN (fid,[I.TEMP p],
                                             [I.LABEL (Temp.newlabel ())] @
@@ -495,11 +533,12 @@ struct
        end
      | tr_ast ve se (A.DVALREC (A.DVAL (s,e,t1,p1),t2,p2)) =
        let
-          val rt = Temp.newtemp (tr_ty t1)
-          val ve' = S.enter (ve,s,I.TEMP rt)
+          val rt = Temp.newglobal (tr_ty t1)
+          val ve' = S.enter (ve,s,I.NAME rt)
           val (_,_,e',in1) = tr_exp ve' se e
+          val _ = add_fragment (FALIAS (I.NAME rt, e'))
        in
-          (ve',se,in1 @ [I.MOVE (I.TEMP rt, e')])
+          (ve',se,in1)
        end
      | tr_ast ve se (A.DVALREC (a,t,p)) =
          tr_ast ve se a

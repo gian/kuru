@@ -42,9 +42,11 @@ struct
                 | BUILTIN of string
                 | ALLOCA of Temp.ty
                 | MALLOC of Temp.ty * int
+                | LOAD of exp
                 | BITCAST of exp * Temp.ty
                 | VOID
                 | NULL
+                | ALIAS of exp
    
         and stm = MOVE of exp * exp
                 | EXP of exp

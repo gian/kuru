@@ -60,6 +60,7 @@ type pos = int
     | WildcardPat of pos
     | TuplePat of pt list * pos
     | ListPat of pt list * pos
+    | NilPat of pos
     | ConPat of pt * pos
     | ConstrPat of pt * pt option * pos
     | TyAnnPat of pt * pt * pos
@@ -126,6 +127,7 @@ type pos = int
      | pp (InfixPat (p1,p2,p3,_)) = "InfixPat [" ^ pp p1 ^ " " ^ pp p2 ^ 
                                      " " ^ pp p3 ^ "]"
      | pp (WildcardPat _) = "WildcardPat []"
+     | pp (NilPat _) = "NilPat"
      | pp (TuplePat (l,_)) = "TuplePat [" ^ 
             (String.concatWith ", " (map pp l)) ^ "]"
      | pp (UnitPat _) = "UnitPat []"

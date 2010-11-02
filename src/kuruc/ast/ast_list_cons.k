@@ -57,7 +57,14 @@ struct
         | s (AsPat (a,b,p)) = AsPat (s a, s b,p)
         | s (InfixPat (a,b,c,pos)) = InfixPat (s a, s b, s c,pos)
         | s (TuplePat (l,p)) = TuplePat (map s l,p)
-        | s (ListPat (l,p)) = ListPat (map s l,p)
+        | s (ListPat ([],p)) = NilPat p
+        | s (ListPat (l,p)) = 
+          let
+             val cons = Ident ("::",p)
+          in
+             List.foldr (fn (le,l) =>
+                InfixPat (s le, cons, l, p)) (NilPat p) l
+          end
         | s (ConPat (a,p)) = ConPat (s a,p)
         | s (ConstrPat (a,NONE,p)) = ConstrPat (s a,NONE,p)
         | s (ConstrPat (a,SOME b,p)) = ConstrPat (s a,SOME (s b),p)

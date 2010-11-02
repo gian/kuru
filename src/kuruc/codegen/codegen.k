@@ -39,8 +39,8 @@ struct
      | cg_ty Temp.i64 = "i64"
      | cg_ty Temp.r32 = "r32"
      | cg_ty Temp.r64 = "r64"
-     | cg_ty (Temp.label _) = raise Fail "CodeGen: taking type of label"
-     | cg_ty (Temp.global _) = raise Fail "CodeGen: taking type of global"
+     | cg_ty (Temp.label _) = "" 
+     | cg_ty (Temp.global (_,t)) = cg_ty t 
      | cg_ty (Temp.ptr t) = cg_ty t ^ "*"
      | cg_ty Temp.void = "void"
      | cg_ty (Temp.fn_ptr (t1,t2)) = j [cg_ty t2,
@@ -72,6 +72,8 @@ struct
             jnl (map (cg_stm 2) stms),
             "\n}\n"
          ]
+     | cg_frag' (T.FALIAS (e1,e2)) =
+         j [cg_exp e1, " = alias ", cg_exp e2]
    and cg_frag l = (cg_frag' l)
 
    and cg_cmp t (I.REQ) _ _ = raise Fail "cg_cmp: REQ not implemented"
@@ -102,7 +104,7 @@ struct
      | cg_exp' b (I.RCONST i) = j [opt_t (b,"r32"), Real.toString i]
      | cg_exp' b (I.BCONST i) = j [opt_t (b, "i1"), if i then "true" else "false"]
      | cg_exp' b (I.EXN _) = j [opt_t (b, "i32"), "123456"] (* FIXME *)
-     | cg_exp' b (I.NAME l) = ppt l
+     | cg_exp' b (I.NAME l) = j [opt_t (b, cg_ty (Temp.getType l)), ppt l]
      | cg_exp' b (I.BUILTIN s) = "@" ^ s
      | cg_exp' b (I.NULL) = j [opt_t (b, "{ i8*, \\2* }*"), "null"]
      | cg_exp' b (I.TEMP t) = j [opt_t (b,cg_ty (Temp.getType t)), ppt t]
@@ -157,10 +159,14 @@ struct
                " null, i32 ",
                Int.toString n,
                ") to i32))"]
+     | cg_exp' b (I.LOAD e) =
+             j ["load ", cg_exp_t e]
      | cg_exp' b (I.BITCAST (t,ty)) =
              j ["bitcast ",
                 cg_exp_t t,
                 " to ", cg_ty ty]
+     | cg_exp' b (I.ALIAS e) = 
+             j ["alias ", cg_exp e]
      | cg_exp' b _ = raise Fail "cg_exp' b: Not implemented"
 
    and cg_exp_t e = (cg_exp' true e)

@@ -98,6 +98,7 @@ struct
         | cpat te ve se (IdPat (_,p)) = raise IllegalParseTree ("IdPat",p)
         | cpat te ve se (WildcardPat p) = 
             (te,ve,A.PWILD p)
+        | cpat te ve se (NilPat p) = (te,ve,A.PNIL p)
         | cpat te ve se p = 
             raise IllegalParseTree ("cpat Match: " ^ prettyPrint p,0)
 

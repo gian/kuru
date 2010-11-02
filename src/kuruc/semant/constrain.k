@@ -124,6 +124,8 @@ struct
        end
      | constr_pat te ve se (A.PWILD p) =
          (te,ve,se,[],T.fresh (),A.PWILD p)
+     | constr_pat te ve se (A.PNIL p) =
+         (te,ve,se,[],T.CONSTR ([T.fresh ()],T.t_list),A.PNIL p)
      | constr_pat _ _ _ _ = raise Fail "constr_pat not implemented"
 
    and constr_exp te ve se (A.ELIT(tv,_,p)) = 
