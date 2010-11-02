@@ -195,7 +195,6 @@ struct
 
    fun codegen (stms, frags) =
       jnl [
-         jnl CodeGenDecs.decs,
          jnl (map cg_frag frags),
          "define i32 @main (i32 %argc, i8** %argv) {\n   entry:\n",
          "      call void @io_init ()",
@@ -205,4 +204,27 @@ struct
          "      call void @io_done ()",
          "      ret i32 0\n}\n"
       ]
+
+   fun emit code =
+      let
+         val dirName = (OS.FileSys.tmpName ()) ^ ".kuruc"
+         val _ = Debug.print Debug.verbose ("Creating output directory: " ^ 
+                                             dirName ^ "\n")
+         val _ = OS.FileSys.mkDir dirName
+         val fp = TextIO.openOut (dirName ^ "/main.ll")
+
+         (* Include the IO library -
+              This is a bit dirty and hardcoded at the moment,
+              so it qualifies for a FIXME *)
+         val io = Config.resolveLibrary "io_kuru.ll"
+
+         val _ = TextIO.output (fp, code)
+         val _ = TextIO.closeOut (fp)
+         val _ = Debug.print Debug.verbose ("Output LLVM asm file: " ^ 
+                                             dirName ^ "/main.ll" ^ "\n")
+      in
+         dirName 
+      end handle OS.SysErr (m,NONE) => raise Fail ("Cannot emit code: " ^ m)
+               | OS.SysErr (m,SOME se) => raise Fail ("Cannot emit code: " ^ 
+                                                      m ^ ": " ^ OS.errorMsg se)
 end

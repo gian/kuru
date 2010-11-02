@@ -41,6 +41,7 @@ struct
 				 "\t-m16\t\tSet machine word size to 16 bits.\n" ^
 				 "\t-m32\t\t(Default) Set machine word size to 32 bits.\n" ^
 				 "\t-m64\t\tSet machine word size to 64 bits.\n" ^
+             "\t-L [path]\t\tSet the library search path (colon-separated)\n" ^
              "\t-keep-llvm\tKeep intermediate LLVM bitcode files.\n" ^
 				 "\t-V\t\tOutput version information and exit.\n")
 
@@ -78,6 +79,7 @@ struct
      | parseArgs ("-m64"::t) = (Config.setMachineWord 64; parseArgs t)
      | parseArgs ("-keep-llvm"::t) = (Config.setKeepLLVM true; parseArgs t)
      | parseArgs ("-o"::f::t) = (Config.setOutputFile f; parseArgs t)
+     | parseArgs ("-L"::f::t) = (Config.setLibPath f; parseArgs t)
      | parseArgs (h::t) = h :: parseArgs t
   
    fun main () =

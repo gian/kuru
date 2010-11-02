@@ -83,6 +83,7 @@ fun escape "n" = "\n"
   | escape "0" = String.str (Char.chr 0)
   | escape "t" = "\t"
   | escape x = x
+  | escape "\"" = "\\\""
 
 %%
 

@@ -114,12 +114,13 @@ struct
       end
 
    (* TODO: This needs to finish linking against the runtime *)
-   fun compile (llvmSource,filename) =
+   fun compile (llvmSourceLocation,filename) =
       let
-         val bc = llvmas llvmSource
+         (* val bc = llvmas llvmSource
          val bc' = if Config.getOptimiser() = 0 then bc else opt bc
          val _ = llc (bc',filename)
-         val _ = gcc ([filename ^ ".s"],filename)
+         val _ = gcc ([filename ^ ".s"],filename) *)
+
       in
          true
       end

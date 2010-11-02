@@ -25,12 +25,34 @@ struct
    val optimiserLevel = ref 2
    val machineWord = ref 32
    val keepLLVM = ref false
+   val libPath = ref
+      let
+         val homeDir = (case OS.Process.getEnv "HOME" of
+                           NONE => 
+                              (Debug.print Debug.warning
+                                ("Unable to read environment variable $HOME - " ^ 
+                                "Are you sure we're in a sane environment?\n")
+                               ;"")
+                         | SOME t => t)
+
+         val p = 
+            (case OS.Process.getEnv "KURU_LIBRARY_PATH" of
+               NONE => 
+                  (Debug.print Debug.warning 
+                     "$KURU_LIBRARY_PATH is not set - using defaults.\n";
+                   homeDir ^ "/.kuru/:/usr/local/lib/kuru/:/usr/lib/kuru/")
+             | SOME x => x)
+
+         val p' = String.tokens (fn #":" => true | _ => false) p
+      in
+         p'
+      end
 
    (* Setters and getters *)
    fun setOutputFile s = outputFile := s
    fun setOptimiser l = optimiserLevel := l
    fun setKeepLLVM l = keepLLVM := l
-
+   fun setLibPath l = libPath := (String.tokens (fn #":" => true | _ => false) l)
    fun setMachineWord 16 = machineWord := 16
      | setMachineWord 32 = machineWord := 32
      | setMachineWord 64 = machineWord := 64
@@ -41,4 +63,13 @@ struct
    fun getOptimiser () = !optimiserLevel
    fun getMachineWord () = !machineWord
    fun getKeepLLVM () = !keepLLVM
+   fun getLibPath () = !libPath
+
+   (* Resolve a full path to a library, based on the library path *)
+
+   fun resolveLibrary n = 
+     (case (List.find (fn x => OS.FileSys.access (x,[OS.FileSys.A_READ]))
+              (map (fn x => x ^ "/" ^ n) (getLibPath ()))) of
+         NONE => raise Fail ("Could not locate library: " ^ n)
+       | SOME l => l)
 end

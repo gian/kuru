@@ -116,9 +116,11 @@ struct
 
          val code = CodeGen.codegen (d',fragments)
          val _ = Debug.print Debug.internal ("Generated code:\n" ^ code ^ "\n")
-      
+     
+         val codeLocation = CodeGen.emit code
+
          (* Stage 7 - LLVM invokation *)
-         val _ = LLVMOperations.compile (code,Config.getOutputFile ())
+         val _ = LLVMOperations.compile (codeLocation,Config.getOutputFile ())
       in
          ()
       end
