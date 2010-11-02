@@ -12,3 +12,12 @@ fun foo [] = 0
   | foo l = 1
 
 val q = sum p
+
+val words = ["three", "blind", "mice", "see", "how", "they", "run"]
+
+fun sayWords [] = ()
+  | sayWords (h::t) = (print h; print "\n"; sayWords t)
+
+val _ = sayWords words
+
+

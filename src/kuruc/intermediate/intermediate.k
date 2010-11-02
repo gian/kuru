@@ -45,7 +45,7 @@ struct
                 | LOAD of exp
                 | BITCAST of exp * Temp.ty
                 | VOID
-                | NULL
+                | NULL of Temp.ty
                 | ALIAS of exp
    
         and stm = MOVE of exp * exp

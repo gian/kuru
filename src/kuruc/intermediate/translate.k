@@ -58,7 +58,7 @@ struct
      | is_simple (I.BCONST _) = true
      | is_simple (I.UNDEF _) = true
      | is_simple (I.VOID) = true
-     | is_simple (I.NULL) = true
+     | is_simple (I.NULL _) = true
      | is_simple _ = false
 
    (* "Contingent label" - used to prevent adding of labels 
@@ -77,7 +77,8 @@ struct
           | "string" => Temp.ptr (Temp.aggr 
                            [Temp.getMachineWord (), Temp.ptr (Temp.i8)])
           | "bool" => Temp.i1
-          | "unit" => Temp.void
+          | "unit" => Temp.ptr (Temp.i8)
+          | "cvoid" => Temp.void
           | "exn" => Temp.void
           | _ => raise Fail "tr_ty: unhandled NAME type.")
       end
@@ -91,7 +92,7 @@ struct
                                  else raise Fail "tr_ty: CONSTR not impl."
                    | _ => raise Fail "tr_ty: Invalid CONSTR type.")
      | tr_ty (T.TUPLE l) = Temp.aggr (map tr_ty l)
-     | tr_ty _ = raise Fail "tr_ty: unhandled type"
+     | tr_ty t = raise Fail ("tr_ty: unhandled type: " ^ T.prettyPrint t)
 
    fun tr_val (A.LINT (v,p)) =   (I.CONST v,[]) (* FIXME: negative numbers? *) 
      | tr_val (A.LREAL (v,p)) =  (I.RCONST v,[])
@@ -114,7 +115,7 @@ struct
        in
           (t3, m')
        end
-     | tr_val (A.LUNIT p) = (I.VOID,[])
+     | tr_val (A.LUNIT p) = (I.NULL (Temp.ptr Temp.i8),[]) 
      | tr_val _ = raise Fail "tr_val: Not implemented"
 
    fun tr_pat ve se (A.PCONST (A.ELIT (v,t,_),_,_)) =
@@ -221,7 +222,10 @@ struct
      | tr_pat ve se (A.PNIL p) =
        (fn (c,t,f) =>
             (ve,se,
-             [I.CJUMP2 (I.EQ,c,I.NULL,t,f)]))
+             [I.CJUMP2 (I.EQ,c,I.NULL (Temp.ptr (Temp.aggr [Temp.ptr Temp.i8,
+                                                            Temp.ptr (
+                                                               Temp.self_ref 2
+                                                            )])),t,f)]))
      | tr_pat ve se _ = raise Fail "tr_pat: Not implemented"
 
    and tr_exp ve se (A.ELIT (v,t,p)) = 
@@ -264,7 +268,10 @@ struct
           (ve,se,rt,instr) 
        end
      | tr_exp ve se (A.ENIL p) = 
-          (ve,se,I.NULL,[])
+          (ve,se,I.NULL (Temp.ptr (Temp.aggr [Temp.ptr Temp.i8,
+                                                            Temp.ptr (
+                                                               Temp.self_ref 2
+                                                            )])),[])
      | tr_exp ve se (A.EIF (e1,e2,e3,t,p)) =
        let
           val (_,_,r1,in1) = tr_exp ve se e1
@@ -296,7 +303,7 @@ struct
        let
           val fid = Temp.newglobal (Temp.fn_ptr (tr_ty it,tr_ty rt))
           val p = Temp.newtemp (tr_ty it)
-          val ve' = S.enter (ve,s,I.NAME fid)
+          val ve' = S.enter (ve,s,I.TEMP p)
           val (ve'',se',e',instr) = tr_exp ve' se e
           val _ = add_fragment (FFN (fid,[I.TEMP p],
                                             [I.LABEL (Temp.newlabel ())] @
@@ -312,6 +319,8 @@ struct
           val el = Temp.newlabel ()
           val fst = Temp.newlabel ()
 
+          val rt = I.TEMP (Temp.newtemp (Temp.ptr (tr_ty t)))
+          
           val (instr,labs,_) =
             Vector.foldl (
                fn ((p,e),(ins,labs,lst)) =>
@@ -325,21 +334,25 @@ struct
                   (ins @ 
                     p' @ 
                     eins @
+                    [I.STORE (e'',rt)] @
                     [I.JUMP (I.NAME el,[el])] @
                     [I.LABEL flab],
                   labs @ [(e'',lst)],flab)
                end) ([],[],fst) v
 
-          val rt = Temp.newtemp (tr_ty t)
+          val ret = I.TEMP (Temp.newtemp (tr_ty t))
+
           val instr' = in1 @
+                       [I.MOVE (rt, I.ALLOCA (tr_ty t))] @
                        [I.JUMP (I.NAME fst,[fst])] @
                        [I.LABEL fst] @
                        instr @
                         [I.UNWIND] @
-                        [I.LABEL el, 
-                         I.PHI (I.TEMP rt, tr_ty t, labs)]
+                        [I.LABEL el] @ 
+                         [I.MOVE (ret,I.LOAD rt)]
+
        in
-          (ve,se,I.TEMP rt,instr')
+          (ve,se,ret,instr')
        end
      | tr_exp ve se (A.EAPP(A.EID((r as "+",_),t1,p1),A.ETUPLE (v,t2,p2),t3,p3)) =
        let

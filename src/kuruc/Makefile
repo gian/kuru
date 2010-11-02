@@ -22,6 +22,7 @@ tests: $(BIN)/kuruc
 	$(MAKE) -C tests
 
 $(BIN)/kuruc: $(SMLDEPS) kuruc.mlb
+	./version.sh > version.k
 	$(COMPILER) -output $(BIN)/kuruc kuruc.mlb
 
 frontend/kuru.kpg.k: frontend/kuru.kpg

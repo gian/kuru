@@ -108,6 +108,7 @@ struct
    val t_bool   = NAME (Symbol.symbol "bool")
    val t_exn    = NAME (Symbol.symbol "exn")
    val t_list   = NAME (Symbol.symbol "list")
+   val t_void   = NAME (Symbol.symbol "cvoid")
 end
 
 

@@ -260,19 +260,18 @@ struct
        let
           val rt = T.fresh ()
 
-          val v' = Vector.map (fn el => 
+          val (rty,cs,v') = 
+            Vector.foldl (fn (el,(ty,cs,v')) => 
                            let
                               val (te',ve',se',cs',t',el') = 
 												constr_exp te ve se el
                            in
-                              (t',el')
-                           end) v
+                              (t',cs@cs',v'@[el'])
+                           end) (rt,[],[]) v
 
-          val (lt,le) = Vector.sub (v', Vector.length v' - 1)
-          val cs = [(rt,lt)]
-          val v'' = Vector.map (fn (a,b) => b) v'
+          val cs' = cs @ [(rt,rty)]
        in
-          (te,ve,se,cs,rt,A.ESEQ (v'',rt,p))
+          (te,ve,se,cs',rt,A.ESEQ (Vector.fromList v',rt,p))
        end
      | constr_exp te ve se (A.ELET (v,e,t,p)) =
        let

@@ -106,7 +106,7 @@ struct
      | cg_exp' b (I.EXN _) = j [opt_t (b, "i32"), "123456"] (* FIXME *)
      | cg_exp' b (I.NAME l) = j [opt_t (b, cg_ty (Temp.getType l)), ppt l]
      | cg_exp' b (I.BUILTIN s) = "@" ^ s
-     | cg_exp' b (I.NULL) = j [opt_t (b, "{ i8*, \\2* }*"), "null"]
+     | cg_exp' b (I.NULL t) = j [opt_t (b, cg_ty t), "null"]
      | cg_exp' b (I.TEMP t) = j [opt_t (b,cg_ty (Temp.getType t)), ppt t]
      | cg_exp' b (I.CALL (ty,e1,e2)) = 
          jsp ["call ",cg_ty ty,cg_exp e1,
