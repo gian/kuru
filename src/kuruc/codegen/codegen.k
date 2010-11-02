@@ -73,7 +73,7 @@ struct
             "\n}\n"
          ]
      | cg_frag' (T.FALIAS (e1,e2)) =
-         j [cg_exp e1, " = alias ", cg_exp e2]
+         j [cg_exp e1, " = alias ", cg_exp_t e2]
    and cg_frag l = (cg_frag' l)
 
    and cg_cmp t (I.REQ) _ _ = raise Fail "cg_cmp: REQ not implemented"
