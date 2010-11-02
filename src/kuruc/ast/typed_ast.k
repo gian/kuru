@@ -43,6 +43,7 @@ struct
                  | EID of S.symbol * T.ty * pos
                  | ELID of S.symbol list * T.ty * pos
                  | ELIST of texp vector * T.ty * pos
+					  | ENIL of pos
                  | ETUPLE of texp vector * T.ty * pos
                  | EIF of texp * texp * texp * T.ty * pos
                  | EWHILE of texp * texp * T.ty * pos
@@ -173,6 +174,7 @@ struct
             EANN (subst_ty_exp tn th e,
                   T.substinty tn th t,
                   p)
+	  | subst_ty_exp tn th x = x
    and subst_ty_dec tn th (DVAL (s,e,t,p)) =
             DVAL (s,
                   subst_ty_exp tn th e,
@@ -215,7 +217,8 @@ struct
      | ppe (EID(s,ty,p)) = S.name s 
 	  | ppe (ELID(s,ty,p)) = String.concatWith "." (map Symbol.name s)
      | ppe (ELIST(v,ty,p)) = "[" ^ (String.concatWith "," (map ppe (vtol v))) ^ "]"
-     | ppe (ETUPLE(v,ty,p)) = "(" ^ (String.concatWith "," (map ppe (vtol v))) ^ ")"
+     | ppe (ENIL p) = "nil"
+	  | ppe (ETUPLE(v,ty,p)) = "(" ^ (String.concatWith "," (map ppe (vtol v))) ^ ")"
      | ppe (EIF(e1,e2,e3,t,p)) = "if " ^ ppe e1 ^ " then " ^ ppe e2 ^ " else " ^ 
 	  											ppe e3
 	  | ppe (EFN(s,e,ty,p)) = "fn " ^ S.name s ^  

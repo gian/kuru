@@ -36,6 +36,8 @@ struct
                | fn_ptr of ty * ty
                | aggr of ty list
                | array of int * ty
+               | self_ref of int
+               | named of string
 
    type temp = int * ty
    type label = temp

@@ -116,8 +116,9 @@ struct
         | s te ve se (TyAnn (a,b,p)) = A.EANN (s te ve se a, t te ve se b, p)
         | s te ve se (SeqExp (l,p)) =
             A.ESEQ (Vector.fromList (map (s te ve se) l),T.UNKNOWN,p) : A.texp
-        | s te ve se (ListExp (l,p)) = 
-            A.ELIST (Vector.fromList (map (s te ve se) l),T.UNKNOWN,p) : A.texp
+        | s te ve se (ListExp (l,p)) =
+            raise Fail ("ast_parse_tree: ListExp node remains!")
+        | s te ve se (NilExp p) = A.ENIL p
         | s te ve se (LetExp (l,e,p)) = 
           let
              val (te',ve',se',dl) = convert te ve se l

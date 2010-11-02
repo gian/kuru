@@ -51,6 +51,8 @@ struct
                                jc (map cg_ty l),
                                " }"]
      | cg_ty (Temp.array (i,t)) = j [ "[", Int.toString i, " x ", cg_ty t, "]" ]
+     | cg_ty (Temp.self_ref i) = j ["\\",Int.toString i]
+     | cg_ty (Temp.named s) = s
 
    val ppt = Temp.prettyPrint
    val ppt_np = Temp.prettyPrintNoPrefix 
@@ -102,6 +104,7 @@ struct
      | cg_exp' b (I.EXN _) = j [opt_t (b, "i32"), "123456"] (* FIXME *)
      | cg_exp' b (I.NAME l) = ppt l
      | cg_exp' b (I.BUILTIN s) = "@" ^ s
+     | cg_exp' b (I.NULL) = j [opt_t (b, "{ i8*, \\2* }*"), "null"]
      | cg_exp' b (I.TEMP t) = j [opt_t (b,cg_ty (Temp.getType t)), ppt t]
      | cg_exp' b (I.CALL (ty,e1,e2)) = 
          jsp ["call ",cg_ty ty,cg_exp e1,
@@ -146,6 +149,18 @@ struct
         end
      | cg_exp' b (I.ALLOCA t) = 
             j ["alloca ", cg_ty t]
+     | cg_exp' b (I.MALLOC (t,n)) =
+            j ["tail call i8* @malloc(i32 ptrtoint (",
+               cg_ty (Temp.ptr t),
+               " getelementptr (",
+               cg_ty (Temp.ptr t),
+               " null, i32 ",
+               Int.toString n,
+               ") to i32))"]
+     | cg_exp' b (I.BITCAST (t,ty)) =
+             j ["bitcast ",
+                cg_exp_t t,
+                " to ", cg_ty ty]
      | cg_exp' b _ = raise Fail "cg_exp' b: Not implemented"
 
    and cg_exp_t e = (cg_exp' true e)

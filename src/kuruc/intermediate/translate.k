@@ -57,6 +57,7 @@ struct
      | is_simple (I.BCONST _) = true
      | is_simple (I.UNDEF _) = true
      | is_simple (I.VOID) = true
+     | is_simple (I.NULL) = true
      | is_simple _ = false
 
    (* "Contingent label" - used to prevent adding of labels 
@@ -72,7 +73,8 @@ struct
             "int" => Temp.getMachineWord ()
           | "real" => Temp.r64
           | "char" => Temp.i32
-          | "string" => Temp.aggr [Temp.getMachineWord (), Temp.ptr (Temp.i8)]
+          | "string" => Temp.ptr (Temp.aggr 
+                           [Temp.getMachineWord (), Temp.ptr (Temp.i8)])
           | "bool" => Temp.i1
           | "unit" => Temp.void
           | "exn" => Temp.void
@@ -80,7 +82,13 @@ struct
       end
      | tr_ty (T.FN (a,b)) =
          Temp.fn_ptr (tr_ty a, tr_ty b)
-     | tr_ty (T.CONSTR (tl,t)) = raise Fail "tr_ty: CONSTR not impl."
+     | tr_ty (T.CONSTR ([t1],t2)) = 
+         (case t2 of (T.NAME n) => 
+            if S.name n = "list" then (Temp.ptr (Temp.aggr [
+                                                    Temp.ptr (Temp.i8),
+                                                    Temp.ptr (Temp.self_ref 2)]))
+                                 else raise Fail "tr_ty: CONSTR not impl."
+                   | _ => raise Fail "tr_ty: Invalid CONSTR type.")
      | tr_ty (T.TUPLE l) = Temp.aggr (map tr_ty l)
      | tr_ty _ = raise Fail "tr_ty: unhandled type"
 
@@ -203,7 +211,6 @@ struct
        in
           (ve,se,t',[]) 
        end
-     | tr_exp ve se (A.ELIST (v,t,p)) = raise Fail "tr_exp list not impl." 
      | tr_exp ve se (A.ETUPLE (v,T.TUPLE t,p)) = 
        let
           val (instr,rt) = 
@@ -218,6 +225,8 @@ struct
        in
           (ve,se,rt,instr) 
        end
+     | tr_exp ve se (A.ENIL p) = 
+          (ve,se,I.NULL,[])
      | tr_exp ve se (A.EIF (e1,e2,e3,t,p)) =
        let
           val (_,_,r1,in1) = tr_exp ve se e1
@@ -406,7 +415,38 @@ struct
           val ins = ins1 @ ins2 @ [I.MOVE (I.TEMP rt, I.BINOP (r,a,b))]
        in
           (ve,se,I.TEMP rt,ins)
-       end    
+       end  
+     | tr_exp ve se (A.EAPP(A.EID((r as "::",_),t1,p1),
+          A.ETUPLE (v,t2,p2),t3,p3)) =
+       let
+          val (lhst,rhst) = (case t2 of T.TUPLE [a,b] => (tr_ty a, tr_ty b)
+                                     | _ => raise Fail
+                                       "tr_exp: Invalid operands to ::")
+
+          val (_,_,a,ins1) = tr_exp ve se (Vector.sub (v,0))
+          val (_,_,b,ins2) = tr_exp ve se (Vector.sub (v,1))
+          val rt = Temp.newtemp (tr_ty t3)
+
+          val listty = Temp.aggr [Temp.ptr Temp.i8,Temp.ptr (Temp.self_ref 2)]
+          val t0 = I.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
+          val t0' = I.TEMP (Temp.newtemp (Temp.ptr lhst))
+          val t1 = I.TEMP (Temp.newtemp (listty))
+          val t2 = I.TEMP (Temp.newtemp (listty))
+          val t3 = I.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
+          val t3' = I.TEMP (Temp.newtemp (Temp.ptr listty))
+          val m' = [I.MOVE (t0,I.MALLOC (lhst,1)),
+                    I.MOVE (t0',I.BITCAST (t0,Temp.ptr lhst)),
+                    I.STORE (a,t0'),
+                    I.MOVE (t1,I.TUPLE_INS(I.UNDEF listty, t0, 0)),
+                    I.MOVE (t2,I.TUPLE_INS (t1, b, 1)),
+                    I.MOVE (t3,I.MALLOC (listty,1)),
+                    I.MOVE (t3',I.BITCAST (t3,Temp.ptr listty)),
+                    I.STORE (t2,t3')]
+
+          val ins = ins1 @ ins2 @ m' 
+       in
+          (ve,se,t3',ins)
+       end
        | tr_exp ve se (A.EAPP (a,b,t,p)) = 
        let
           val (_,_,b',instr1) = tr_exp ve se b

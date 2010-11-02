@@ -46,6 +46,7 @@ type pos = int
     | UnitExp of pos
     | SeqExp of pt list * pos
     | ListExp of pt list * pos
+    | NilExp of pos
     | LetExp of pt list * pt * pos
     | IfExp of pt * pt * pt * pos
     | WhileExp of pt * pt * pos
@@ -110,6 +111,7 @@ type pos = int
      | pp (UnitExp _) = "Unit []"
      | pp (SeqExp (l,_)) = "Seq [" ^ (String.concatWith "; " (map pp l)) ^ "]"
      | pp (ListExp (l,_)) = "List [" ^ (String.concatWith ", " (map pp l)) ^ "]"
+     | pp (NilExp p) = "Nil"
      | pp (LetExp (d,e,_)) = "Let [" ^ (String.concatWith "\n  " (map pp d)) ^ 
                             " in " ^ pp e ^ " end]\n"
      | pp (IfExp (e1,e2,e3,_)) = "If [" ^ pp e1 ^ " then " ^ pp e2 ^ " else " ^

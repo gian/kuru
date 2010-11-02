@@ -176,6 +176,13 @@ struct
        in
           (te,ve,se,cs',t,A.ELIST(v'',t,p))
        end
+     | constr_exp te ve se (A.ENIL p) = 
+       let
+          val t1 = T.fresh ()
+          val t2 = T.CONSTR ([t1],T.t_list)
+       in
+          (te,ve,se,[],t2,A.ENIL p)
+       end
      | constr_exp te ve se (A.ETUPLE (v,t,p)) =
        let
           val v' = map (constr_exp te ve se) (vtol v)

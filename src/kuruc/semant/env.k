@@ -46,6 +46,8 @@ struct
 
 	val venv_base = 
       let
+         val consty = T.POLY 0
+         val listty = T.CONSTR ([consty],T.t_list)
          val benv =
           [
             ("true",        T.t_bool),
@@ -63,7 +65,9 @@ struct
             (">=",          T.FN(T.TUPLE [T.t_int,T.t_int],T.t_bool)),
             ("_andalso",    T.FN(T.TUPLE [T.t_bool,T.t_bool],T.t_bool)),
             ("_orelse",     T.FN(T.TUPLE [T.t_bool,T.t_bool],T.t_bool)),
-            ("print",       T.FN (T.t_string, T.t_unit))
+            ("print",       T.FN (T.t_string, T.t_unit)),
+            ("::",          T.FN(T.TUPLE [consty,listty],listty)),
+            ("@",           T.FN(T.TUPLE [listty,listty],listty))
           ]
          val b = 
             List.foldl (fn ((s,t),st) => 

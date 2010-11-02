@@ -41,7 +41,10 @@ struct
                 | BINOP of string * exp * exp
                 | BUILTIN of string
                 | ALLOCA of Temp.ty
+                | MALLOC of Temp.ty * int
+                | BITCAST of exp * Temp.ty
                 | VOID
+                | NULL
    
         and stm = MOVE of exp * exp
                 | EXP of exp
