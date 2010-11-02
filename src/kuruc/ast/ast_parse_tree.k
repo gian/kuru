@@ -273,7 +273,42 @@ struct
         | d te ve se (FunMatch (a,l,_,c,p)) =
              raise IllegalParseTree ("FunMatch",p)
         | d te ve se (DataBind (l,a,b,p)) =
-             raise Fail "Databind not implemented"
+          let
+             val a' = case (s te ve se a) of A.EID (n,t,p) => n
+                                        | _ => raise Fail "non-id DataBind"
+             
+             val te' = S.enter (te,a',T.UNION (a',[]))
+
+             val (te'',ve') = 
+                List.foldl (fn (cb, (te,ve)) =>
+                   let
+                      val (te',ve') = 
+                        (case cb of
+                           ConBind (Ident (id,_),NONE,_) =>
+                              let
+                                 val ve' = S.enter (ve,S.symbol id,
+                                                      Env.VarEntry (T.NAME a'))
+                                 val te' = (case S.look (te,a') of
+                                               SOME (T.UNION (n',l)) =>
+                                                  S.enter (te,
+                                                            a',
+                                                            T.UNION (n',
+                                                            l @ [T.NAME 
+                                                                 (S.symbol id)]))
+                                             | _ => raise Fail 
+                                                   "ast_parse_tree: UNION bug")
+                              in
+                                 (te',ve')
+                              end
+                         | ConBind (p,SOME f,_) =>
+                              raise Fail "ast-parse-tree: ConBind not impl."
+                         | _ => raise Fail "ast-parse-tree: Non-ConBind?")
+                   in
+                      (te',ve')
+                   end) (te',ve) b
+          in
+             (te'',ve',se,[])
+          end
         | d te ve se (ConBind (a,_,p)) = raise Fail "ConBind not implemented"
         | d te ve se (StructDec ([b],p)) =  
           let

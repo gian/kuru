@@ -30,6 +30,7 @@ struct
 					| META of int
 					| VAR of Symbol.symbol
 					| POLY of int
+               | UNION of Symbol.symbol * ty list
 					| UNKNOWN
 
    fun freevars (NAME s) = Set.empty
