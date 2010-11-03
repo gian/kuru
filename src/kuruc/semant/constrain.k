@@ -110,6 +110,15 @@ struct
        in
           (te',ve',se',cs',t'',A.PTUPLE(v'',t'',p))
        end
+     | constr_pat te ve se (A.PCONSTR(i,NONE,t,p)) =
+          (te,ve,se,[],t,A.PCONSTR(i,NONE,t,p))
+     | constr_pat te ve se (A.PCONSTR(i,SOME (e,t1), t2, p)) =
+       let
+          val (te',ve',se',cs,t1',e') = constr_pat te ve se e
+          val cs' = cs @ [(t1',t1)]
+       in
+          (te',ve',se',cs',t2,A.PCONSTR(i,SOME (e',t1'),t2,p))
+       end
      | constr_pat te ve se (A.PINFIX (l,s,r,t,p)) =
        let
           val _ = if s = Symbol.symbol "::" then () else

@@ -176,8 +176,42 @@ struct
          in
             (te',ve',se',fl)
          end)
-     | tr_pat te ve se (A.PCONSTR (s,popt,t,p)) = 
-            raise Fail ("tr_pat: PCONSTR not impl.")
+     | tr_pat te ve se (A.PCONSTR (i,NONE,t,p)) = 
+       (fn (c,t,f) =>
+       let
+          val conty = Temp.aggr [Temp.i32, Temp.ptr Temp.i8]
+          val tmp = I.TEMP (Temp.newtemp conty)
+          val tmp2 = I.TEMP (Temp.newtemp Temp.i32)
+          val instr = [I.MOVE(tmp,I.LOAD c),
+                       I.MOVE(tmp2,I.TUPLE_IND (tmp,0)),
+                       I.CJUMP2(I.EQ,tmp2,I.CONST i,t,f)
+                       ]
+       in
+          (te,ve,se,instr)
+       end)
+     | tr_pat te ve se (A.PCONSTR (i,SOME (pat,t1),t2,p)) = 
+       (fn (c,tr,f) =>
+       let
+          val t = Temp.newlabel ()
+          val conty = Temp.aggr [Temp.i32, Temp.ptr Temp.i8]
+          val tmp = I.TEMP (Temp.newtemp conty)
+          val tmp2 = I.TEMP (Temp.newtemp Temp.i32)
+          val tmp3 = I.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
+          val tmp3' = I.TEMP (Temp.newtemp (Temp.ptr (tr_ty te t1)))
+          val tmp3'' = I.TEMP (Temp.newtemp (tr_ty te t1))
+          val instr = [I.MOVE(tmp,I.LOAD c),
+                       I.MOVE(tmp2,I.TUPLE_IND (tmp,0)),
+                       I.CJUMP2(I.EQ,tmp2,I.CONST i,t,f),
+                       I.LABEL t,
+                       I.MOVE(tmp3,I.TUPLE_IND (tmp,1)),
+                       I.MOVE(tmp3',I.BITCAST (tmp3,Temp.ptr(tr_ty te t1))),
+                       I.MOVE(tmp3'',I.LOAD tmp3')]
+          val f' = tr_pat te ve se pat
+          val t2 = Temp.newlabel ()
+          val (te',ve',se',inst2) = f' (tmp3'',t2,f)
+       in
+          (te,ve',se,instr @ inst2 @ [I.JUMP (I.NAME tr,[tr])])
+       end)
      | tr_pat te ve se (A.PID (s,ty,p)) =
        (fn (c,t,f) =>
        let
@@ -242,7 +276,8 @@ struct
           (te,ve,se,v',ins)
        end
 	  | tr_exp te ve se (A.EID (s,t,p)) = 
-         (case S.look (ve,s) of NONE => raise Fail ("Unknown EID in tr_exp")
+         (case S.look (ve,s) of NONE => 
+               raise Fail ("Unknown EID "^S.name s^ " in tr_exp")
                               | SOME tm => (te,ve,se,tm,[]))
 	  | tr_exp te ve se (A.ELID (l,t,p)) = 
        let

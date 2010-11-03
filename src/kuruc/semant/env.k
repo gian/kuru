@@ -66,6 +66,7 @@ struct
             ("_andalso",    T.FN(T.TUPLE [T.t_bool,T.t_bool],T.t_bool)),
             ("_orelse",     T.FN(T.TUPLE [T.t_bool,T.t_bool],T.t_bool)),
             ("print",       T.FN (T.t_string, T.t_void)),
+            ("toString",    T.FN (T.t_int,T.t_string)),
             ("::",          T.FN(T.TUPLE [consty,listty],listty)),
             ("@",           T.FN(T.TUPLE [listty,listty],listty))
           ]

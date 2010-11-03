@@ -75,17 +75,34 @@ struct
              val t = case (S.look (ve,s')) of
                         SOME (Env.VarEntry t') => t'
                       | NONE => raise IllegalParseTree ("Constr " ^ n, p)
+
+             val (i,t')
+                   = (case t of 
+                        T.CON (i,NONE,ty) => (i,ty)
+                      | T.CON (i,SOME _,ty) =>
+                           raise Fail ("Constructor near " ^ Int.toString p ^ 
+                                       " expects argument")
+                      | _ => raise Fail ("Non-constructor near: " ^ Int.toString p))
           in
-             (te,ve,A.PCONSTR (S.symbol n,NONE,t,p))
+             (te,ve,A.PCONSTR (i,NONE,t',p))
           end
-        | cpat te ve se (ConstrPat (a,SOME b,p)) = 
+        | cpat te ve se (ConstrPat (Ident (n,_),SOME b,p)) = 
           let
-             val s' = S.symbol "_DUMMY_CONSTR_" 
+             val s' = S.symbol n 
              val t = case (S.look (ve,s')) of
                         SOME (Env.VarEntry t') => t'
                       | NONE => raise IllegalParseTree ("Constr n" , p)
+             val (te',ve',b') = cpat te ve se b
+
+             val (i,t',t'')
+                   = (case t of 
+                        T.CON (i,NONE,ty) => 
+                           raise Fail ("Constructor given unexpected argument near "
+                                       ^ Int.toString p)
+                      | T.CON (i,SOME ty1,ty2) => (i,ty2,ty1)
+                      | _ => raise Fail ("Non-constructor near: " ^ Int.toString p))
           in
-             (te,ve,A.PCONSTR (S.symbol "_DUMMY_CONSTR",NONE,t,p))
+             (te',ve',A.PCONSTR (i,SOME (b',t''),t',p))
           end
         | cpat te ve se (TyAnnPat (a,b,p)) = raise Fail "TyAnnPat not impl"
         | cpat te ve se (IdPat (Ident (n,_),p)) =
@@ -289,7 +306,10 @@ struct
                            ConBind (Ident (id,pos),NONE,_) =>
                               let
                                  val ve' = S.enter (ve,S.symbol id,
-                                                      Env.VarEntry (T.NAME a'))
+                                                      Env.VarEntry (T.CON (
+                                                                     !cbi,
+                                                                     NONE,
+                                                                     T.NAME a')))
                                  val te' = (case S.look (te,a') of
                                                SOME (T.UNION (n',l)) =>
                                                   S.enter (te,
@@ -314,8 +334,9 @@ struct
                               val f' = t te ve se f
 
                               val ve' = S.enter (ve,S.symbol id,
-                                           Env.VarEntry (T.FN (f',
-                                                               T.NAME a')))
+                                           Env.VarEntry (T.CON (!cbi,
+                                                                SOME f',
+                                                                T.NAME a')))
 
                               val te' = (case S.look (te,a') of
                                                SOME (T.UNION (n',l)) =>

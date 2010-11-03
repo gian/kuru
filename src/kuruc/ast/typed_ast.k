@@ -34,7 +34,7 @@ struct
    datatype tpat = PCONST of texp * T.ty * pos
                  | PLIST of tpat vector * T.ty * pos
                  | PTUPLE of tpat vector * T.ty * pos
-                 | PCONSTR of S.symbol * tpat option * T.ty * pos
+                 | PCONSTR of int * (tpat * T.ty) option * T.ty * pos
                  | PID of S.symbol * T.ty * pos 
                  | PINFIX of tpat * S.symbol * tpat * T.ty * pos
 					  | PWILD of pos
@@ -93,7 +93,8 @@ struct
      | subst_ty_pat tn th (PCONSTR (s,b,t,p)) = 
             PCONSTR (s, 
                      (case b of NONE => NONE
-                              | SOME b' => SOME (subst_ty_pat tn th b')),
+                              | SOME (b',t1) => SOME (subst_ty_pat tn th b',
+																		T.substinty tn th t1)),
                      T.substinty tn th t,
                      p)
      | subst_ty_pat tn th (PID (s,t,p)) =
