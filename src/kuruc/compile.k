@@ -105,7 +105,7 @@ struct
 
          (* Stage 5 - Typed Intermediate Representation *)
 
-         val (ve''',se''',d',fragments) = Translate.translate d
+         val (te''',ve''',se''',d',fragments) = Translate.translate te'' d
 
          val _ = Debug.print Debug.internal ("Translated Program:\n")
          val _ = Debug.print Debug.internal ("\n" ^ 
