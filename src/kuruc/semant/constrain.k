@@ -294,8 +294,15 @@ struct
        in
           (te,ve,se,cs',T.fresh (),A.ERAISE (e',p))
        end
-     | constr_exp te ve se (A.ECON (i,e,t,p)) =
-          (te,ve,se,[],t,A.ECON (i,e,t,p))
+     | constr_exp te ve se (A.ECON (i,NONE,t,p)) =
+          (te,ve,se,[],t,A.ECON (i,NONE,t,p))
+     | constr_exp te ve se (A.ECON (i,SOME (e',t1),t2,p)) =
+       let
+          val (te',ve',se',cs',t',e'') = constr_exp te ve se e'
+          val constr = cs' @ [(t',t1)]
+       in
+          (te,ve,se,constr,t2,A.ECON (i,SOME (e'',t'),t2,p))
+       end
      | constr_exp _ _ _ e = raise Fail ("Unhandled constr_exp:" ^ A.ppe e)
 
    (* The flag in the 4th argument indicates whether to bind the name

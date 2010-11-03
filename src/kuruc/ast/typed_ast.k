@@ -57,7 +57,7 @@ struct
                  | ESEQ of texp vector * T.ty * pos
                  | ELET of tast vector * texp * T.ty * pos
                  | EANN of texp * T.ty * pos
-					  | ECON of int * texp option * T.ty * pos
+					  | ECON of int * (texp * T.ty) option * T.ty * pos
                  
    and      tast = DVAL of S.symbol * texp * T.ty * pos
                  | DVALREC of tast * T.ty * pos
@@ -237,6 +237,11 @@ struct
                               "in\n   " ^ ppe e ^ 
                               "\nend\n"
 	  | ppe (ERAISE (e,p)) = "raise " ^ ppe e
+	  | ppe (ECON (i,NONE,t,p)) = "_con ("^ Int.toString i ^", " ^ ppty t ^ ")"
+	  | ppe (ECON (i,SOME (e,t1),t2,p)) = "_con ("^ ppty t2 ^ " " ^ Int.toString i ^
+	  										   ", " ^ ppty t1 ^ 
+	  											" of " ^
+	  											ppe e ^ ")"
      | ppe _ = "???texp???"
 
 
