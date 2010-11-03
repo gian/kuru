@@ -6,6 +6,7 @@ LIB=../../lib
 LIBKURU= \
 	$(LIB)/libkuru.a(channels.o) \
 	$(LIB)/libkuru.a(io_kuru.o) \
+	$(LIB)/libkuru.a(int_kuru.o) \
 	$(LIB)/libkuru.a(kuru_types.o) \
 	#$(LIB)/libkuru.a(kuruio.o)
 

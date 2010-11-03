@@ -1,0 +1,16 @@
+c #include <stdio.h>
+c #include <unistd.h>
+
+c static kuru_string_t* kuru_to_string(int message)
+c {
+c   char msg[64];
+c   sprintf(msg,"%d",message);
+c   return c2ks(msg);
+c }
+
+# export_as <kuruname> <cname> <returntype> [<argname:argtype>...]
+# valid argtypes:
+#  string -- standard C string (char *)
+#  kstring -- kuru_string_t
+#  int -- integer
+export_as to_string kuru_to_string kstring message:int
