@@ -177,6 +177,11 @@ struct
             EANN (subst_ty_exp tn th e,
                   T.substinty tn th t,
                   p)
+	  | subst_ty_exp tn th (ECON (i,NONE,t,p)) =
+	  			ECON (i,NONE,T.substinty tn th t,p)
+	  | subst_ty_exp tn th (ECON (i,SOME (e,t1),t2,p)) =
+	  			ECON (i,SOME (subst_ty_exp tn th e,T.substinty tn th t1),
+						T.substinty tn th t2, p)
 	  | subst_ty_exp tn th x = x
    and subst_ty_dec tn th (DVAL (s,e,t,p)) =
             DVAL (s,
