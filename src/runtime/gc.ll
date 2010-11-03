@@ -1,0 +1,1 @@
+declare i8* @malloc(i32)

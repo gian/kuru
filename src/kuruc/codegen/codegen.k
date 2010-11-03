@@ -219,10 +219,11 @@ struct
          jnl (map cg_frag frags),
          "define i32 @main (i32 %argc, i8** %argv) {\n   entry:\n",
          "      call void @io_init ()",
+         "      call void @int_init ()",
          jnl (map (cg_stm 2) stms),
          "      br label %finalise",
          "   finalise:",
-         "      call void @io_done ()",
+         "      call void @int_done ()",
          "      ret i32 0\n}\n"
       ]
 
@@ -234,6 +235,12 @@ struct
          val _ = OS.FileSys.mkDir dirName
          val fp = TextIO.openOut (dirName ^ "/main.ll")
 
+         val gc = Config.resolveLibrary "gc.ll"
+         val gclib = TextIO.openIn gc
+         val gclib' = TextIO.input gclib
+         val _ = TextIO.closeIn gclib
+         val _ = TextIO.output (fp, gclib' ^ "\n")
+
          (* Include the IO library -
               This is a bit dirty and hardcoded at the moment,
               so it qualifies for a FIXME *)
@@ -241,8 +248,14 @@ struct
          val iolib = TextIO.openIn io
          val iolib' = TextIO.input iolib
          val _ = TextIO.closeIn iolib
-
          val _ = TextIO.output (fp, iolib' ^ "\n")
+
+         val intl = Config.resolveLibrary "int_kuru.ll"
+         val intlib = TextIO.openIn intl
+         val intlib' = TextIO.input intlib
+         val _ = TextIO.closeIn intlib
+
+         val _ = TextIO.output (fp, intlib' ^ "\n")
          val _ = TextIO.output (fp, code)
          val _ = TextIO.closeOut (fp)
          val _ = Debug.print Debug.verbose ("Output LLVM asm file: " ^ 
