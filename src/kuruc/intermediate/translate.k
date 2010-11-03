@@ -527,6 +527,20 @@ struct
        in
           (ve,se,rt,v')
        end
+     | tr_exp ve se (A.ECON (i,NONE,t,p)) =
+       let
+          (* Layout for constructors is: { int index, i8* data } *)
+          val conty = Temp.aggr [Temp.i32, Temp.ptr Temp.i8]
+          val tt = I.TEMP (Temp.newtemp conty)
+          val tt' = I.TEMP (Temp.newtemp conty)
+          val rt = I.TEMP (Temp.newtemp (Temp.ptr conty))
+          val instr = [I.MOVE (tt,I.TUPLE_INS (I.UNDEF conty,I.CONST i,0)),
+                       I.MOVE (tt',I.TUPLE_INS (tt,I.NULL (Temp.ptr Temp.i8),1)),
+                       I.MOVE (rt,I.ALLOCA conty),
+                       I.STORE (tt',rt)]
+       in
+          (ve,se,rt,instr)
+       end
      | tr_exp ve se (A.ELET _) = raise Fail "tr_exp: ELET remains!" 
      | tr_exp ve se (A.EANN (e,t,p)) = tr_exp ve se e
      | tr_exp ve se (A.ERAISE (e,p)) =

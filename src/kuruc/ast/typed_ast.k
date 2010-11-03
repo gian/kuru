@@ -57,6 +57,7 @@ struct
                  | ESEQ of texp vector * T.ty * pos
                  | ELET of tast vector * texp * T.ty * pos
                  | EANN of texp * T.ty * pos
+					  | ECON of int * texp option * T.ty * pos
                  
    and      tast = DVAL of S.symbol * texp * T.ty * pos
                  | DVALREC of tast * T.ty * pos

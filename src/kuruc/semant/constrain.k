@@ -294,6 +294,8 @@ struct
        in
           (te,ve,se,cs',T.fresh (),A.ERAISE (e',p))
        end
+     | constr_exp te ve se (A.ECON (i,e,t,p)) =
+          (te,ve,se,[],t,A.ECON (i,e,t,p))
      | constr_exp _ _ _ e = raise Fail ("Unhandled constr_exp:" ^ A.ppe e)
 
    (* The flag in the 4th argument indicates whether to bind the name

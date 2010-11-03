@@ -279,12 +279,14 @@ struct
              
              val te' = S.enter (te,a',T.UNION (a',[]))
 
-             val (te'',ve') = 
-                List.foldl (fn (cb, (te,ve)) =>
+             val cbi = ref 0
+
+             val (te'',ve',ins) = 
+                List.foldl (fn (cb, (te,ve,ins)) =>
                    let
-                      val (te',ve') = 
+                      val (te',ve',ins') = 
                         (case cb of
-                           ConBind (Ident (id,_),NONE,_) =>
+                           ConBind (Ident (id,pos),NONE,_) =>
                               let
                                  val ve' = S.enter (ve,S.symbol id,
                                                       Env.VarEntry (T.NAME a'))
@@ -297,17 +299,55 @@ struct
                                                                  (S.symbol id)]))
                                              | _ => raise Fail 
                                                    "ast_parse_tree: UNION bug")
+                                 val ins' =
+                                             [A.DVAL (S.symbol id,
+                                                      A.ECON (!cbi,NONE,
+                                                              T.NAME a',
+                                                              pos),
+                                                      T.NAME a',pos)]
+                                 val _ = cbi := !cbi + 1
                               in
-                                 (te',ve')
+                                 (te',ve',ins')
                               end
-                         | ConBind (p,SOME f,_) =>
-                              raise Fail "ast-parse-tree: ConBind not impl."
+                         | ConBind (Ident (id,pos),SOME f,_) =>
+                           let
+                              val f' = t te ve se f
+
+                              val ve' = S.enter (ve,S.symbol id,
+                                           Env.VarEntry (T.FN (f',
+                                                               T.NAME a')))
+
+                              val te' = (case S.look (te,a') of
+                                               SOME (T.UNION (n',l)) =>
+                                                  S.enter (te,
+                                                            a',
+                                                            T.UNION (n',
+                                                            l @ 
+                                                            [T.FN (f',
+                                                               T.NAME
+                                                               (S.symbol id))]))
+                                             | _ => raise Fail 
+                                                   "ast_parse_tree: UNION bug")
+
+                              val p = S.symbol ("_p" ^ Int.toString (!cbi)) 
+                              val ins' = [A.DVAL (S.symbol id,
+                                             A.EFN (p,
+                                               A.ECON (!cbi,
+                                                SOME (A.EID (p,f',pos)),
+                                                T.NAME a',
+                                                pos),
+                                             T.FN (f',T.NAME a'),pos),
+                                             T.FN (f',T.NAME a'),pos)]
+                              val _ = cbi := !cbi + 1 
+                           in
+                               (te',ve',ins')
+                           end
                          | _ => raise Fail "ast-parse-tree: Non-ConBind?")
                    in
-                      (te',ve')
-                   end) (te',ve) b
+                      (te',ve',ins @ ins')
+                   end) (te',ve,[]) b
           in
-             (te'',ve',se,[])
+             (te'',ve',se,ins)
           end
         | d te ve se (ConBind (a,_,p)) = raise Fail "ConBind not implemented"
         | d te ve se (StructDec ([b],p)) =  
