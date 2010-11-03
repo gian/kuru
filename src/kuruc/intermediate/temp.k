@@ -30,12 +30,14 @@ struct
                | r32
                | r64
                | label of string
-               | global of string
+               | global of string * ty
                | ptr of ty
                | void
                | fn_ptr of ty * ty
                | aggr of ty list
                | array of int * ty
+               | self_ref of int
+               | named of string
 
    type temp = int * ty
    type label = temp
@@ -46,18 +48,18 @@ struct
 
    fun newtemp  t = (tc := !tc + 1; (!tc,t))
    fun newlabel () = newtemp (label ("l" ^ Int.toString (lc := !lc + 1; !lc)))
-   fun newglobal () = newtemp (global ("g" ^ Int.toString (gc := !gc + 1; !gc)))
+   fun newglobal t = newtemp (global ("g" ^ Int.toString (gc := !gc + 1; !gc),t))
 
    fun labelFromString s = (0,label s)
    (* fun tempFromSymbol s t = (S.hash s, t) *)
    fun getType (_,t) = t : ty
 
    fun prettyPrint (i,label s) = "%" ^ s
-     | prettyPrint (i,global s) = "@" ^ s
+     | prettyPrint (i,global (s,_)) = "@" ^ s
      | prettyPrint (i,_) = "%t" ^ Int.toString i
 
    fun prettyPrintNoPrefix (i,label s) = s
-     | prettyPrintNoPrefix (i,global s) = s
+     | prettyPrintNoPrefix (i,global (s,_)) = s
      | prettyPrintNoPrefix (i,_) = "t" ^ Int.toString i
 
    fun getMachineWord () = 

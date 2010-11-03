@@ -32,7 +32,8 @@ struct
          ("true",       I.BCONST true,          []),
          ("false",      I.BCONST false,         []),
          ("Match",      I.UNDEF (Temp.void),    []),
-         ("print",      I.BUILTIN "k_io_print", [])
+         ("print",      I.BUILTIN "k_io_print", []),
+         ("@",          I.BUILTIN "k_list_append", [])
       ]
 end
 

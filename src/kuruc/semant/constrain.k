@@ -124,6 +124,8 @@ struct
        end
      | constr_pat te ve se (A.PWILD p) =
          (te,ve,se,[],T.fresh (),A.PWILD p)
+     | constr_pat te ve se (A.PNIL p) =
+         (te,ve,se,[],T.CONSTR ([T.fresh ()],T.t_list),A.PNIL p)
      | constr_pat _ _ _ _ = raise Fail "constr_pat not implemented"
 
    and constr_exp te ve se (A.ELIT(tv,_,p)) = 
@@ -175,6 +177,13 @@ struct
 			 val cs' = List.concat (map (fn (_,_,_,c,_,_) => c) v')
        in
           (te,ve,se,cs',t,A.ELIST(v'',t,p))
+       end
+     | constr_exp te ve se (A.ENIL p) = 
+       let
+          val t1 = T.fresh ()
+          val t2 = T.CONSTR ([t1],T.t_list)
+       in
+          (te,ve,se,[],t2,A.ENIL p)
        end
      | constr_exp te ve se (A.ETUPLE (v,t,p)) =
        let
@@ -251,19 +260,18 @@ struct
        let
           val rt = T.fresh ()
 
-          val v' = Vector.map (fn el => 
+          val (rty,cs,v') = 
+            Vector.foldl (fn (el,(ty,cs,v')) => 
                            let
                               val (te',ve',se',cs',t',el') = 
 												constr_exp te ve se el
                            in
-                              (t',el')
-                           end) v
+                              (t',cs@cs',v'@[el'])
+                           end) (rt,[],[]) v
 
-          val (lt,le) = Vector.sub (v', Vector.length v' - 1)
-          val cs = [(rt,lt)]
-          val v'' = Vector.map (fn (a,b) => b) v'
+          val cs' = cs @ [(rt,rty)]
        in
-          (te,ve,se,cs,rt,A.ESEQ (v'',rt,p))
+          (te,ve,se,cs',rt,A.ESEQ (Vector.fromList v',rt,p))
        end
      | constr_exp te ve se (A.ELET (v,e,t,p)) =
        let
@@ -285,6 +293,15 @@ struct
           val cs' = cs @ [(t',T.t_exn)]
        in
           (te,ve,se,cs',T.fresh (),A.ERAISE (e',p))
+       end
+     | constr_exp te ve se (A.ECON (i,NONE,t,p)) =
+          (te,ve,se,[],t,A.ECON (i,NONE,t,p))
+     | constr_exp te ve se (A.ECON (i,SOME (e',t1),t2,p)) =
+       let
+          val (te',ve',se',cs',t',e'') = constr_exp te ve se e'
+          val constr = cs' @ [(t',t1)]
+       in
+          (te,ve,se,constr,t2,A.ECON (i,SOME (e'',t'),t2,p))
        end
      | constr_exp _ _ _ e = raise Fail ("Unhandled constr_exp:" ^ A.ppe e)
 

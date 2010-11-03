@@ -30,6 +30,7 @@ struct
 					| META of int
 					| VAR of Symbol.symbol
 					| POLY of int
+               | UNION of Symbol.symbol * ty list
 					| UNKNOWN
 
    fun freevars (NAME s) = Set.empty
@@ -108,6 +109,7 @@ struct
    val t_bool   = NAME (Symbol.symbol "bool")
    val t_exn    = NAME (Symbol.symbol "exn")
    val t_list   = NAME (Symbol.symbol "list")
+   val t_void   = NAME (Symbol.symbol "cvoid")
 end
 
 

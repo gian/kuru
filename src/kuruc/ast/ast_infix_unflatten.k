@@ -57,6 +57,9 @@ struct
         | s i (Raise (a,p)) = Raise (s i a,p)
         | s i (Seq (a,b,p)) = Seq (s i a, s i b,p)
         | s i (OpExp (a,p)) = OpExp (s i a,p)
+        | s i (AppList ([],p)) = AppList ([],p)
+        | s i (AppList ([a],p)) = AppList ([s i a],p)
+        | s i (AppList ([a,b],p)) = AppList ([s i a, s i b],p)
         | s i (AppList (l,p)) =
           let
              val (opr,d) = i
@@ -95,41 +98,6 @@ struct
                                               p')]
                                   else ((s i h1) :: (infixifyr (h2::t))))
                             | _ => (s i h1) :: (infixifyr (h2 :: t)))
-
-             fun foldr2 f e [] = e
-               | foldr2 f e [x1] = e
-               | foldr2 f e (x1::x2::xr) = f(x1, x2, foldr2 f e xr)
-
-          (*   fun infixifyr [] = AppList ([],p) 
-               | infixifyr (h1::h2::h3) = 
-                  (case h2 of 
-                     Ident (h2',p) => 
-                        if h2' = opr 
-                          then 
-                             Infix (s i h1, h2, infixifyr h3, p)
-                          else
-                             AppList (s i h1 :: [infixifyr (h2 :: h3)],p)
-                    | x => (AppList ((App (s i h1, s i h2,p)) ::
-                                          [infixifyr h3], p)))
-               | infixifyr [h] = s i h *)
-
-                                         
-            (*       
-
-             fun infixifyr l =
-               let
-                  val l' = List.rev l
-                  val h = hd l'
-                  val t = List.rev (tl l')
-               in
-                  foldr2 (fn (a,(Ident (b,p1)),c) =>
-                           if opr = b then  
-                                           [Infix (s i a, Ident (b,p1), 
-                                            AppList (c,p1),p1)]
-                                      else s i a :: 
-                                             (infixifyr ((Ident (b,p1)) :: c))
-                           | (a,b,c) => s i a :: infixifyr (s i b :: c)) [h] t
-               end*)
           in
              case d of BLeft =>
                         AppList (infixifyl (fnapp l), p)
@@ -147,7 +115,8 @@ struct
         | s i (CaseExp (a,b,p)) = CaseExp (s i a, map (s i) b, p)
         | s i (FnExp (l,p)) = FnExp (map (s i) l,p)
         | s i (HandleExp (e,l,p)) = HandleExp (s i e, map (s i) l, p)
-        | s i (Match (a,b,p)) = Match (s i a, s i b,p)
+        | s i (Match (a,b,p)) = (Debug.print Debug.debugmore "Unflatten Match\n";
+                                 Match (s i a, s i b,p))
         | s i (AsPat (a,b,p)) = AsPat (s i a, s i b,p)
         | s i (InfixPat (a,b,c,pos)) = InfixPat (s i a, s i b, s i c,pos)
         | s i (TuplePat (l,p)) = TuplePat (map (s i) l,p)
@@ -182,7 +151,7 @@ struct
         | s i (StructDec (l,p)) = StructDec (map (s i) l,p)
         | s i (StructBind (a,b,p)) = StructBind (s i a, s i b,p)
         | s i (Structure (l,p)) = Structure (map (s i) l,p)
-        | s i t = t
+        | s i t = t 
 
       fun conv l =
          let

@@ -98,6 +98,7 @@ struct
         | cpat te ve se (IdPat (_,p)) = raise IllegalParseTree ("IdPat",p)
         | cpat te ve se (WildcardPat p) = 
             (te,ve,A.PWILD p)
+        | cpat te ve se (NilPat p) = (te,ve,A.PNIL p)
         | cpat te ve se p = 
             raise IllegalParseTree ("cpat Match: " ^ prettyPrint p,0)
 
@@ -116,8 +117,9 @@ struct
         | s te ve se (TyAnn (a,b,p)) = A.EANN (s te ve se a, t te ve se b, p)
         | s te ve se (SeqExp (l,p)) =
             A.ESEQ (Vector.fromList (map (s te ve se) l),T.UNKNOWN,p) : A.texp
-        | s te ve se (ListExp (l,p)) = 
-            A.ELIST (Vector.fromList (map (s te ve se) l),T.UNKNOWN,p) : A.texp
+        | s te ve se (ListExp (l,p)) =
+            raise Fail ("ast_parse_tree: ListExp node remains!")
+        | s te ve se (NilExp p) = A.ENIL p
         | s te ve se (LetExp (l,e,p)) = 
           let
              val (te',ve',se',dl) = convert te ve se l
@@ -271,7 +273,83 @@ struct
         | d te ve se (FunMatch (a,l,_,c,p)) =
              raise IllegalParseTree ("FunMatch",p)
         | d te ve se (DataBind (l,a,b,p)) =
-             raise Fail "Databind not implemented"
+          let
+             val a' = case (s te ve se a) of A.EID (n,t,p) => n
+                                        | _ => raise Fail "non-id DataBind"
+             
+             val te' = S.enter (te,a',T.UNION (a',[]))
+
+             val cbi = ref 0
+
+             val (te'',ve',ins) = 
+                List.foldl (fn (cb, (te,ve,ins)) =>
+                   let
+                      val (te',ve',ins') = 
+                        (case cb of
+                           ConBind (Ident (id,pos),NONE,_) =>
+                              let
+                                 val ve' = S.enter (ve,S.symbol id,
+                                                      Env.VarEntry (T.NAME a'))
+                                 val te' = (case S.look (te,a') of
+                                               SOME (T.UNION (n',l)) =>
+                                                  S.enter (te,
+                                                            a',
+                                                            T.UNION (n',
+                                                            l @ [T.NAME 
+                                                                 (S.symbol id)]))
+                                             | _ => raise Fail 
+                                                   "ast_parse_tree: UNION bug")
+                                 val ins' =
+                                             [A.DVAL (S.symbol id,
+                                                      A.ECON (!cbi,NONE,
+                                                              T.NAME a',
+                                                              pos),
+                                                      T.NAME a',pos)]
+                                 val _ = cbi := !cbi + 1
+                              in
+                                 (te',ve',ins')
+                              end
+                         | ConBind (Ident (id,pos),SOME f,_) =>
+                           let
+                              val f' = t te ve se f
+
+                              val ve' = S.enter (ve,S.symbol id,
+                                           Env.VarEntry (T.FN (f',
+                                                               T.NAME a')))
+
+                              val te' = (case S.look (te,a') of
+                                               SOME (T.UNION (n',l)) =>
+                                                  S.enter (te,
+                                                            a',
+                                                            T.UNION (n',
+                                                            l @ 
+                                                            [T.FN (f',
+                                                               T.NAME
+                                                               (S.symbol id))]))
+                                             | _ => raise Fail 
+                                                   "ast_parse_tree: UNION bug")
+
+                              val p = S.symbol ("_p" ^ Int.toString (!cbi)) 
+                              val ins' = [A.DVAL (S.symbol id,
+                                             A.EFN (p,
+                                               A.ECON (!cbi,
+                                                SOME (A.EID (p,f',pos),
+                                                      f'),
+                                                T.NAME a',
+                                                pos),
+                                             T.FN (f',T.NAME a'),pos),
+                                             T.FN (f',T.NAME a'),pos)]
+                              val _ = cbi := !cbi + 1 
+                           in
+                               (te',ve',ins')
+                           end
+                         | _ => raise Fail "ast-parse-tree: Non-ConBind?")
+                   in
+                      (te',ve',ins @ ins')
+                   end) (te',ve,[]) b
+          in
+             (te'',ve',se,ins)
+          end
         | d te ve se (ConBind (a,_,p)) = raise Fail "ConBind not implemented"
         | d te ve se (StructDec ([b],p)) =  
           let

@@ -16,6 +16,7 @@ ast/typed_ast.sml
 ast/ast_datatype_unfold.sml
 ast/ast_infix_unflatten.sml
 ast/ast_infix_apply.sml
+ast/ast_list_cons.sml
 ast/ast_typedec_eval.sml
 ast/ast_app_apply.sml
 ast/typed_ast.sml

@@ -31,7 +31,7 @@ struct
    datatype fragment = 
       FSTRING of Temp.label * string
     | FFN of Temp.label * I.exp list * I.stm list * Temp.ty
-
+    | FALIAS of I.exp * I.exp
 
    val fragments = ref [] : fragment list ref
 
@@ -46,6 +46,7 @@ struct
          String.concatWith "," (map I.ppe el) ^
        ") {\n   " ^
          String.concatWith "\n   " (map I.ppstm sl) ^ "\n}\n"
+     | printFragment (FALIAS _) = "FALIAS\n"
 
    fun printFragments [] = ""
      | printFragments (h::t) = printFragment h ^ "\n" ^ 
@@ -57,6 +58,7 @@ struct
      | is_simple (I.BCONST _) = true
      | is_simple (I.UNDEF _) = true
      | is_simple (I.VOID) = true
+     | is_simple (I.NULL _) = true
      | is_simple _ = false
 
    (* "Contingent label" - used to prevent adding of labels 
@@ -72,26 +74,34 @@ struct
             "int" => Temp.getMachineWord ()
           | "real" => Temp.r64
           | "char" => Temp.i32
-          | "string" => Temp.aggr [Temp.getMachineWord (), Temp.ptr (Temp.i8)]
+          | "string" => Temp.ptr (Temp.aggr 
+                           [Temp.getMachineWord (), Temp.ptr (Temp.i8)])
           | "bool" => Temp.i1
-          | "unit" => Temp.void
+          | "unit" => Temp.ptr (Temp.i8)
+          | "cvoid" => Temp.void
           | "exn" => Temp.void
           | _ => raise Fail "tr_ty: unhandled NAME type.")
       end
      | tr_ty (T.FN (a,b)) =
          Temp.fn_ptr (tr_ty a, tr_ty b)
-     | tr_ty (T.CONSTR (tl,t)) = raise Fail "tr_ty: CONSTR not impl."
+     | tr_ty (T.CONSTR ([t1],t2)) = 
+         (case t2 of (T.NAME n) => 
+            if S.name n = "list" then (Temp.ptr (Temp.aggr [
+                                                    Temp.ptr (Temp.i8),
+                                                    Temp.ptr (Temp.self_ref 2)]))
+                                 else raise Fail "tr_ty: CONSTR not impl."
+                   | _ => raise Fail "tr_ty: Invalid CONSTR type.")
      | tr_ty (T.TUPLE l) = Temp.aggr (map tr_ty l)
-     | tr_ty _ = raise Fail "tr_ty: unhandled type"
+     | tr_ty t = raise Fail ("tr_ty: unhandled type: " ^ T.prettyPrint t)
 
    fun tr_val (A.LINT (v,p)) =   (I.CONST v,[]) (* FIXME: negative numbers? *) 
      | tr_val (A.LREAL (v,p)) =  (I.RCONST v,[])
      | tr_val (A.LCHAR (v,p)) =  (I.CONST (Char.ord v),[])
      | tr_val (A.LSTRING (v,p)) =
        let
-          val n = Temp.newglobal ()
-          val _ = add_fragment (FSTRING (n, v))
           val strty = Temp.aggr [Temp.getMachineWord (),Temp.ptr Temp.i8]
+          val n = Temp.newglobal (Temp.ptr strty)
+          val _ = add_fragment (FSTRING (n, v))
           val m = I.ELEM_PTR (Temp.array (size v + 1, Temp.i8),I.NAME n,0)
           val t0 = I.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
           val t1 = I.TEMP (Temp.newtemp (strty))
@@ -105,7 +115,7 @@ struct
        in
           (t3, m')
        end
-     | tr_val (A.LUNIT p) = (I.VOID,[])
+     | tr_val (A.LUNIT p) = (I.NULL (Temp.ptr Temp.i8),[]) 
      | tr_val _ = raise Fail "tr_val: Not implemented"
 
    fun tr_pat ve se (A.PCONST (A.ELIT (v,t,_),_,_)) =
@@ -170,12 +180,52 @@ struct
        in
          (ve',se,mv)
        end)
-     | tr_pat ve se (A.PINFIX (a,b,c,t,p)) = 
-            raise Fail "tr_pat: Infix not impl."
+     | tr_pat ve se (A.PINFIX (a, b, r, T.CONSTR ([t1],t2),p2)) =
+       (fn (c,t,f) =>
+       let
+          (* FIXME: Check that t2 is t_list *)
+          val _ = case (S.name b) of 
+                     "::" => ()
+                   | _ => raise Fail ("tr_pat: Invalid pattern infix operator!")
+
+          (* FIXME: Output check for empty list. *)
+          
+          val ht = tr_ty t1
+          val h0 = I.TEMP (Temp.newtemp (Temp.aggr [Temp.ptr Temp.i8,
+                                                    Temp.ptr (Temp.self_ref 2)]))
+          val h1 = I.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
+          val h1' = I.TEMP (Temp.newtemp (Temp.ptr ht))
+          val h2 = I.TEMP (Temp.newtemp (ht))
+          val h3 = I.TEMP (Temp.newtemp (Temp.ptr (
+                                           Temp.aggr [Temp.ptr Temp.i8,
+                                                      Temp.ptr (Temp.self_ref 2)
+                                                     ]
+                                        )))
+          val headc = [I.MOVE (h0, I.LOAD c),
+                       I.MOVE (h1, I.TUPLE_IND (h0,0)),
+                       I.MOVE (h1', I.BITCAST (h1, Temp.ptr (ht))),
+                       I.MOVE (h2, I.LOAD h1'),
+                       I.MOVE (h3, I.TUPLE_IND (h0,1))]
+
+          val fh = tr_pat ve se a
+          val (ve',se',a') = fh (h2,t,f)
+
+          val ft = tr_pat ve' se r
+          val (ve'',se',b') = ft (h3,t,f)
+       in
+          (ve'',se,headc @ a' @ b' @ [I.JUMP (I.NAME t, [t])])
+       end)
      | tr_pat ve se (A.PWILD p) =
        (fn (c,t,f) =>
             (ve,se,[])
        )
+     | tr_pat ve se (A.PNIL p) =
+       (fn (c,t,f) =>
+            (ve,se,
+             [I.CJUMP2 (I.EQ,c,I.NULL (Temp.ptr (Temp.aggr [Temp.ptr Temp.i8,
+                                                            Temp.ptr (
+                                                               Temp.self_ref 2
+                                                            )])),t,f)]))
      | tr_pat ve se _ = raise Fail "tr_pat: Not implemented"
 
    and tr_exp ve se (A.ELIT (v,t,p)) = 
@@ -203,7 +253,6 @@ struct
        in
           (ve,se,t',[]) 
        end
-     | tr_exp ve se (A.ELIST (v,t,p)) = raise Fail "tr_exp list not impl." 
      | tr_exp ve se (A.ETUPLE (v,T.TUPLE t,p)) = 
        let
           val (instr,rt) = 
@@ -218,6 +267,11 @@ struct
        in
           (ve,se,rt,instr) 
        end
+     | tr_exp ve se (A.ENIL p) = 
+          (ve,se,I.NULL (Temp.ptr (Temp.aggr [Temp.ptr Temp.i8,
+                                                            Temp.ptr (
+                                                               Temp.self_ref 2
+                                                            )])),[])
      | tr_exp ve se (A.EIF (e1,e2,e3,t,p)) =
        let
           val (_,_,r1,in1) = tr_exp ve se e1
@@ -247,7 +301,7 @@ struct
      | tr_exp ve se (A.EWHILE (c,e,t,p)) = raise Fail "tr_exp while not impl." 
      | tr_exp ve se (A.EFN (s,e,T.FN(it,rt),p)) =
        let
-          val fid = Temp.newglobal ()
+          val fid = Temp.newglobal (Temp.fn_ptr (tr_ty it,tr_ty rt))
           val p = Temp.newtemp (tr_ty it)
           val ve' = S.enter (ve,s,I.TEMP p)
           val (ve'',se',e',instr) = tr_exp ve' se e
@@ -265,6 +319,8 @@ struct
           val el = Temp.newlabel ()
           val fst = Temp.newlabel ()
 
+          val rt = I.TEMP (Temp.newtemp (Temp.ptr (tr_ty t)))
+          
           val (instr,labs,_) =
             Vector.foldl (
                fn ((p,e),(ins,labs,lst)) =>
@@ -278,21 +334,25 @@ struct
                   (ins @ 
                     p' @ 
                     eins @
+                    [I.STORE (e'',rt)] @
                     [I.JUMP (I.NAME el,[el])] @
                     [I.LABEL flab],
                   labs @ [(e'',lst)],flab)
                end) ([],[],fst) v
 
-          val rt = Temp.newtemp (tr_ty t)
+          val ret = I.TEMP (Temp.newtemp (tr_ty t))
+
           val instr' = in1 @
+                       [I.MOVE (rt, I.ALLOCA (tr_ty t))] @
                        [I.JUMP (I.NAME fst,[fst])] @
                        [I.LABEL fst] @
                        instr @
                         [I.UNWIND] @
-                        [I.LABEL el, 
-                         I.PHI (I.TEMP rt, tr_ty t, labs)]
+                        [I.LABEL el] @ 
+                         [I.MOVE (ret,I.LOAD rt)]
+
        in
-          (ve,se,I.TEMP rt,instr')
+          (ve,se,ret,instr')
        end
      | tr_exp ve se (A.EAPP(A.EID((r as "+",_),t1,p1),A.ETUPLE (v,t2,p2),t3,p3)) =
        let
@@ -406,7 +466,38 @@ struct
           val ins = ins1 @ ins2 @ [I.MOVE (I.TEMP rt, I.BINOP (r,a,b))]
        in
           (ve,se,I.TEMP rt,ins)
-       end    
+       end  
+     | tr_exp ve se (A.EAPP(A.EID((r as "::",_),t1,p1),
+          A.ETUPLE (v,t2,p2),t3,p3)) =
+       let
+          val (lhst,rhst) = (case t2 of T.TUPLE [a,b] => (tr_ty a, tr_ty b)
+                                     | _ => raise Fail
+                                       "tr_exp: Invalid operands to ::")
+
+          val (_,_,a,ins1) = tr_exp ve se (Vector.sub (v,0))
+          val (_,_,b,ins2) = tr_exp ve se (Vector.sub (v,1))
+          val rt = Temp.newtemp (tr_ty t3)
+
+          val listty = Temp.aggr [Temp.ptr Temp.i8,Temp.ptr (Temp.self_ref 2)]
+          val t0 = I.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
+          val t0' = I.TEMP (Temp.newtemp (Temp.ptr lhst))
+          val t1 = I.TEMP (Temp.newtemp (listty))
+          val t2 = I.TEMP (Temp.newtemp (listty))
+          val t3 = I.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
+          val t3' = I.TEMP (Temp.newtemp (Temp.ptr listty))
+          val m' = [I.MOVE (t0,I.MALLOC (lhst,1)),
+                    I.MOVE (t0',I.BITCAST (t0,Temp.ptr lhst)),
+                    I.STORE (a,t0'),
+                    I.MOVE (t1,I.TUPLE_INS(I.UNDEF listty, t0, 0)),
+                    I.MOVE (t2,I.TUPLE_INS (t1, b, 1)),
+                    I.MOVE (t3,I.MALLOC (listty,1)),
+                    I.MOVE (t3',I.BITCAST (t3,Temp.ptr listty)),
+                    I.STORE (t2,t3')]
+
+          val ins = ins1 @ ins2 @ m' 
+       in
+          (ve,se,t3',ins)
+       end
        | tr_exp ve se (A.EAPP (a,b,t,p)) = 
        let
           val (_,_,b',instr1) = tr_exp ve se b
@@ -436,6 +527,20 @@ struct
        in
           (ve,se,rt,v')
        end
+     | tr_exp ve se (A.ECON (i,NONE,t,p)) =
+       let
+          (* Layout for constructors is: { int index, i8* data } *)
+          val conty = Temp.aggr [Temp.i32, Temp.ptr Temp.i8]
+          val tt = I.TEMP (Temp.newtemp conty)
+          val tt' = I.TEMP (Temp.newtemp conty)
+          val rt = I.TEMP (Temp.newtemp (Temp.ptr conty))
+          val instr = [I.MOVE (tt,I.TUPLE_INS (I.UNDEF conty,I.CONST i,0)),
+                       I.MOVE (tt',I.TUPLE_INS (tt,I.NULL (Temp.ptr Temp.i8),1)),
+                       I.MOVE (rt,I.ALLOCA conty),
+                       I.STORE (tt',rt)]
+       in
+          (ve,se,rt,instr)
+       end
      | tr_exp ve se (A.ELET _) = raise Fail "tr_exp: ELET remains!" 
      | tr_exp ve se (A.EANN (e,t,p)) = tr_exp ve se e
      | tr_exp ve se (A.ERAISE (e,p)) =
@@ -455,11 +560,12 @@ struct
        end
      | tr_ast ve se (A.DVALREC (A.DVAL (s,e,t1,p1),t2,p2)) =
        let
-          val rt = Temp.newtemp (tr_ty t1)
-          val ve' = S.enter (ve,s,I.TEMP rt)
+          val rt = Temp.newglobal (tr_ty t1)
+          val ve' = S.enter (ve,s,I.NAME rt)
           val (_,_,e',in1) = tr_exp ve' se e
+          val _ = add_fragment (FALIAS (I.NAME rt, e'))
        in
-          (ve',se,in1 @ [I.MOVE (I.TEMP rt, e')])
+          (ve',se,in1)
        end
      | tr_ast ve se (A.DVALREC (a,t,p)) =
          tr_ast ve se a

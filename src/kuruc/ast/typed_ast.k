@@ -38,11 +38,13 @@ struct
                  | PID of S.symbol * T.ty * pos 
                  | PINFIX of tpat * S.symbol * tpat * T.ty * pos
 					  | PWILD of pos
+					  | PNIL of pos
 
    and      texp = ELIT of tval * T.ty * pos
                  | EID of S.symbol * T.ty * pos
                  | ELID of S.symbol list * T.ty * pos
                  | ELIST of texp vector * T.ty * pos
+					  | ENIL of pos
                  | ETUPLE of texp vector * T.ty * pos
                  | EIF of texp * texp * texp * T.ty * pos
                  | EWHILE of texp * texp * T.ty * pos
@@ -55,6 +57,7 @@ struct
                  | ESEQ of texp vector * T.ty * pos
                  | ELET of tast vector * texp * T.ty * pos
                  | EANN of texp * T.ty * pos
+					  | ECON of int * (texp * T.ty) option * T.ty * pos
                  
    and      tast = DVAL of S.symbol * texp * T.ty * pos
                  | DVALREC of tast * T.ty * pos
@@ -102,6 +105,7 @@ struct
                     T.substinty tn th t,
                     p)
      | subst_ty_pat tn th (PWILD p) = PWILD p
+	  | subst_ty_pat tn th (PNIL p) = PNIL p
 	  | subst_ty_pat tn th _ = raise Fail "subst_ty_pat: not implemented"
 
    and subst_ty_exp tn th (ELIT (tv,t,p)) =
@@ -173,6 +177,12 @@ struct
             EANN (subst_ty_exp tn th e,
                   T.substinty tn th t,
                   p)
+	  | subst_ty_exp tn th (ECON (i,NONE,t,p)) =
+	  			ECON (i,NONE,T.substinty tn th t,p)
+	  | subst_ty_exp tn th (ECON (i,SOME (e,t1),t2,p)) =
+	  			ECON (i,SOME (subst_ty_exp tn th e,T.substinty tn th t1),
+						T.substinty tn th t2, p)
+	  | subst_ty_exp tn th x = x
    and subst_ty_dec tn th (DVAL (s,e,t,p)) =
             DVAL (s,
                   subst_ty_exp tn th e,
@@ -208,6 +218,7 @@ struct
      | ppp (PID(s,t,p)) = S.name s  
      | ppp (PINFIX (a,b,c,t,p)) = "(" ^ ppp a ^ S.name b ^ ppp c ^ ")"
 	  | ppp (PWILD p) = "_"
+	  | ppp (PNIL _) = "nil"
 	  | ppp _ = "???ppp"
 
    and ppe (ELIT(tv,ty,p)) =  
@@ -215,7 +226,8 @@ struct
      | ppe (EID(s,ty,p)) = S.name s 
 	  | ppe (ELID(s,ty,p)) = String.concatWith "." (map Symbol.name s)
      | ppe (ELIST(v,ty,p)) = "[" ^ (String.concatWith "," (map ppe (vtol v))) ^ "]"
-     | ppe (ETUPLE(v,ty,p)) = "(" ^ (String.concatWith "," (map ppe (vtol v))) ^ ")"
+     | ppe (ENIL p) = "nil"
+	  | ppe (ETUPLE(v,ty,p)) = "(" ^ (String.concatWith "," (map ppe (vtol v))) ^ ")"
      | ppe (EIF(e1,e2,e3,t,p)) = "if " ^ ppe e1 ^ " then " ^ ppe e2 ^ " else " ^ 
 	  											ppe e3
 	  | ppe (EFN(s,e,ty,p)) = "fn " ^ S.name s ^  
@@ -230,6 +242,11 @@ struct
                               "in\n   " ^ ppe e ^ 
                               "\nend\n"
 	  | ppe (ERAISE (e,p)) = "raise " ^ ppe e
+	  | ppe (ECON (i,NONE,t,p)) = "_con ("^ Int.toString i ^", " ^ ppty t ^ ")"
+	  | ppe (ECON (i,SOME (e,t1),t2,p)) = "_con ("^ ppty t2 ^ " " ^ Int.toString i ^
+	  										   ", " ^ ppty t1 ^ 
+	  											" of " ^
+	  											ppe e ^ ")"
      | ppe _ = "???texp???"
 
 
