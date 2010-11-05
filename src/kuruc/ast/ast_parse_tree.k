@@ -42,7 +42,7 @@ struct
    let
       fun t te ve se (Var (Ident (a,_),p)) = T.VAR (S.symbol a)
         | t te ve se (TyArrow (a,b,p)) = T.FN (t te ve se a, t te ve se b)
-        | t te ve se (TyPair (a,b,p)) = raise Fail "TyPair not implemented"
+        | t te ve se (TyPair (a,p)) = T.TUPLE (map (t te ve se) a) 
         | t te ve se (TyCon (a,b,p)) = T.CONSTR ([t te ve se a], t te ve se b)
         | t te ve se (TyName (Ident (a,_),p)) = T.NAME (S.symbol a) 
         | t te ve se n = raise Fail ("Unknown type not handled: " ^ 

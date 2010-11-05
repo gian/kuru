@@ -66,7 +66,7 @@ type pos = int
     | TyAnnPat of pt * pt * pos
     | IdPat of pt * pos
     | TyArrow of pt * pt * pos
-    | TyPair of pt * pt * pos
+    | TyPair of pt list * pos
     | TyCon of pt * pt * pos
     | TyName of pt * pos
     | ValDec of pt list * pos
@@ -139,8 +139,8 @@ type pos = int
      | pp (TyAnnPat (i,p,_)) = "TyAnnPat ["^ pp i ^ " : "^ pp p ^"]"
      | pp (IdPat (c,_)) = "IdPat [" ^ pp c ^ "]"
      | pp (TyArrow (t1,t2,_)) = pp t1 ^ " -> " ^ pp t2
-     | pp (TyPair (t1,t2,_)) = pp t1 ^ " * " ^ pp t2
-     | pp (TyCon (t1,t2,_)) = pp t1 ^ " " ^ pp t2
+     | pp (TyPair (t1,_)) = "TyPair [" ^ String.concatWith " * " (map pp t1) ^ "]"
+     | pp (TyCon (t1,t2,_)) = "TyCon [" ^ pp t1 ^ " " ^ pp t2 ^ "]"
      | pp (TyName (t1,_)) = pp t1
      | pp (Match (p,e,_)) = "Match [" ^ pp p ^ " => " ^ pp e ^ "]\n"
      | pp (ValDec (b,_)) = 

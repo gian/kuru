@@ -60,7 +60,7 @@ struct
         | s te ve (TyAnnPat (a,b,p)) = TyAnnPat (s te ve a, s te ve b,p)
         | s te ve (IdPat (a,p)) = IdPat (s te ve a,p)
         | s te ve (TyArrow (a,b,p)) = TyArrow (s te ve a, s te ve b,p)
-        | s te ve (TyPair (a,b,p)) = TyPair (s te ve a, s te ve b,p)
+        | s te ve (TyPair (a,p)) = TyPair (map (s te ve) a,p)
         | s te ve (TyCon (a,b,p)) = TyCon (s te ve a, s te ve b,p)
         | s te ve (TyName (a,p)) = TyName (s te ve a,p)
         | s te ve (ValDec (l,p)) = ValDec (map (s te ve) l,p)

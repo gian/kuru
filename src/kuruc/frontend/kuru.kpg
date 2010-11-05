@@ -61,6 +61,8 @@ structure P = ParseTree
 %nonterm typ of P.pt
 %nonterm typel of P.pt
 %nonterm tyannopt of P.pt option
+%nonterm typairlist of P.pt list
+%nonterm typapp of P.pt
 %nonterm declist of P.pt list
 %nonterm dec of P.pt
 %nonterm valbind of P.pt list
@@ -238,20 +240,31 @@ patapp         <- _ p1: pat _ p2: patlist -> ($p1 :: $p2)
 
 % Types
 
-typ            <- _ t1: typel _ "->" _ t2: typ -> 
+typ            <- _ t1: typel _ "->" _ t2: typ ->
                   (P.TyArrow ($t1,$t2,!pos))
-                / _ t1: typel _ "*" _ t2: typ ->
-                  (P.TyPair ($t1,$t2,!pos))
-                / _ t1: typel _ t2: typ ->
+                / t: typairlist -> (
+                     if length ($t) = 1 then hd ($t) else
+                        P.TyPair ($t,!pos))
+                / _ t1: typel _ t2: typapp -> 
                   (P.TyCon ($t1,$t2,!pos))
                 / _ t1: typel -> ($t1).
 
 typel          <- v: var -> ($v)
+                / !"*" i: longid -> (P.TyName ($i,!pos))
                 / "(" _ t: typ _ ")" -> ($t)
-                / i: longid -> (P.TyName ($i,!pos)).
+                .
+
+typapp         <- !"*" i: longid _ t: typapp ->
+                  (P.TyCon($i,$t,!pos))
+                / !"*" i: longid -> ($i)
+                .
 
 tyannopt       <- _ ":" _ t: typ -> (SOME ($t))
                 / -> (NONE).
+
+typairlist		<- _ t1: typel _ "*" _ t2: typairlist -> ($t1 :: $t2)
+                / _ t1: typel -> ([$t1])
+					 .
 
 % Declarations
 

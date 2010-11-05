@@ -127,7 +127,7 @@ struct
         | s i (TyAnnPat (a,b,p)) = TyAnnPat (s i a, s i b,p)
         | s i (IdPat (a,p)) = IdPat (s i a,p)
         | s i (TyArrow (a,b,p)) = TyArrow (s i a, s i b,p)
-        | s i (TyPair (a,b,p)) = TyPair (s i a, s i b,p)
+        | s i (TyPair (a,p)) = TyPair (map (s i) a,p)
         | s i (TyCon (a,b,p)) = TyCon (s i a, s i b,p)
         | s i (TyName (a,p)) = TyName (s i a,p)
         | s i (ValDec (l,p)) = ValDec (map (s i) l,p)
