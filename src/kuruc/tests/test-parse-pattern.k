@@ -1,0 +1,1 @@
+fun pp (REAL (b,s1,FOO s2)) = x 

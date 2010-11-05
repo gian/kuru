@@ -32,6 +32,7 @@ struct
       ("ast-infix-unflatten",AstInfixUnflatten.apply),
       ("ast-app-apply",AstAppApply.apply),
       ("ast-infix-apply",AstInfixApply.apply),
+		("ast-infix-pattern",AstInfixPattern.apply),
       ("ast-list-cons",AstListCons.apply),
       ("ast-fun-curry",AstFunCurry.apply),
       ("ast-typedec-eval",AstTypedecEval.apply),
