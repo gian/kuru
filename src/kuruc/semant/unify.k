@@ -73,7 +73,7 @@ struct
          if s = t then unify rest
          else raise (Fail ("Type error: " ^ S.name s ^ " != " ^ S.name t))
      | unify' ((T.FN(t1,t2),T.FN(t3,t4)) :: rest) =
-         unify ((t1,t3) :: (t2,t4) :: rest)
+	  		unify ((ListPair.zip (t1,t3)) @ [(t2,t4)] @ rest)
      | unify' ((T.TUPLE l1,T.TUPLE l2) :: rest) =
          unify ((ListPair.zip (l1,l2)) @ rest)
      | unify' ((T.CONSTR (l1,lt),T.CONSTR (r1,rt)) :: rest) =
@@ -109,11 +109,12 @@ struct
                      val _ = pv := !pv + 1
                      val _ = st := S.enter (!st,S.symbol (Int.toString i),
                                             p)
-                     val _ = csr := substinconstr_rhs (T.META i) p (!csr)
+                     val _ = csr := (substinconstr_rhs (T.META i) p (!csr)) @
+                                       [(T.META i, p)]
                   in
                      p
                   end)
-           | g (T.FN (t1,t2)) = T.FN (g t1, g t2)
+           | g (T.FN (t1,t2)) = T.FN (map  g t1, g t2)
            | g (T.TUPLE l1) = T.TUPLE (map g l1)
            | g (T.CONSTR (l1,t1)) = T.CONSTR (map g l1, g t1)
            | g x = x

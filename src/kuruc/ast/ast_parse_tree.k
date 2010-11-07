@@ -41,7 +41,7 @@ struct
    fun convert tenv venv senv pt = 
    let
       fun t te ve se (Var (Ident (a,_),p)) = T.VAR (S.symbol a)
-        | t te ve se (TyArrow (a,b,p)) = T.FN (t te ve se a, t te ve se b)
+        | t te ve se (TyArrow (a,b,p)) = T.FN ([t te ve se a], t te ve se b)
         | t te ve se (TyPair (a,p)) = T.TUPLE (map (t te ve se) a) 
         | t te ve se (TyCon (a,b,p)) = T.CONSTR ([t te ve se a], t te ve se b)
         | t te ve se (TyName (Ident (a,_),p)) = T.NAME (S.symbol a) 
@@ -91,7 +91,7 @@ struct
              val s' = S.symbol n 
              val t = case (S.look (ve,s')) of
                         SOME (Env.VarEntry t') => t'
-                      | NONE => raise IllegalParseTree ("Constr n" , p)
+                      | NONE => raise IllegalParseTree ("Unrecognised constructor!" , p)
              val (te',ve',b') = cpat te ve se b
 
              val (i,t',t'')
@@ -106,12 +106,18 @@ struct
           end
         | cpat te ve se (TyAnnPat (a,b,p)) = raise Fail "TyAnnPat not impl"
         | cpat te ve se (IdPat (Ident (n,_),p)) =
-          let
-             val s' = S.symbol n
-             val ve' = S.enter (ve,s',Env.VarEntry T.UNKNOWN) 
-          in
-             (te,ve',A.PID (s',T.UNKNOWN,p))
-          end
+          (case S.look (ve,S.symbol n) of
+            SOME (Env.VarEntry (T.CON (i,NONE,t))) =>
+            cpat te ve se (ConstrPat (Ident (n,p),NONE,p))
+          | SOME (Env.VarEntry (T.CON (i,SOME _,t))) =>
+            raise Fail ("Using constructor pattern without arguments near" ^ 
+                        Int.toString p)
+          | _ => let
+               val s' = S.symbol n
+               val ve' = S.enter (ve,s',Env.VarEntry T.UNKNOWN) 
+            in
+               (te,ve',A.PID (s',T.UNKNOWN,p))
+            end)
         | cpat te ve se (IdPat (_,p)) = raise IllegalParseTree ("IdPat",p)
         | cpat te ve se (WildcardPat p) = 
             (te,ve,A.PWILD p)
@@ -163,7 +169,7 @@ struct
           let
              val ve' = Symbol.enter (ve,S.symbol n,Env.VarEntry (T.UNKNOWN))
           in
-            A.EFN (S.symbol n, s te ve' se e, T.UNKNOWN, p)
+            A.EFN ([S.symbol n], s te ve' se e, T.UNKNOWN, p)
           end
         | s te ve se (FnExp (_,p)) = raise IllegalParseTree ("FnExp",p)
         | s te ve se (HandleExp (e,l,p)) = raise Fail "handle not implemented" 
@@ -344,7 +350,7 @@ struct
                                                             a',
                                                             T.UNION (n',
                                                             l @ 
-                                                            [T.FN (f',
+                                                            [T.FN ([f'],
                                                                T.NAME
                                                                (S.symbol id))]))
                                              | _ => raise Fail 
@@ -352,14 +358,14 @@ struct
 
                               val p = S.symbol ("_p" ^ Int.toString (!cbi)) 
                               val ins' = [A.DVAL (S.symbol id,
-                                             A.EFN (p,
+                                             A.EFN ([p],
                                                A.ECON (!cbi,
                                                 SOME (A.EID (p,f',pos),
                                                       f'),
                                                 T.NAME a',
                                                 pos),
-                                             T.FN (f',T.NAME a'),pos),
-                                             T.FN (f',T.NAME a'),pos)]
+                                             T.FN ([f'],T.NAME a'),pos),
+                                             T.FN ([f'],T.NAME a'),pos)]
                               val _ = cbi := !cbi + 1 
                            in
                                (te',ve',ins')

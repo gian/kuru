@@ -33,7 +33,7 @@ struct
                | global of string * ty
                | ptr of ty
                | void
-               | fn_ptr of ty * ty
+               | fn_ptr of ty list * ty
                | aggr of ty list
                | array of int * ty
                | self_ref of int

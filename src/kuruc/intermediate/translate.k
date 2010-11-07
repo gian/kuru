@@ -34,11 +34,24 @@ struct
       FSTRING of Temp.label * string
     | FFN of Temp.label * I.exp list * I.stm list * Temp.ty
     | FALIAS of I.exp * I.exp
+    | FPOLYFN of Temp.label * S.symbol list * A.texp * Temp.ty 
 
    val fragments = ref [] : fragment list ref
 
    fun add_fragment f = fragments := !fragments @ [f]
    fun add_fragments f = fragments := !fragments @ f
+
+   fun get_fragment l = 
+      let
+         fun fr ((f as FPOLYFN (s,_,_,_))::t) = if s = l then SOME f else fr t
+           | fr ((FALIAS (I.NAME a, I.NAME b))::t) = 
+               if a = l then get_fragment b else fr t
+           | fr (x::t) = fr t
+           | fr [] = NONE
+      in
+         fr (!fragments)
+      end
+   
    fun reset_fragments () = fragments := []
 
    fun printFragment (FSTRING (l,s)) = 
@@ -49,6 +62,8 @@ struct
        ") {\n   " ^
          String.concatWith "\n   " (map I.ppstm sl) ^ "\n}\n"
      | printFragment (FALIAS _) = "FALIAS\n"
+     | printFragment (FPOLYFN (l,s,e,_)) = "FPOLYFN " ^ Temp.prettyPrint l ^
+                                           " = " ^ A.ppe e ^ "\n"
 
    fun printFragments [] = ""
      | printFragments (h::t) = printFragment h ^ "\n" ^ 
@@ -89,7 +104,7 @@ struct
           )
       end
      | tr_ty te (T.FN (a,b)) =
-         Temp.fn_ptr (tr_ty te a, tr_ty te b)
+         Temp.fn_ptr (map (tr_ty te) a, tr_ty te b)
      | tr_ty te (T.CONSTR ([t1],t2)) = 
          (case t2 of (T.NAME n) => 
             if S.name n = "list" then (Temp.ptr (Temp.aggr [
@@ -99,6 +114,9 @@ struct
                    | _ => raise Fail "tr_ty: Invalid CONSTR type.")
      | tr_ty te (T.TUPLE l) = Temp.aggr (map (tr_ty te) l)
      | tr_ty te (T.UNION _) = Temp.ptr (Temp.aggr [Temp.i32, Temp.ptr Temp.i8])
+     | tr_ty te (T.VAR _) = Temp.ptr (Temp.i8)
+     | tr_ty te (T.META _) = Temp.ptr (Temp.i8)
+     | tr_ty te (T.POLY _) = Temp.ptr (Temp.i8)
      | tr_ty te t = raise Fail ("tr_ty: unhandled type: " ^ T.prettyPrint t)
 
    fun tr_val (A.LINT (v,p)) =   (I.CONST v,[]) (* FIXME: negative numbers? *) 
@@ -341,13 +359,26 @@ struct
           phi)
        end
      | tr_exp te ve se (A.EWHILE (c,e,t,p)) = raise Fail "tr_exp tewhile not impl." 
-     | tr_exp te ve se (A.EFN (s,e,T.FN(it,rt),p)) =
+     | tr_exp te ve se (f as A.EFN (s,e,T.FN(it,rt),p)) =
        let
-          val fid = Temp.newglobal (Temp.fn_ptr (tr_ty te it,tr_ty te rt))
-          val p = Temp.newtemp (tr_ty te it)
-          val ve' = S.enter (ve,s,I.TEMP p)
+          val fid = Temp.newglobal (Temp.fn_ptr (map (tr_ty te) it,tr_ty te rt))
+          val (p',ve') =
+          List.foldl (fn ((s,t),(ts,ve)) =>
+               let
+                  val p = I.TEMP (Temp.newtemp (tr_ty te t))
+                  val v' = S.enter (ve,s,p)
+               in
+                  (ts@[p],v')
+               end) ([],ve) (ListPair.zip (s,it))
+          
           val (te',ve'',se',e',instr) = tr_exp te ve' se e
-          val _ = add_fragment (FFN (fid,[I.TEMP p],
+          val _ = if Polymorphism.is_polymorphic f then
+                                    (Debug.print Debug.debug "is_poly EFN\n";
+                                    add_fragment (FPOLYFN (fid, s, f, 
+                                                           tr_ty te 
+                                                            (T.FN(it,rt)))))
+                                    else
+                                    add_fragment (FFN (fid, p',
                                             [I.LABEL (Temp.newlabel ())] @
                                                    instr @ 
                                                    [I.RET e'],tr_ty te rt))
@@ -542,11 +573,49 @@ struct
        end
        | tr_exp te ve se (A.EAPP (a,b,t,p)) = 
        let
+
+
+          val _ = Debug.print Debug.debug ("tr_exp: is_polymorphic: " ^
+                     A.ppe a ^ " : " ^ 
+                     T.prettyPrint (A.getTypeExp a) ^ "\n") 
+
           val (_,_,_,b',instr1) = tr_exp te ve se b
           val (_,_,_,a',instr2) = tr_exp te ve se a
+
+          val (a'',instr2')
+            = if Polymorphism.is_polymorphic a 
+                     then 
+                        let
+                           val lbl = case a' of I.NAME l => l
+                                       | _ => raise Fail 
+                                          "tr_exp: BUG: Monomorphisation"
+
+
+                           val _ = Debug.print Debug.debug
+                              ("Monomorphising label: "^Temp.prettyPrint lbl ^"\n")
+                           val frag = get_fragment lbl
+
+                           val _ = Debug.print Debug.debug
+                              ("Fragments:\n" ^ printFragments (!fragments) ^ "\n")
+
+                           val fr = case frag of 
+                              SOME (FPOLYFN (l,s,exp,_)) => exp
+                            | SOME _ => raise Fail "tr_exp: BUG: Monomorphisation2"
+                            | NONE => raise Fail "tr_exp: BUG: Monomorphisation3"
+                                       
+                           val mon = 
+                              Polymorphism.monomorphise (A.getTypeExp a) 
+                                                        (A.getTypeExp b) fr
+
+                           val (_,_,_,m',ins') = tr_exp te ve se mon
+                        in
+                           (m',ins')
+                        end
+                     else (a',instr2)
+
           val rt = Temp.newtemp (tr_ty te t)
           
-          val c = I.CALL (tr_ty te t,a',b')
+          val c = I.CALL (tr_ty te t,a'',b')
        in
           if tr_ty te t = Temp.void then 
              (te,ve,se,I.VOID,instr1 @ instr2 @ [I.EXP c])
@@ -575,10 +644,12 @@ struct
           val conty = Temp.aggr [Temp.i32, Temp.ptr Temp.i8]
           val tt = I.TEMP (Temp.newtemp conty)
           val tt' = I.TEMP (Temp.newtemp conty)
+          val rt' = I.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
           val rt = I.TEMP (Temp.newtemp (Temp.ptr conty))
           val instr = [I.MOVE (tt,I.TUPLE_INS (I.UNDEF conty,I.CONST i,0)),
                        I.MOVE (tt',I.TUPLE_INS (tt,I.NULL (Temp.ptr Temp.i8),1)),
-                       I.MOVE (rt,I.MALLOC (conty,1)),
+                       I.MOVE (rt',I.MALLOC (conty,1)),
+                       I.MOVE (rt,I.BITCAST (rt',Temp.ptr (conty))),
                        I.STORE (tt',rt)]
        in
           (te,ve,se,rt,instr)

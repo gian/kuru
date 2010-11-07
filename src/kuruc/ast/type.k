@@ -22,7 +22,7 @@ structure Type =
 struct
 
 	datatype ty = NAME of Symbol.symbol
-	            | FN of ty * ty
+	            | FN of ty list * ty
 					| TUPLE of ty list
 					| CONSTR of ty list * ty
 					| CLASS of ty Set.set
@@ -35,7 +35,9 @@ struct
 					| UNKNOWN
 
    fun freevars (NAME s) = Set.empty
-     | freevars (FN (t1,t2)) = Set.union (freevars t1, freevars t2)
+     | freevars (FN (l,t)) =
+         Set.union (List.foldl (fn (a,b) => Set.union(b,freevars a)) Set.empty l,
+                    freevars t)
      | freevars (TUPLE l) = 
          List.foldl (fn (a,b) => Set.union(b,freevars a)) Set.empty l
      | freevars (CONSTR (l,t)) = 
@@ -45,7 +47,7 @@ struct
      | freevars _ = []
 
    fun substinty (NAME s) th (NAME t) = if s = t then th else NAME t
-     | substinty tn th (FN (t1,t2)) = FN (substinty tn th t1,
+     | substinty tn th (FN (t1,t2)) = FN (map (substinty tn th) t1,
                                           substinty tn th t2)
      | substinty tn th (TUPLE l) = TUPLE (map (substinty tn th) l)
      | substinty tn th (CONSTR (l,t)) = CONSTR (map (substinty tn th) l,
@@ -56,7 +58,9 @@ struct
      | substinty tn th t = t 
 
    fun equal (NAME s) (NAME t) = s = t
-     | equal (FN (t1,t2)) (FN (t3,t4)) = equal t1 t3 andalso equal t2 t4
+     | equal (FN (t1,t2)) (FN (t3,t4)) = 
+         (List.all (fn (a,b) => equal a b) (ListPair.zip (t1,t3))) 
+            andalso equal t2 t4
      | equal (TUPLE l1) (TUPLE l2) = 
          List.all (fn (a,b) => equal a b) (ListPair.zip (l1,l2))
      | equal (CONSTR (l1,t1)) (CONSTR (l2,t2)) = 
@@ -70,7 +74,7 @@ struct
 	fun occursin (META tyX) tyT =
 		let
 			fun oc tyT = (case tyT of
-				 FN(tyT1,tyT2) => oc tyT1 orelse oc tyT2
+				 FN(tyT1,tyT2) => (List.all oc tyT1) orelse oc tyT2
 			  | TUPLE tyT1 => List.all oc tyT1
 			  | CONSTR (tyT1,t2) => List.all oc tyT1 orelse oc t2
 			  | META x => (x = tyX)
@@ -81,8 +85,9 @@ struct
 	  | occursin _ _ = raise Fail "Non-UVar argument to occursin"
 
 	fun pp (NAME s) = Symbol.name s
-     | pp (FN (f as FN _,t2)) = "(" ^ pp f ^ ") -> " ^ pp t2
-	  | pp (FN (t1,t2)) = pp t1 ^ " -> " ^ pp t2
+     | pp (FN (f as [FN _],t2)) = "(" ^ pp (hd f) ^ ") -> " ^ pp t2
+	  | pp (FN ([t1],t2)) = pp t1 ^ " -> " ^ pp t2
+	  | pp (FN (l,t2)) = "("^(String.concatWith "," (map pp l)) ^ ") -> " ^ pp t2
 	  | pp (TUPLE l) = String.concatWith " * " (map pp l)
 	  | pp (CONSTR ([],t2)) = pp t2
 	  | pp (CONSTR ([t1],t2)) = pp t1 ^ " " ^ pp t2

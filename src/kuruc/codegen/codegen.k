@@ -45,7 +45,7 @@ struct
      | cg_ty Temp.void = "void"
      | cg_ty (Temp.fn_ptr (t1,t2)) = j [cg_ty t2,
                                        " (",
-                                       cg_ty t1,
+                                       jc (map cg_ty t1),
                                        ") *"]
      | cg_ty (Temp.aggr l) = j ["{ ",
                                jc (map cg_ty l),
@@ -74,6 +74,15 @@ struct
          ]
      | cg_frag' (T.FALIAS (e1,e2)) =
          j [cg_exp e1, " = alias ", cg_exp_t e2]
+     | cg_frag' (T.FPOLYFN (l,_,_,Temp.fn_ptr(a,b))) =
+          j [
+            jsp ["define ",cg_ty b,ppt l,"("],
+            jsp [cg_ty (hd a), "%x"], 
+            ") {\n",
+            "      unwind",
+            "\n}\n"
+         ]
+        
    and cg_frag l = (cg_frag' l)
 
    and cg_cmp t (I.REQ) _ _ = raise Fail "cg_cmp: REQ not implemented"

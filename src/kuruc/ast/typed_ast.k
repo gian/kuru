@@ -48,9 +48,10 @@ struct
                  | ETUPLE of texp vector * T.ty * pos
                  | EIF of texp * texp * texp * T.ty * pos
                  | EWHILE of texp * texp * T.ty * pos
-                 | EFN of S.symbol * texp * T.ty * pos
+                 | EFN of S.symbol list * texp * T.ty * pos
                  | ECASE of texp * (tpat * texp) vector * T.ty * pos
                  | EAPP of texp * texp * T.ty * pos
+                 | EAPPMULT of texp * texp list * T.ty * pos
                  | EEXN of texp * T.ty * pos
                  | ERAISE of texp * pos
                  | EHANDLE of tpat * texp * T.ty * pos
@@ -68,6 +69,26 @@ struct
 
    val ppty = T.pp
    fun vtol f = Vector.foldr (fn (a,b) => a::b) [] f
+
+   fun getTypeExp (ELIT (_,t,_)) = t
+     | getTypeExp (EID (_,t,_)) = t
+     | getTypeExp (ELID (_,t,_)) = t
+     | getTypeExp (ELIST (_,t,_)) = t
+	  | getTypeExp (ENIL _) = T.CONSTR ([T.fresh()], T.t_list)
+     | getTypeExp (ETUPLE (_,t,_)) = t 
+     | getTypeExp (EIF (_,_,_,t,_)) = t
+     | getTypeExp (EWHILE (_,_,t,_)) = t
+     | getTypeExp (EFN (_,_,t,_)) = t
+     | getTypeExp (ECASE (_,_,t,_)) = t
+     | getTypeExp (EAPP (_,_,t,_)) = t
+     | getTypeExp (EAPPMULT (_,_,t,_)) = t
+     | getTypeExp (EEXN (_,t,_)) = t
+     | getTypeExp (ERAISE _) = T.fresh ()
+     | getTypeExp (EHANDLE (_,_,t,_)) = t 
+     | getTypeExp (ESEQ (_,t,p)) = t
+     | getTypeExp (ELET (_,_,t,_)) = t
+     | getTypeExp (EANN (_,t,_)) = t
+     | getTypeExp (ECON (_,_,t,_)) = t
 
 	fun getType (DVAL (_,_,t,_)) = t
 	  | getType (DVALREC (_,t,_)) = t
@@ -183,7 +204,6 @@ struct
 	  | subst_ty_exp tn th (ECON (i,SOME (e,t1),t2,p)) =
 	  			ECON (i,SOME (subst_ty_exp tn th e,T.substinty tn th t1),
 						T.substinty tn th t2, p)
-	  | subst_ty_exp tn th x = x
    and subst_ty_dec tn th (DVAL (s,e,t,p)) =
             DVAL (s,
                   subst_ty_exp tn th e,
@@ -224,15 +244,15 @@ struct
 
    and ppe (ELIT(tv,ty,p)) =  
                              ppv tv 
-     | ppe (EID(s,ty,p)) = S.name s 
+     | ppe (EID(s,ty,p)) = S.name s ^ " : " ^ ppty ty 
 	  | ppe (ELID(s,ty,p)) = String.concatWith "." (map Symbol.name s)
      | ppe (ELIST(v,ty,p)) = "[" ^ (String.concatWith "," (map ppe (vtol v))) ^ "]"
      | ppe (ENIL p) = "nil"
 	  | ppe (ETUPLE(v,ty,p)) = "(" ^ (String.concatWith "," (map ppe (vtol v))) ^ ")"
      | ppe (EIF(e1,e2,e3,t,p)) = "if " ^ ppe e1 ^ " then " ^ ppe e2 ^ " else " ^ 
 	  											ppe e3
-	  | ppe (EFN(s,e,ty,p)) = "fn " ^ S.name s ^  
-                             " => (" ^ ppe e ^ ")"
+	  | ppe (EFN(s,e,ty,p)) = "fn " ^ (String.concatWith "," (map S.name s)) ^  
+                             " => (" ^ ppe e ^ ") : " ^ ppty ty
      | ppe (ECASE(e1,m,ty,p)) = "case " ^ ppe e1 ^ " of [\n" ^
                                 (String.concatWith "\n" (map
                                                          (fn (p,e) => ppp p ^ " => " ^ ppe e) (vtol m)))

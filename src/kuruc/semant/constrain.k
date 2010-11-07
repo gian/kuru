@@ -51,7 +51,7 @@ struct
                   in
                      tx
                   end)
-           | inst' (T.FN (a,b)) = T.FN (inst' a, inst' b)
+           | inst' (T.FN (a,b)) = T.FN (map inst' a, inst' b)
            | inst' (T.TUPLE l) = T.TUPLE (map inst' l)
            | inst' (T.CONSTR (l,t)) = T.CONSTR (map inst' l, inst' t)
            | inst' t = t
@@ -216,8 +216,14 @@ struct
        end
      | constr_exp te ve se (A.EFN (s,e,t,p)) =
        let
-          val t' = T.fresh ()
-          val ve' = S.enter (ve,s,E.VarEntry t')
+          val (t',ve') = 
+            List.foldl (fn (s,(ts,ve)) =>
+               let
+                  val t' = T.fresh ()
+                  val v' = S.enter (ve,s,E.VarEntry t')
+               in
+                  (ts@[t'],v')
+               end) ([],ve) s
           
           val (te',ve'',se',cs,t2,e') = constr_exp te ve' se e
 
@@ -234,9 +240,26 @@ struct
           
           val tx = T.fresh ()
           
-          val cs' = [(te1',T.FN(te2,tx))]
+          val cs' = [(te1',T.FN([te2],tx))]
        in
           (te,ve,se, cs' @ cs1 @ cs2, tx, A.EAPP(e1',e2',tx,p))
+       end
+     | constr_exp te ve se (A.EAPPMULT (e1,e2,t,p)) =
+       let
+          val (te',ve',se',cs1,te1,e1') = constr_exp te ve se e1
+          val e2' = map (constr_exp te ve se) e2
+
+          val e2'' = (map (fn (_,_,_,_,_,e) => e) e2')
+          val te2 = (map (fn (_,_,_,_,t,_) => t) e2')
+			 val cs2 = List.concat (map (fn (_,_,_,c,_,_) => c) e2')
+          
+          val te1' = inst te1 
+          
+          val tx = T.fresh ()
+          
+          val cs' = [(te1',T.FN(te2,tx))]
+       in
+          (te,ve,se, cs' @ cs1 @ cs2, tx, A.EAPPMULT(e1',e2'',tx,p))
        end
      | constr_exp te ve se (A.ECASE (e1,v,t,p)) =
        let
@@ -437,10 +460,22 @@ struct
                                                 val (d',cs') = 
                                                    Unify.generalise cs
                                                       (A.getType l)
+
+                                                val _ = 
+                                                   Debug.print Debug.debug
+                                                ("Generalised: " ^ T.prettyPrint
+                                                   d' ^ "\n")
+
                                                 val d'' = 
                                                    A.setType l d'
+
+                                                val d''' = Unify.apply cs' [l]
+
+                                                val _ = Debug.print Debug.debug
+                                                ("Generalised exp: " ^ 
+                                                 A.prettyPrint d''' ^ "\n")
                                              in
-                                                (d@[d''],cs')
+                                                (d@d''',cs')
                                              end) ([],cs'''') d''''
 
                          val _ = Debug.print 
@@ -451,6 +486,11 @@ struct
 
                          val ve''' = List.foldl (fn (cstr,ve) => 
                                          substinenv cstr ve) ve'' csg 
+
+                         val gty' = Unify.apply cs'''' gty
+                         val _ = Debug.print
+                                    Debug.debug ("gty': " ^ A.prettyPrint gty ^ 
+                                                   "\n")
                       in
                          (te'',ve''',se'',csg,gty)
                       end)
