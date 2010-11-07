@@ -163,8 +163,7 @@ exp            <- _ "raise" _ e: exp -> (P.Raise ($e,!pos))
                   (P.TyAnn (P.AppList ($e,!pos),$t,!pos))
                 / _ e1: expapp _"="_ e2: exp -> 
                   (P.Infix (P.AppList ($e1,!pos),P.Ident ("=",!pos),$e2,!pos))
-                / _ e1: expapp -> (P.AppList ($e1,!pos))
-                / _ e: expel _ -> ($e).
+                / _ e1: expapp -> (P.AppList ($e1,!pos)).
                 
 expel          <- "op" _ l: longid -> (P.OpExp ($l,!pos))
                 / "let"_ d: declist _"in"_ 
