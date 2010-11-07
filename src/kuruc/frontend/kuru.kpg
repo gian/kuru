@@ -62,7 +62,7 @@ structure P = ParseTree
 %nonterm typel of P.pt
 %nonterm tyannopt of P.pt option
 %nonterm typairlist of P.pt list
-%nonterm typapp of P.pt
+%nonterm typapp of P.pt list
 %nonterm declist of P.pt list
 %nonterm dec of P.pt
 %nonterm valbind of P.pt list
@@ -139,7 +139,7 @@ id             <-  r1: reserved r2: (reserved*) ->
                   (P.Ident(String.concat($r1 :: $r2),!pos))
                 / k: keyword i1: idrest i2: (idrest*) -> 
                   (P.Ident($k ^ $i1 ^String.concat($i2),!pos))
-                / !keyword l: alpha r: (idrest*) -> 
+                / !keyword !nonid l: alpha r: (idrest*) -> 
                   (P.Ident(String.concat ($l :: $r),!pos))
                 . 
 
@@ -153,19 +153,17 @@ longid         <- i: id "." l: longid -> (P.LongId ($i,$l,!pos))
 % Expressions
 
 exp            <- _ "raise" _ e: exp -> (P.Raise ($e,!pos))
-                / _ e1: expel _ "andalso" _ e2: exp ->
-                  (P.AndAlso($e1,$e2,!pos))
-                / _ e1: expel _ "orelse" _ e2: exp ->
-                  (P.OrElse($e1,$e2,!pos))
-                / _ e: expel _ ":" _ t: typ ->
-                  (P.TyAnn ($e,$t,!pos))
-                / _ e: expel _ "handle" _ m: match ->
-                  (P.HandleExp($e,$m,!pos))
+                / _ e1: expapp _ "andalso" _ e2: exp ->
+                  (P.AndAlso(P.AppList($e1,!pos),$e2,!pos))
+                / _ e1: expapp _ "orelse" _ e2: exp ->
+                  (P.OrElse(P.AppList($e1,!pos),$e2,!pos))
+                / _ e: expapp _ "handle" _ m: match ->
+                  (P.HandleExp(P.AppList($e,!pos),$m,!pos))
+                / _ e: expapp _ ":" _ t: typ ->
+                  (P.TyAnn (P.AppList ($e,!pos),$t,!pos))
+                / _ e1: expapp _"="_ e2: exp -> 
+                  (P.Infix (P.AppList ($e1,!pos),P.Ident ("=",!pos),$e2,!pos))
                 / _ e1: expapp -> (P.AppList ($e1,!pos))
-                / _ e1: expel _ i: id _ e2: exp ->
-                  (P.Infix($e1,$i,$e2,!pos))
-                / _ e1: expel _ "=" _ e2: exp ->
-                  (P.Infix($e1,P.Ident ("=",!pos),$e2,!pos))
                 / _ e: expel _ -> ($e).
                 
 expel          <- "op" _ l: longid -> (P.OpExp ($l,!pos))
@@ -241,30 +239,24 @@ patapp         <- _ p1: pat _ p2: patlist -> ($p1 :: $p2)
 % Types
 
 typ            <- _ t1: typel _ "->" _ t2: typ ->
-                  (P.TyArrow ($t1,$t2,!pos))
-                / t: typairlist -> (
-                     if length ($t) = 1 then hd ($t) else
-                        P.TyPair ($t,!pos))
-                / _ t1: typel _ t2: typapp -> 
-                  (P.TyCon ($t1,$t2,!pos))
-                / _ t1: typel -> ($t1).
+                     (P.TyArrow ($t1,$t2,!pos))
+                / _ t1: typapp ->
+                     (P.TyPair ($t1,!pos))
+                / _ t1: typel _ t2: typ ->
+                     (P.TyCon ($t1,$t2,!pos))
+                / _ t: typel -> ($t).
 
 typel          <- v: var -> ($v)
                 / !"*" i: longid -> (P.TyName ($i,!pos))
-                / "(" _ t: typ _ ")" -> ($t)
-                .
+                / "(" _ t: typ _ ")" -> ($t).
 
-typapp         <- !"*" i: longid _ t: typapp ->
-                  (P.TyCon($i,$t,!pos))
-                / !"*" i: longid -> ($i)
-                .
+typapp			<- t1: typel _"*"_ t2: typapp ->
+                  ($t1 :: $t2)
+				    / t1: typel _"*"_ t2: typ ->
+                  ([$t1,$t2]).
 
 tyannopt       <- _ ":" _ t: typ -> (SOME ($t))
                 / -> (NONE).
-
-typairlist		<- _ t1: typel _ "*" _ t2: typairlist -> ($t1 :: $t2)
-                / _ t1: typel -> ([$t1])
-					 .
 
 % Declarations
 
