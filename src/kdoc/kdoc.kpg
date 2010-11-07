@@ -1,0 +1,212 @@
+(*******************************************************************************
+*  The Kuru Programming Language Compiler Toolset (http://www.kuru-lang.org)
+*  Copyright (C) 2010  Gian Perrone
+*
+*  This program is free software: you can redistribute it and/or modify
+*  it under the terms of the GNU General Public License as published by
+*  the Free Software Foundation, either version 3 of the License, or
+*  (at your option) any later version.
+*
+*  This program is distributed in the hope that it will be useful,
+*  but WITHOUT ANY WARRANTY; without even the implied warranty of
+*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+*  GNU General Public License for more details.
+*
+*  You should have received a copy of the GNU General Public License
+*  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*******************************************************************************
+*  This file:
+*    Basic grammar to extract Kdoc-style comments from Kuru code.
+******************************************************************************)
+
+%name KuruParser
+%start program
+
+structure P = ParseTree
+
+%nonterm sp of string
+%nonterm _ of string
+%nonterm comment of string
+%nonterm commentc of string
+%nonterm kdocstr of string
+%nonterm kdocstrc of string
+%nonterm reserved of string
+%nonterm nonid of string
+%nonterm keyword of string
+%nonterm id of string 
+%nonterm idrest of string
+%nonterm var of string
+%nonterm longid of string
+%nonterm typ of string
+%nonterm typel of string
+%nonterm typapp of string
+%nonterm declist of P.pt list
+%nonterm dec of P.pt
+%nonterm valbind of P.pt list
+%nonterm tyvarlist of P.pt list
+%nonterm tyvars of P.pt list
+%nonterm typebind of P.pt list
+%nonterm funbind of P.pt list list
+%nonterm funmatch of P.pt list
+%nonterm databind of P.pt list
+%nonterm conbind of P.pt list
+%nonterm strbind of P.pt list
+%nonterm str of P.pt
+%nonterm programel of P.pt
+%nonterm program of P.pt list
+
+val srcFileLineNum = ref 1
+
+fun escape "n" = "\n"
+  | escape "\\" = "\\"
+  | escape "0" = String.str (Char.chr 0)
+  | escape "t" = "\t"
+  | escape x = x
+  | escape "\"" = "\\\""
+
+%%
+
+sp             <- " " / "\n" -> ((srcFileLineNum := !srcFileLineNum + 1);"\n") / "\t".
+_              <- sp _ / comment _ / .
+
+comment        <- !"(**" "(*" c: commentc "*)" -> ("").
+
+commentc       <- !"*)" char commentc
+                / .
+
+kdocstr			<- "(**" c: kdocstrc "*)" -> ($c).
+
+kdocstrc			<- !"*)" c: char k: kdocstrc -> ($c ^ $k)
+
+% Identifiers
+
+reserved       <- "!" / "%" / "&" / "$" / "+" / "-" /  "/" 
+                / "<=" / ">=" / ":=" / "::"
+                / "<" / ">" / "?" / "@" / "\\" / "`" 
+                / "^" / "*".
+
+nonid          <- "(" / ")" / "[" / "]" / "." / ";" / "," / "|" /
+                  "~" / "#" / ":" / "=>" / "=". 
+
+keyword        <- "val" / "datatype"
+                / "type" / "fun" / "and" / 
+                  "structure" 
+                  / "infixr" / "infix".
+
+id             <-  r1: reserved r2: (reserved*) -> 
+                  (String.concat($r1 :: $r2))
+                / k: keyword i1: idrest i2: (idrest*) -> 
+                  ($k ^ $i1 ^ String.concat($i2))
+                / !keyword !nonid l: alpha r: (idrest*) -> 
+                  (String.concat ($l :: $r))
+                . 
+
+idrest         <- !sp !nonid !reserved c: char -> ($c).
+
+var            <- "'" i: id -> ("'" ^ $i).
+
+longid         <- i: id "." l: longid -> ($i ^ "." ^ $l)
+                / i: id -> ($i).
+
+% Types
+
+typ            <- _ t1: typel _ "->" _ t2: typ ->
+                     ($t1 ^ " -> " ^ $t2)
+                / _ t1: typapp ->
+                     (String.concatWith " * " ($t1))
+                / _ t1: typel _ t2: typ ->
+                     ($t1 ^ " " ^ $t2) 
+                / _ t: typel -> ($t).
+
+typel          <- v: var -> ($v)
+                / !"*" i: longid -> ($i)
+                / "(" _ t: typ _ ")" -> ("(" ^ $t ^ ")").
+
+typapp			<- t1: typel _"*"_ t2: typapp ->
+                  ($t1 ^ " * " ^ $t2)
+				    / t1: typel _"*"_ t2: typ ->
+                  ($t1 ^ " * " ^ $t2).
+
+% Declarations
+
+declist        <- dec*.
+
+dec            <- _ "val" _ v: valbind -> (P.ValDec($v,!pos))
+                / _ "type" _ v: typebind -> (P.TypeDec($v,!pos))
+                / _ "datatype" _ i: id _"="_ "datatype"_ l: longid
+                  -> (P.DatatypeAssign ($i,$l,!pos))
+                / _ "datatype" _ d: databind -> 
+                     (P.DatatypeDec ($d,!pos))
+                / _"fun" _ f: funbind -> (P.FunDec ($f,!pos))
+                / _"structure" _ s: strbind -> (P.StructDec ($s,!pos))
+                / _"infixr" _ d: digit _ i: id -> (P.InfixrDec ($d,$i,!pos))
+                / _"infixr" _ i: id -> (P.InfixrDec ("",$i,!pos))
+                / _"infix" _ d: digit _ i: id -> (P.InfixDec ($d,$i,!pos))
+                / _"infix" _ i: id -> (P.InfixDec ("",$i,!pos))
+                .
+
+valbind        <- "rec" _ v1: valbind ->
+                  ([P.ValRec ($v1,!pos)])
+                / "rec" _ v: valbind _ ->
+                  ([P.ValRec ($v,!pos)])
+                / p: pat _"="_ e: exp _ "and" v: valbind ->
+                  (P.ValBind ($p,$e,!pos) :: $v)
+                / p: pat _"="_ e: exp ->
+                  ([P.ValBind ($p,$e,!pos)]).
+
+tyvarlist      <- _ v: var _ "," _ t: tyvarlist -> ($v ^ ", " ^ $t)
+                / _ v: var -> ($v).
+
+tyvars         <- _"("_ l: tyvarlist _ ")" -> ("(" ^ $l ^ ")")
+                / _ v: var -> ($v)
+                / -> ("").
+
+typebind       <- _ tv: tyvars _ i: id _"="_ t: typ _ "and" 
+                     l: typebind -> (P.TypeBind($tv,
+                                     P.TyName ($i,!pos),$t,!pos) :: $l)
+                / _ tv: tyvars _ i: id _"="_ t: typ ->
+                     ([P.TypeBind($tv,P.TyName ($i,!pos),$t,!pos)]).
+
+funbind        <- _ f: funmatch _ "and" _ l: funbind ->
+                 ($f :: $l)
+                / _ f: funmatch -> ([$f]).
+
+funmatch       <- "op" _ i: id _ l: patapp _ t: tyannopt _"="_
+                   e: exp _ "|"_ f: funmatch ->
+                     (P.FunMatch (P.OpExp ($i,!pos),$l,$t,$e,!pos) :: $f)
+                / "op" _ i: id _ l: patapp _ t: tyannopt _"="_
+                   e: exp -> ([P.FunMatch(P.OpExp ($i,!pos),$l,$t,$e,!pos)])
+                / i: id l: patapp t: tyannopt _"="_ e: exp _
+                     "|"_ f: funmatch -> 
+                     (P.FunMatch ($i,$l,$t,$e,!pos) :: $f)
+                / i: id l: patapp t: tyannopt _"="_ e: exp ->
+                     ([P.FunMatch ($i,$l,$t,$e,!pos)]).
+
+databind       <- _ tv: tyvars _ i: id _ "=" _ c: conbind _ "and" d: databind
+                  -> (P.DataBind($tv,$i,$c,!pos) :: $d)
+                / _ tv: tyvars _ i: id _ "=" _ c: conbind
+                  -> ([P.DataBind($tv,$i,$c,!pos)]).
+
+conbind        <- _ i: id _ "of" _ t: typ _"|"_ c: conbind ->
+                  (P.ConBind($i,SOME ($t),!pos) :: $c)
+                / _ i: id _ "of" _ t: typ ->
+                  ([P.ConBind($i,SOME ($t),!pos)])
+                / _ i: id _ "|" _ c: conbind ->
+                  (P.ConBind($i,NONE,!pos) :: $c)
+                / _ i: id ->
+                  ([P.ConBind($i,NONE,!pos)]).
+
+strbind        <- _ i: id _ "=" _ s: str _ "and" _ st: strbind ->
+                  (P.StructBind($i,$s,!pos) :: $st)
+                / _ i: id _ "=" _ s: str ->
+                  ([P.StructBind($i,$s,!pos)]).
+
+str            <- _ "struct" _ d: declist _ "end"
+                  -> (P.Structure($d,!pos))
+                / longid.
+
+programel      <- _ dec.
+
+program        <- p1: programel _ ";" _ p2: program -> ($p1 :: $p2)
+                / p1: programel _ p2: program -> ($p1 :: $p2)
+                / p: programel -> ([$p]).
