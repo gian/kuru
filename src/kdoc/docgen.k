@@ -34,10 +34,13 @@ struct
      | dg (Seq (p1, p2,_)) = dg p1 ^ "\n" ^ dg p2
      | dg (TyAnn (p1,p2,_)) = "<typedexpr>\n" ^ 
                               "  <expr>" ^ dg p1 ^ "</expr>\n" ^ 
-                              "  <type>" ^ dg p2 ^ "</type\n" ^
+                              "  <type>" ^ dg p2 ^ "</type>\n" ^
                               "</typedexpr>"
      | dg (TyAnnPat (i,p,_)) = 
-         "<pattern type=\"" ^ dg p ^ "\">" ^ dg i ^ "</pattern>"
+         "<pattern>\n" ^ 
+         "  <type>" ^ dg p ^ "</type>\n" ^ 
+         "  <body>" ^ dg i ^ "</body>\n" ^
+         "</pattern>\n"
      | dg (IdPat (i,p)) = dg i
      | dg (TyArrow (t1,t2,_)) = dg t1 ^ " -> " ^ dg t2
      | dg (TyPair (t1,_)) = String.concatWith " * " (map dg t1) 

@@ -13,7 +13,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:value-of select="name"/>
         </h1>
         <hr/>
-        <xsl:apply-templates select="doc"/>  
+        <xsl:apply-templates select="*"/>  
       </xsl:for-each>
   </body>
   </html>

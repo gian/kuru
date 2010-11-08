@@ -1,0 +1,2179 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="kdoc.xsl"?>
+<kdoc>
+<file>
+<name>../kuruc/tests/test-all.k</name>
+<dec>
+<structure>
+  <name><identifier>Error</identifier></name>
+  <body><struct>
+<dec>
+<fun>
+  <name><identifier>resolveErrorPos</identifier></name>
+  <params></params>
+</fun></dec>
+
+
+</struct></body>
+</structure>
+</dec>
+
+
+
+<dec>
+<structure>
+  <name><identifier>ParseTree</identifier></name>
+  <body><struct>
+<dec>
+<datatype>
+  <tyvars></tyvars>
+  <name><identifier>pt</identifier></name>
+     <body>
+    <con>
+      <name><identifier>Int</identifier></name>
+      <type><identifier>bool</identifier> * <identifier>string</identifier></type>
+    </con>
+    <con>
+      <name><identifier>Real</identifier></name>
+      <type><identifier>bool</identifier> * <identifier>string</identifier> * <identifier>string</identifier> * <identifier>bool</identifier> * <identifier>string</identifier> <identifier>option</identifier></type>
+    </con>
+    <con>
+      <name><identifier>Char</identifier></name>
+      <type><identifier>string</identifier></type>
+    </con>
+    <con>
+      <name><identifier>String</identifier></name>
+      <type><identifier>string</identifier></type>
+    </con>
+    <con>
+      <name><identifier>Ident</identifier></name>
+      <type><identifier>string</identifier></type>
+    </con>
+    <con>
+      <name><identifier>LongId</identifier></name>
+      <type><identifier>pt</identifier> * <identifier>pt</identifier></type>
+    </con>
+    <con>
+      <name><identifier>Var</identifier></name>
+      <type><identifier>pt</identifier></type>
+    </con>
+    <con>
+      <name><identifier>Raise</identifier></name>
+      <type><identifier>pt</identifier></type>
+    </con>
+    <con>
+      <name><identifier>AndAlso</identifier></name>
+      <type><identifier>pt</identifier> * <identifier>pt</identifier></type>
+    </con>
+    <con>
+      <name><identifier>OrElse</identifier></name>
+      <type><identifier>pt</identifier> * <identifier>pt</identifier></type>
+    </con>
+    <con>
+      <name><identifier>Seq</identifier></name>
+      <type><identifier>pt</identifier> * <identifier>pt</identifier></type>
+    </con>
+    <con>
+      <name><identifier>Infix</identifier></name>
+      <type><identifier>pt</identifier> * <identifier>pt</identifier> * <identifier>pt</identifier></type>
+    </con>
+    <con>
+      <name><identifier>OpExp</identifier></name>
+      <type><identifier>pt</identifier></type>
+    </con>
+    <con>
+      <name><identifier>App</identifier></name>
+      <type><identifier>pt</identifier> * <identifier>pt</identifier></type>
+    </con>
+    <con>
+      <name><identifier>TyAnn</identifier></name>
+      <type><identifier>pt</identifier> * <identifier>pt</identifier></type>
+    </con>
+    <con>
+      <name><identifier>TupleExp</identifier></name>
+      <type><identifier>pt</identifier> <identifier>list</identifier></type>
+    </con>
+    <con>
+      <name><identifier>UnitExp</identifier></name>
+    </con>
+    <con>
+      <name><identifier>SeqExp</identifier></name>
+      <type><identifier>pt</identifier> <identifier>list</identifier></type>
+    </con>
+    <con>
+      <name><identifier>ListExp</identifier></name>
+      <type><identifier>pt</identifier> <identifier>list</identifier></type>
+    </con>
+    <con>
+      <name><identifier>LetExp</identifier></name>
+      <type><identifier>pt</identifier> <identifier>list</identifier> * <identifier>pt</identifier></type>
+    </con>
+    <con>
+      <name><identifier>IfExp</identifier></name>
+      <type><identifier>pt</identifier> * <identifier>pt</identifier> * <identifier>pt</identifier></type>
+    </con>
+    <con>
+      <name><identifier>WhileExp</identifier></name>
+      <type><identifier>pt</identifier> * <identifier>pt</identifier></type>
+    </con>
+    <con>
+      <name><identifier>CaseExp</identifier></name>
+      <type><identifier>pt</identifier> * <identifier>pt</identifier> <identifier>list</identifier></type>
+    </con>
+    <con>
+      <name><identifier>FnExp</identifier></name>
+      <type><identifier>pt</identifier> <identifier>list</identifier></type>
+    </con>
+    <con>
+      <name><identifier>HandleExp</identifier></name>
+      <type><identifier>pt</identifier> * <identifier>pt</identifier> <identifier>list</identifier></type>
+    </con>
+    <con>
+      <name><identifier>Match</identifier></name>
+      <type><identifier>pt</identifier> * <identifier>pt</identifier></type>
+    </con>
+    <con>
+      <name><identifier>AsPat</identifier></name>
+      <type><identifier>pt</identifier> * <identifier>pt</identifier></type>
+    </con>
+    <con>
+      <name><identifier>UnitPat</identifier></name>
+    </con>
+    <con>
+      <name><identifier>InfixPat</identifier></name>
+      <type><identifier>pt</identifier> * <identifier>pt</identifier> * <identifier>pt</identifier></type>
+    </con>
+    <con>
+      <name><identifier>WildcardPat</identifier></name>
+    </con>
+    <con>
+      <name><identifier>TuplePat</identifier></name>
+      <type><identifier>pt</identifier> <identifier>list</identifier></type>
+    </con>
+    <con>
+      <name><identifier>ListPat</identifier></name>
+      <type><identifier>pt</identifier> <identifier>list</identifier></type>
+    </con>
+    <con>
+      <name><identifier>ConPat</identifier></name>
+      <type><identifier>pt</identifier></type>
+    </con>
+    <con>
+      <name><identifier>ConstrPat</identifier></name>
+      <type><identifier>pt</identifier> * <identifier>pt</identifier> <identifier>option</identifier></type>
+    </con>
+    <con>
+      <name><identifier>TyAnnPat</identifier></name>
+      <type><identifier>pt</identifier> * <identifier>pt</identifier></type>
+    </con>
+    <con>
+      <name><identifier>IdPat</identifier></name>
+      <type><identifier>pt</identifier></type>
+    </con>
+    <con>
+      <name><identifier>TyArrow</identifier></name>
+      <type><identifier>pt</identifier> * <identifier>pt</identifier></type>
+    </con>
+    <con>
+      <name><identifier>TyPair</identifier></name>
+      <type><identifier>pt</identifier> * <identifier>pt</identifier></type>
+    </con>
+    <con>
+      <name><identifier>TyCon</identifier></name>
+      <type><identifier>pt</identifier> * <identifier>pt</identifier></type>
+    </con>
+    <con>
+      <name><identifier>TyName</identifier></name>
+      <type><identifier>pt</identifier></type>
+    </con>
+    <con>
+      <name><identifier>ValDec</identifier></name>
+      <type><identifier>pt</identifier> <identifier>list</identifier></type>
+    </con>
+    <con>
+      <name><identifier>TypeDec</identifier></name>
+      <type><identifier>pt</identifier> <identifier>list</identifier></type>
+    </con>
+    <con>
+      <name><identifier>DatatypeAssign</identifier></name>
+      <type><identifier>pt</identifier> * <identifier>pt</identifier></type>
+    </con>
+    <con>
+      <name><identifier>DatatypeDec</identifier></name>
+      <type><identifier>pt</identifier> <identifier>list</identifier></type>
+    </con>
+    <con>
+      <name><identifier>FunDec</identifier></name>
+      <type><identifier>pt</identifier> <identifier>list</identifier> <identifier>list</identifier></type>
+    </con>
+    <con>
+      <name><identifier>ValBind</identifier></name>
+      <type><identifier>pt</identifier> * <identifier>pt</identifier></type>
+    </con>
+    <con>
+      <name><identifier>TypeBind</identifier></name>
+      <type><identifier>pt</identifier> <identifier>list</identifier> * <identifier>pt</identifier> * <identifier>pt</identifier></type>
+    </con>
+    <con>
+      <name><identifier>FunMatch</identifier></name>
+      <type><identifier>pt</identifier> * <identifier>pt</identifier> <identifier>list</identifier> * <identifier>pt</identifier> <identifier>option</identifier> * <identifier>pt</identifier></type>
+    </con>
+    <con>
+      <name><identifier>DataBind</identifier></name>
+      <type><identifier>pt</identifier> <identifier>list</identifier> * <identifier>pt</identifier> * <identifier>pt</identifier> <identifier>list</identifier></type>
+    </con>
+    <con>
+      <name><identifier>ConBind</identifier></name>
+      <type><identifier>pt</identifier> * <identifier>pt</identifier> <identifier>option</identifier></type>
+    </con>
+    <con>
+      <name><identifier>StructDec</identifier></name>
+      <type><identifier>pt</identifier> <identifier>list</identifier></type>
+    </con>
+    <con>
+      <name><identifier>StructBind</identifier></name>
+      <type><identifier>pt</identifier> * <identifier>pt</identifier></type>
+    </con>
+    <con>
+      <name><identifier>Structure</identifier></name>
+      <type><identifier>pt</identifier> <identifier>list</identifier></type>
+    </con>  </body>
+</datatype>
+</dec>
+
+
+
+   <dec>
+<fun>
+  <name><identifier>pp</identifier></name>
+  <params></params>
+</fun></dec>
+
+
+
+   <dec>
+<fun>
+  <name><identifier>prettyPrint</identifier></name>
+  <params><identifier>p</identifier></params>
+</fun></dec>
+
+
+</struct></body>
+</structure>
+</dec>
+
+
+
+<dec>
+<structure>
+  <name><identifier>KuruParser</identifier></name>
+  <body><struct>
+<dec>
+<structure>
+  <name><identifier>P</identifier></name>
+  <body><identifier>ParseTree</identifier></body>
+</structure>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>srcFileLineNum</identifier></name>
+  <body></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_char</identifier></name>
+  <body><identifier>string</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_literal</identifier></name>
+  <body><identifier>string</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_sp</identifier></name>
+  <body><identifier>string</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res__</identifier></name>
+  <body><identifier>string</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_comment</identifier></name>
+  <body><identifier>string</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_commentc</identifier></name>
+  <body><identifier>string</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_num</identifier></name>
+  <body><identifier>string</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_numdig</identifier></name>
+  <body><identifier>string</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_int</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_real</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_negat</identifier></name>
+  <body><identifier>bool</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_charconst</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_string</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_stringcont</identifier></name>
+  <body><identifier>string</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_con</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_reserved</identifier></name>
+  <body><identifier>string</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_nonid</identifier></name>
+  <body><identifier>string</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_keyword</identifier></name>
+  <body><identifier>string</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_id</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_idrest</identifier></name>
+  <body><identifier>string</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_var</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_longid</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_exp</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_expel</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_explist</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>list</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_expseq</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>list</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_match</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>list</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_pat</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_patel</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_patlist</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>list</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_patapp</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>list</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_typ</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_typel</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_tyannopt</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>option</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_declist</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>list</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_dec</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_valbind</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>list</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_tyvarlist</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>list</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_tyvars</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>list</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_typebind</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>list</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_funbind</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>list</identifier> <identifier>list</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_funmatch</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>list</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_databind</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>list</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_conbind</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>list</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_strbind</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>list</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_str</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_programel</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<typebind>
+  <tyvars></tyvars>
+  <name><identifier>res_program</identifier></name>
+  <body><longid>
+  <prefix><identifier>P</identifier></prefix>
+  <identifier><identifier>pt</identifier></identifier>
+</longid> <identifier>list</identifier> <identifier>option</identifier></body>
+</typebind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_program</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_program</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_programel</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_programel</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_str</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_str</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_strbind</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_strbind</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_conbind</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_conbind</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_databind</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_databind</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_funmatch</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_funmatch</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_funbind</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_funbind</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_typebind</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_typebind</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_tyvars</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_tyvars</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_tyvarlist</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_tyvarlist</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_valbind</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_valbind</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_dec</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_dec</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_declist</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_declist</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_tyannopt</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_tyannopt</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_typel</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_typel</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_typ</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_typ</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_patapp</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_patapp</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_patlist</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_patlist</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_patel</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_patel</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_pat</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_pat</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_match</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_match</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_expseq</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_expseq</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_explist</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_explist</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_expel</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_expel</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_exp</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_exp</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_longid</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_longid</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_var</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_var</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_idrest</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_idrest</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_id</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_id</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_keyword</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_keyword</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_nonid</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_nonid</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_reserved</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_reserved</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_con</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_con</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_stringcont</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_stringcont</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_string</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_string</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_charconst</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_charconst</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_negat</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_negat</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_real</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_real</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_int</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_int</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_num</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_num</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_commentc</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_commentc</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_comment</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_comment</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache__</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res__</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>cache_sp</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> * <identifier>int</identifier> * <identifier>res_sp</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<fun>
+  <name><identifier>$</identifier></name>
+  <params><identifier>f</identifier></params>
+</fun></dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>errorPos</identifier></name>
+  <body></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<fun>
+  <name><identifier>setErrPos</identifier></name>
+  <params><identifier>c</identifier></params>
+</fun></dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>debugVerbose</identifier></name>
+  <body></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<fun>
+  <name><identifier>debug_print</identifier></name>
+  <params><identifier>s</identifier></params>
+</fun></dec>
+
+
+
+   <dec>
+<fun>
+  <name><identifier>notNone</identifier></name>
+  <params><pattern>
+  <type>'<identifier>a</identifier> <identifier>option</identifier></type>
+  <body><identifier>NONE</identifier></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+
+   <dec>
+<fun>
+  <name><identifier>cachefind</identifier></name>
+  <params></params>
+</fun></dec>
+
+
+
+   <dec>
+<fun>
+  <name><identifier>cacheupd</identifier></name>
+  <params></params>
+</fun></dec>
+
+
+
+   <dec>
+<fun>
+  <name><identifier>error</identifier></name>
+  <params></params>
+</fun></dec>
+
+
+
+   <dec>
+<fun>
+  <name><identifier>kupeg_start</identifier></name>
+  <params><identifier>s</identifier></params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_char</identifier></name>
+  <params></params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_alpha</identifier></name>
+  <params></params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_digit</identifier></name>
+  <params></params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>literal</identifier></name>
+  <params></params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_sp</identifier></name>
+  <params><pattern>
+  <type><identifier>res_sp</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse__</identifier></name>
+  <params><pattern>
+  <type><identifier>res__</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_comment</identifier></name>
+  <params><pattern>
+  <type><identifier>res_comment</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_commentc</identifier></name>
+  <params><pattern>
+  <type><identifier>res_commentc</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_num</identifier></name>
+  <params><pattern>
+  <type><identifier>res_num</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_int</identifier></name>
+  <params><pattern>
+  <type><identifier>res_int</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_real</identifier></name>
+  <params><pattern>
+  <type><identifier>res_real</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_negat</identifier></name>
+  <params><pattern>
+  <type><identifier>res_negat</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_charconst</identifier></name>
+  <params><pattern>
+  <type><identifier>res_charconst</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_string</identifier></name>
+  <params><pattern>
+  <type><identifier>res_string</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_stringcont</identifier></name>
+  <params><pattern>
+  <type><identifier>res_stringcont</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_con</identifier></name>
+  <params><pattern>
+  <type><identifier>res_con</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_reserved</identifier></name>
+  <params><pattern>
+  <type><identifier>res_reserved</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_nonid</identifier></name>
+  <params><pattern>
+  <type><identifier>res_nonid</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_keyword</identifier></name>
+  <params><pattern>
+  <type><identifier>res_keyword</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_id</identifier></name>
+  <params><pattern>
+  <type><identifier>res_id</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_idrest</identifier></name>
+  <params><pattern>
+  <type><identifier>res_idrest</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_var</identifier></name>
+  <params><pattern>
+  <type><identifier>res_var</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_longid</identifier></name>
+  <params><pattern>
+  <type><identifier>res_longid</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_exp</identifier></name>
+  <params><pattern>
+  <type><identifier>res_exp</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_expel</identifier></name>
+  <params><pattern>
+  <type><identifier>res_expel</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_explist</identifier></name>
+  <params><pattern>
+  <type><identifier>res_explist</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_expseq</identifier></name>
+  <params><pattern>
+  <type><identifier>res_expseq</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_match</identifier></name>
+  <params><pattern>
+  <type><identifier>res_match</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_pat</identifier></name>
+  <params><pattern>
+  <type><identifier>res_pat</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_patel</identifier></name>
+  <params><pattern>
+  <type><identifier>res_patel</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_patlist</identifier></name>
+  <params><pattern>
+  <type><identifier>res_patlist</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_patapp</identifier></name>
+  <params><pattern>
+  <type><identifier>res_patapp</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_typ</identifier></name>
+  <params><pattern>
+  <type><identifier>res_typ</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_typel</identifier></name>
+  <params><pattern>
+  <type><identifier>res_typel</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_tyannopt</identifier></name>
+  <params><pattern>
+  <type><identifier>res_tyannopt</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_declist</identifier></name>
+  <params><pattern>
+  <type><identifier>res_declist</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_dec</identifier></name>
+  <params><pattern>
+  <type><identifier>res_dec</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_valbind</identifier></name>
+  <params><pattern>
+  <type><identifier>res_valbind</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_tyvarlist</identifier></name>
+  <params><pattern>
+  <type><identifier>res_tyvarlist</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_tyvars</identifier></name>
+  <params><pattern>
+  <type><identifier>res_tyvars</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_typebind</identifier></name>
+  <params><pattern>
+  <type><identifier>res_typebind</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_funbind</identifier></name>
+  <params><pattern>
+  <type><identifier>res_funbind</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_funmatch</identifier></name>
+  <params><pattern>
+  <type><identifier>res_funmatch</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_databind</identifier></name>
+  <params><pattern>
+  <type><identifier>res_databind</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_conbind</identifier></name>
+  <params><pattern>
+  <type><identifier>res_conbind</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_strbind</identifier></name>
+  <params><pattern>
+  <type><identifier>res_strbind</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_str</identifier></name>
+  <params><pattern>
+  <type><identifier>res_str</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_programel</identifier></name>
+  <params><pattern>
+  <type><identifier>res_programel</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+<dec>
+<fun>
+  <name><identifier>parse_program</identifier></name>
+  <params><pattern>
+  <type><identifier>res_program</identifier></type>
+  <body></body>
+</pattern>
+</params>
+</fun></dec>
+
+
+</struct></body>
+</structure>
+</dec>
+
+
+
+<dec>
+<structure>
+  <name><identifier>Main</identifier></name>
+  <body><struct>
+<dec>
+<valbind>
+  <name><identifier>args</identifier></name>
+  <body></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<fun>
+  <name><identifier>parseArgs</identifier></name>
+  <params></params>
+</fun></dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>args'</identifier></name>
+  <body></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name></name>
+  <body></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>linepositions</identifier></name>
+  <body><typedexpr>
+  <expr></expr>
+  <type><identifier>int</identifier> <identifier>list</identifier> <identifier>ref</identifier></type>
+</typedexpr></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>p</identifier></name>
+  <body></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<fun>
+  <name><identifier>readLines</identifier></name>
+  <params><identifier>fp</identifier></params>
+</fun></dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>filename</identifier></name>
+  <body></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>f</identifier></name>
+  <body></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>buf</identifier></name>
+  <body></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name></name>
+  <body></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>p</identifier></name>
+  <body></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name></name>
+  <body></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<valbind>
+  <name><identifier>pretty</identifier></name>
+  <body></body>
+</valbind>
+</dec>
+
+
+
+   <dec>
+<fun>
+  <name><identifier>main</identifier></name>
+  <params></params>
+</fun></dec>
+
+
+</struct></body>
+</structure>
+</dec>
+
+
+
+<dec>
+<valbind>
+  <name></name>
+  <body></body>
+</valbind>
+</dec>
+
+
+</file>
+
+</kdoc>
