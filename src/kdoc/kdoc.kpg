@@ -16,10 +16,14 @@
 *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *******************************************************************************
 *  This file:
-*    Basic grammar to extract Kdoc-style comments from Kuru code.
+*    Primary Kuru PEG grammar. 
+*
+*  Partially derived from http://www.mpi-sws.org/~rossberg/sml.html
+*  For a description of the grammar, see: 
+*  http://www.kuru-lang.org/documentation/kuru-grammar
 ******************************************************************************)
 
-%name KuruParser
+%name KdocParser
 %start program
 
 structure P = ParseTree
@@ -30,24 +34,46 @@ structure P = ParseTree
 %nonterm commentc of string
 %nonterm kdocstr of string
 %nonterm kdocstrc of string
+%nonterm ko of string
+%nonterm num of string
+%nonterm numdig of string
+%nonterm int of P.pt
+%nonterm real of P.pt
+%nonterm negat of bool
+%nonterm charconst of P.pt
+%nonterm string of P.pt
+%nonterm stringcont of string
+%nonterm con of P.pt
 %nonterm reserved of string
 %nonterm nonid of string
 %nonterm keyword of string
-%nonterm id of string 
+%nonterm id of P.pt
 %nonterm idrest of string
-%nonterm var of string
-%nonterm longid of string
-%nonterm typ of string
-%nonterm typel of string
-%nonterm typapp of string
+%nonterm var of P.pt
+%nonterm longid of P.pt
+%nonterm exp of P.pt
+%nonterm expel of P.pt
+%nonterm expapp of P.pt list
+%nonterm explist of P.pt list
+%nonterm expseq of P.pt list
+%nonterm match of P.pt list
+%nonterm pat of P.pt
+%nonterm patel of P.pt
+%nonterm patlist of P.pt list
+%nonterm patapp of P.pt list
+%nonterm typ of P.pt
+%nonterm typel of P.pt
+%nonterm tyannopt of P.pt option
+%nonterm typairlist of P.pt list
+%nonterm typapp of P.pt list
 %nonterm declist of P.pt list
 %nonterm dec of P.pt
 %nonterm valbind of P.pt list
 %nonterm tyvarlist of P.pt list
 %nonterm tyvars of P.pt list
 %nonterm typebind of P.pt list
-%nonterm funbind of P.pt list list
-%nonterm funmatch of P.pt list
+%nonterm funbind of P.pt list
+%nonterm funmatch of P.pt 
 %nonterm databind of P.pt list
 %nonterm conbind of P.pt list
 %nonterm strbind of P.pt list
@@ -69,7 +95,7 @@ fun escape "n" = "\n"
 sp             <- " " / "\n" -> ((srcFileLineNum := !srcFileLineNum + 1);"\n") / "\t".
 _              <- sp _ / comment _ / .
 
-comment        <- !"(**" "(*" c: commentc "*)" -> ("").
+comment        <- !"(**" "(*" commentc "*)" -> ("").
 
 commentc       <- !"*)" char commentc
                 / .
@@ -77,6 +103,33 @@ commentc       <- !"*)" char commentc
 kdocstr			<- "(**" c: kdocstrc "*)" -> ($c).
 
 kdocstrc			<- !"*)" c: char k: kdocstrc -> ($c ^ $k)
+				    / .
+
+ko					<- _ k: kdocstr -> ($k)
+                / -> ("").
+
+% Constants
+num            <- d: digit n: (digit*) -> (String.concat($d :: $n)). 
+
+int            <- n: negat d: num -> (P.Int ($n,$d,!pos)).
+
+real           <- n1: negat d1: num "." d2: num "e" n2: negat d3: num ->
+                  (P.Real ($n1,$d1,$d2,SOME ($n2,$d3),!pos))
+                / n1: negat d1: num "." d2: num ->
+                  (P.Real ($n1,$d1,$d2,NONE,!pos)).
+
+negat          <- "~" -> (true)
+                /     -> (false).
+
+charconst      <- "#" "\"" c: char "\"" -> (P.Char ($c,!pos)).
+
+string         <- "\"" s: stringcont "\"" _ -> (P.String ($s,!pos)).
+
+stringcont     <- !"\\" !"\"" c: char s: stringcont -> ($c ^ $s)
+                / b: "\\" c: char s: stringcont -> ((escape ($c)) ^ $s)
+                / -> ("").
+
+con            <- real / int / charconst / string.
 
 % Identifiers
 
@@ -86,50 +139,138 @@ reserved       <- "!" / "%" / "&" / "$" / "+" / "-" /  "/"
                 / "^" / "*".
 
 nonid          <- "(" / ")" / "[" / "]" / "." / ";" / "," / "|" /
-                  "~" / "#" / ":" / "=>" / "=". 
+                  "~" / "#" / ":" / "=>" / "=" / "(**". 
 
-keyword        <- "val" / "datatype"
-                / "type" / "fun" / "and" / 
-                  "structure" 
-                  / "infixr" / "infix".
+keyword        <- "val" / "let" / "if" / "then" / "else" / "datatype"
+                / "type" / "fn" / "fun" / "and" / "end" / "in" /
+                  "structure" / "struct" / "of" / "case" /
+                  "handle" / "raise" / "infixr" / "infix".
 
 id             <-  r1: reserved r2: (reserved*) -> 
-                  (String.concat($r1 :: $r2))
+                  (P.Ident(String.concat($r1 :: $r2),!pos))
                 / k: keyword i1: idrest i2: (idrest*) -> 
-                  ($k ^ $i1 ^ String.concat($i2))
+                  (P.Ident($k ^ $i1 ^String.concat($i2),!pos))
                 / !keyword !nonid l: alpha r: (idrest*) -> 
-                  (String.concat ($l :: $r))
+                  (P.Ident(String.concat ($l :: $r),!pos))
                 . 
 
 idrest         <- !sp !nonid !reserved c: char -> ($c).
 
-var            <- "'" i: id -> ("'" ^ $i).
+var            <- "'" i: id -> (P.Var ($i,!pos)).
 
-longid         <- i: id "." l: longid -> ($i ^ "." ^ $l)
+longid         <- i: id "." l: longid -> (P.LongId ($i,$l,!pos))
                 / i: id -> ($i).
+
+% Expressions
+
+exp            <- _ "raise" _ e: exp -> (P.Raise ($e,!pos))
+                / _ e1: expapp _ "andalso" _ e2: exp ->
+                  (P.AndAlso(P.AppList($e1,!pos),$e2,!pos))
+                / _ e1: expapp _ "orelse" _ e2: exp ->
+                  (P.OrElse(P.AppList($e1,!pos),$e2,!pos))
+                / _ e: expapp _ "handle" _ m: match ->
+                  (P.HandleExp(P.AppList($e,!pos),$m,!pos))
+                / _ e: expapp _ ":" _ t: typ ->
+                  (P.TyAnn (P.AppList ($e,!pos),$t,!pos))
+                / _ e1: expapp _"="_ e2: exp -> 
+                  (P.Infix (P.AppList ($e1,!pos),P.Ident ("=",!pos),$e2,!pos))
+                / _ e1: expapp -> (P.AppList ($e1,!pos)).
+                
+expel          <- "op" _ l: longid -> (P.OpExp ($l,!pos))
+                / "let"_ d: declist _"in"_ 
+                     e1: exp _ ";"_ e2: expseq _ "end" ->
+                        (P.LetExp($d,P.SeqExp($e1 :: $e2,!pos),!pos))
+                / "let"_ d: declist _"in"_ e: exp _ "end" ->
+                        (P.LetExp($d,$e,!pos))
+                / con
+                / "(" _ e1: exp _ "," e2: explist _ ")" ->
+                 (P.TupleExp ($e1 :: $e2,!pos))
+                / "(" _ e1: exp _ ";" e2: expseq _ ")" ->
+                  (P.SeqExp ($e1 :: $e2,!pos))
+                / "(" _ e: exp _ ")" -> ($e)
+                / "()" -> (P.UnitExp (!pos))
+                / "[" _ e1: exp _ "," _ e2: explist _ "]" ->
+                  (P.ListExp ($e1 :: $e2,!pos))
+                / "[" _ e: exp _ "]" -> (P.ListExp ([$e],!pos))
+                / "[" _ "]" -> (P.ListExp ([],!pos))
+                / "if"_ e1: exp _"then"_ e2: exp _"else"_ e3: exp
+                   -> (P.IfExp($e1,$e2,$e3,!pos))
+                / "while"_ e1: exp _"do"_ e2: exp ->
+                  (P.WhileExp($e1,$e2,!pos))
+                / "case"_ e: exp _"of"_ m: match ->
+                  (P.CaseExp($e,$m,!pos))
+                / "fn"_ m: match -> (P.FnExp($m,!pos))
+                / longid 
+                .
+
+expapp         <- !"(**" e1: expel _ e2: expapp -> ($e1 :: $e2)
+                / !"(**" e1: expel -> ([$e1]).
+
+explist        <- _ e1: exp _","_ e2: explist -> 
+                  ($e1 :: $e2)
+                / _ e: exp -> (([$e])).
+
+expseq         <- _ e1: exp _";"_ e2: expseq -> 
+                  ($e1 :: $e2)
+                / _ e: exp -> (([$e])).
+
+match          <- _ p: pat _"=>"_ e: exp _ "|"_ m: match ->
+                  ((P.Match($p,$e,!pos)) :: $m)
+                / _ p: pat _"=>"_ e: exp ->
+                  ([P.Match($p,$e,!pos)]).
+
+% Patterns
+
+pat            <- _ p1: patel _"as"_ p2: pat -> (P.AsPat($p1,$p2,!pos))
+                / _"("_ p1: patel _ "::" _ p2: pat _")" ->
+                  (P.InfixPat($p1,P.Ident ("::",!pos),$p2,!pos))
+                / _ p: patel _ ":"_ t: typ -> (P.TyAnnPat ($p,$t,!pos))
+                / _ patel.
+
+patel          <- "_" -> (P.WildcardPat (!pos))
+                / "(" _ p1: pat _ "," _ p2: patlist _ ")" ->
+                  (P.TuplePat ($p1 :: $p2,!pos))
+                / i: longid _ p: patel -> 
+                     (P.ConstrPat ($i,SOME ($p),!pos))
+                / "(" _ p: pat _ ")" -> ($p)
+                / "()" -> (P.UnitPat (!pos))
+                / "[" _ p: patlist _ "]" -> (P.ListPat ($p,!pos))
+                / "[" _ "]" -> (P.ListPat ([],!pos))
+                / c: con -> (P.ConPat ($c,!pos))
+                / i: longid -> (P.IdPat ($i,!pos))
+                .
+
+patlist        <- _ p1: pat _ "," _ p2: patlist -> ($p1 :: $p2)
+                / _ p1: pat _ -> ([$p1]).
+
+patapp         <- _ p1: pat _ p2: patlist -> ($p1 :: $p2)
+                / _ p1: pat -> ([$p1]).
 
 % Types
 
 typ            <- _ t1: typel _ "->" _ t2: typ ->
-                     ($t1 ^ " -> " ^ $t2)
+                     (P.TyArrow ($t1,$t2,!pos))
                 / _ t1: typapp ->
-                     (String.concatWith " * " ($t1))
+                     (P.TyPair ($t1,!pos))
                 / _ t1: typel _ t2: typ ->
-                     ($t1 ^ " " ^ $t2) 
+                     (P.TyCon ($t1,$t2,!pos))
                 / _ t: typel -> ($t).
 
 typel          <- v: var -> ($v)
-                / !"*" i: longid -> ($i)
-                / "(" _ t: typ _ ")" -> ("(" ^ $t ^ ")").
+                / !"*" i: longid -> (P.TyName ($i,!pos))
+                / "(" _ t: typ _ ")" -> ($t).
 
 typapp			<- t1: typel _"*"_ t2: typapp ->
-                  ($t1 ^ " * " ^ $t2)
+                  ($t1 :: $t2)
 				    / t1: typel _"*"_ t2: typ ->
-                  ($t1 ^ " * " ^ $t2).
+                  ([$t1,$t2]).
+
+tyannopt       <- _ ":" _ t: typ -> (SOME ($t))
+                / -> (NONE).
 
 % Declarations
 
-declist        <- dec*.
+declist        <- programel*.
 
 dec            <- _ "val" _ v: valbind -> (P.ValDec($v,!pos))
                 / _ "type" _ v: typebind -> (P.TypeDec($v,!pos))
@@ -137,7 +278,7 @@ dec            <- _ "val" _ v: valbind -> (P.ValDec($v,!pos))
                   -> (P.DatatypeAssign ($i,$l,!pos))
                 / _ "datatype" _ d: databind -> 
                      (P.DatatypeDec ($d,!pos))
-                / _"fun" _ f: funbind -> (P.FunDec ($f,!pos))
+                / _"fun" _ f: funbind -> (P.FunDec ([$f],!pos))
                 / _"structure" _ s: strbind -> (P.StructDec ($s,!pos))
                 / _"infixr" _ d: digit _ i: id -> (P.InfixrDec ($d,$i,!pos))
                 / _"infixr" _ i: id -> (P.InfixrDec ("",$i,!pos))
@@ -145,47 +286,48 @@ dec            <- _ "val" _ v: valbind -> (P.ValDec($v,!pos))
                 / _"infix" _ i: id -> (P.InfixDec ("",$i,!pos))
                 .
 
-valbind        <- "rec" _ v1: valbind ->
-                  ([P.ValRec ($v1,!pos)])
-                / "rec" _ v: valbind _ ->
-                  ([P.ValRec ($v,!pos)])
-                / p: pat _"="_ e: exp _ "and" v: valbind ->
-                  (P.ValBind ($p,$e,!pos) :: $v)
-                / p: pat _"="_ e: exp ->
-                  ([P.ValBind ($p,$e,!pos)]).
+valbind        <- k: ko _ "rec" _ v1: valbind ->
+                  ([P.DocNode ($k,P.ValRec ($v1,!pos))])
+                / k: ko _ "rec" _ v: valbind _ ->
+                  ([P.DocNode ($k,P.ValRec ($v,!pos))])
+                / k: ko _ p: pat _"="_ e: exp _ "and" v: valbind ->
+                  (P.DocNode ($k,P.ValBind ($p,$e,!pos)) :: $v)
+                / k: ko _ p: pat _"="_ e: exp ->
+                  ([P.DocNode ($k,P.ValBind ($p,$e,!pos))]).
 
-tyvarlist      <- _ v: var _ "," _ t: tyvarlist -> ($v ^ ", " ^ $t)
-                / _ v: var -> ($v).
+tyvarlist      <- _ v: var _ "," _ t: tyvarlist -> ($v :: $t)
+                / _ v: var -> ([$v]).
 
-tyvars         <- _"("_ l: tyvarlist _ ")" -> ("(" ^ $l ^ ")")
-                / _ v: var -> ($v)
-                / -> ("").
+tyvars         <- _"("_ l: tyvarlist _ ")" -> ($l)
+                / _ v: var -> ([$v])
+                / -> ([]).
 
-typebind       <- _ tv: tyvars _ i: id _"="_ t: typ _ "and" 
-                     l: typebind -> (P.TypeBind($tv,
-                                     P.TyName ($i,!pos),$t,!pos) :: $l)
-                / _ tv: tyvars _ i: id _"="_ t: typ ->
-                     ([P.TypeBind($tv,P.TyName ($i,!pos),$t,!pos)]).
+typebind       <- _ k: ko _ tv: tyvars _ i: id _"="_ t: typ _ "and" 
+                     l: typebind -> (P.DocNode ($k,P.TypeBind($tv,
+                                     P.TyName ($i,!pos),$t,!pos)) :: $l)
+                / _ k: ko _ tv: tyvars _ i: id _"="_ t: typ ->
+                     ([P.DocNode ($k,P.TypeBind($tv,P.TyName ($i,!pos),$t,!pos))]).
 
-funbind        <- _ f: funmatch _ "and" _ l: funbind ->
-                 ($f :: $l)
-                / _ f: funmatch -> ([$f]).
+funbind        <- _ k: ko _ f: funmatch _ "and" _ l: funbind ->
+                 (P.DocNode ($k,$f) :: $l)
+                / _ k: ko _ f: funmatch -> ([P.DocNode($k,$f)]).
 
 funmatch       <- "op" _ i: id _ l: patapp _ t: tyannopt _"="_
                    e: exp _ "|"_ f: funmatch ->
-                     (P.FunMatch (P.OpExp ($i,!pos),$l,$t,$e,!pos) :: $f)
+                     (P.FunMatch (P.OpExp ($i,!pos),$l,$t,$e,!pos))
                 / "op" _ i: id _ l: patapp _ t: tyannopt _"="_
-                   e: exp -> ([P.FunMatch(P.OpExp ($i,!pos),$l,$t,$e,!pos)])
+                   e: exp -> (P.FunMatch(P.OpExp ($i,!pos),$l,$t,$e,!pos))
                 / i: id l: patapp t: tyannopt _"="_ e: exp _
                      "|"_ f: funmatch -> 
-                     (P.FunMatch ($i,$l,$t,$e,!pos) :: $f)
+                     (P.FunMatch ($i,$l,$t,$e,!pos))
                 / i: id l: patapp t: tyannopt _"="_ e: exp ->
-                     ([P.FunMatch ($i,$l,$t,$e,!pos)]).
+                     (P.FunMatch ($i,$l,$t,$e,!pos)).
 
-databind       <- _ tv: tyvars _ i: id _ "=" _ c: conbind _ "and" d: databind
-                  -> (P.DataBind($tv,$i,$c,!pos) :: $d)
-                / _ tv: tyvars _ i: id _ "=" _ c: conbind
-                  -> ([P.DataBind($tv,$i,$c,!pos)]).
+databind       <- _ k: ko _ tv: tyvars _ i: id _ "=" _ c: conbind _ 
+							"and" d: databind
+                  -> (P.DocNode ($k,P.DataBind($tv,$i,$c,!pos)) :: $d)
+                / _ k: ko _ tv: tyvars _ i: id _ "=" _ c: conbind
+                  -> ([P.DocNode ($k,P.DataBind($tv,$i,$c,!pos))]).
 
 conbind        <- _ i: id _ "of" _ t: typ _"|"_ c: conbind ->
                   (P.ConBind($i,SOME ($t),!pos) :: $c)
@@ -196,16 +338,17 @@ conbind        <- _ i: id _ "of" _ t: typ _"|"_ c: conbind ->
                 / _ i: id ->
                   ([P.ConBind($i,NONE,!pos)]).
 
-strbind        <- _ i: id _ "=" _ s: str _ "and" _ st: strbind ->
-                  (P.StructBind($i,$s,!pos) :: $st)
-                / _ i: id _ "=" _ s: str ->
-                  ([P.StructBind($i,$s,!pos)]).
+strbind        <- _ k: ko _ i: id _ "=" _ s: str _ "and" _ st: strbind ->
+                  (P.DocNode($k,P.StructBind($i,$s,!pos)) :: $st)
+                / _ k: ko _ i: id _ "=" _ s: str ->
+                  ([P.DocNode($k,P.StructBind($i,$s,!pos))]).
 
 str            <- _ "struct" _ d: declist _ "end"
                   -> (P.Structure($d,!pos))
                 / longid.
 
-programel      <- _ dec.
+programel      <- _ k: ko _ d: dec ->
+							(P.DocNode ($k,$d)).
 
 program        <- p1: programel _ ";" _ p2: program -> ($p1 :: $p2)
                 / p1: programel _ p2: program -> ($p1 :: $p2)
