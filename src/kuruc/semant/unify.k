@@ -78,6 +78,9 @@ struct
          unify ((ListPair.zip (l1,l2)) @ rest)
      | unify' ((T.CONSTR (l1,lt),T.CONSTR (r1,rt)) :: rest) =
 	  		unify ((ListPair.zip (l1,r1)) @ [(lt,rt)] @ rest)
+     | unify' ((T.POLY i, T.POLY j) :: rest) =
+         if i = j then unify rest else 
+            raise Fail ("Type error: Polymorphic unification")
      | unify' ((t1,t2) :: rest) = 
          raise Fail ("Type error: " ^ T.prettyPrint t1 ^ " != " ^ 
                                       T.prettyPrint t2)

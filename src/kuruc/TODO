@@ -1,0 +1,5 @@
+* Implement "open"
+* Implement type classes
+* Implement exceptions
+* Implement escapes in character constants.
+* Fix signature ascription.

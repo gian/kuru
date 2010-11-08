@@ -75,6 +75,14 @@ structure P = ParseTree
 %nonterm conbind of P.pt list
 %nonterm strbind of P.pt list
 %nonterm str of P.pt
+%nonterm sign of P.pt
+%nonterm sdeclist of P.pt list
+%nonterm sdec of P.pt
+%nonterm sigasc_opt of P.ascription
+%nonterm valdesc of P.pt list
+%nonterm typedesc of P.pt list
+%nonterm sigbind of P.pt list
+%nonterm strdesc of P.pt list
 %nonterm programel of P.pt
 %nonterm program of P.pt list
 
@@ -133,7 +141,8 @@ nonid          <- "(" / ")" / "[" / "]" / "." / ";" / "," / "|" /
 keyword        <- "val" / "let" / "if" / "then" / "else" / "datatype"
                 / "type" / "fn" / "fun" / "and" / "end" / "in" /
                   "structure" / "struct" / "of" / "case" /
-                  "handle" / "raise" / "infixr" / "infix".
+                  "handle" / "raise" / "infixr" / "infix" /
+                  "signature" / "sig" / "exception" .
 
 id             <-  r1: reserved r2: (reserved*) -> 
                   (P.Ident(String.concat($r1 :: $r2),!pos))
@@ -145,7 +154,8 @@ id             <-  r1: reserved r2: (reserved*) ->
 
 idrest         <- !sp !nonid !reserved c: char -> ($c).
 
-var            <- "'" i: id -> (P.Var ($i,!pos)).
+var            <- "''" i: id -> (P.Var ($i,!pos))
+                / "'" i: id -> (P.Var ($i,!pos)).
 
 longid         <- i: id "." l: longid -> (P.LongId ($i,$l,!pos))
                 / i: id -> ($i).
@@ -261,6 +271,8 @@ tyannopt       <- _ ":" _ t: typ -> (SOME ($t))
 
 declist        <- dec*.
 
+sdeclist        <- sdec*.
+
 dec            <- _ "val" _ v: valbind -> (P.ValDec($v,!pos))
                 / _ "type" _ v: typebind -> (P.TypeDec($v,!pos))
                 / _ "datatype" _ i: id _"="_ "datatype"_ l: longid
@@ -274,6 +286,30 @@ dec            <- _ "val" _ v: valbind -> (P.ValDec($v,!pos))
                 / _"infix" _ d: digit _ i: id -> (P.InfixDec ($d,$i,!pos))
                 / _"infix" _ i: id -> (P.InfixDec ("",$i,!pos))
                 .
+
+sdec           <- _"val" _ v: valdesc -> (P.ValDesc($v,!pos))
+                / _ "type" _ v: typedesc -> (P.TypeDesc($v,!pos))
+                / _ "datatype" _ i: id _"="_ "datatype"_ l: longid
+                  -> (P.DatatypeAssign ($i,$l,!pos))
+                / _ "datatype" _ d: databind -> 
+                     (P.DatatypeDec ($d,!pos))
+                / _ "structure" _ s: strdesc -> (P.StructDesc($s,!pos))
+                .
+
+valdesc        <- _ i: id _ ":" _ t: typ _ "and" _ v: valdesc ->
+                     (P.ValDescBind (P.IdPat($i,!pos),$t,!pos) :: $v)
+                / _ i: id _ ":" _ t: typ ->
+                     ([P.ValDescBind (P.IdPat($i,!pos),$t,!pos)]).
+
+typedesc        <- _ t: tyvars _ i: id _ "and" _ v: typedesc ->
+                     (P.TypeDescBind ($t,$i,!pos) :: $v)
+                 / _ t: tyvars _ i: id ->
+                     ([P.TypeDescBind ($t,$i,!pos)]).
+
+strdesc        <- _ i: id _ ":" _ s: sign _ "and" _ st: strdesc
+                  -> (P.StructDescBind ($i,$s,!pos) :: $st)
+                / _ i: id _ ":" _ s: sign ->
+                     ([P.StructDescBind ($i,$s,!pos)]).
 
 valbind        <- "rec" _ v1: valbind ->
                   ([P.ValRec ($v1,!pos)])
@@ -326,16 +362,31 @@ conbind        <- _ i: id _ "of" _ t: typ _"|"_ c: conbind ->
                 / _ i: id ->
                   ([P.ConBind($i,NONE,!pos)]).
 
-strbind        <- _ i: id _ "=" _ s: str _ "and" _ st: strbind ->
-                  (P.StructBind($i,$s,!pos) :: $st)
-                / _ i: id _ "=" _ s: str ->
-                  ([P.StructBind($i,$s,!pos)]).
+strbind        <- _ i: id _ a: sigasc_opt _ "=" _ s: str _ "and" _ st: strbind ->
+                  (P.StructBind($i,$a,$s,!pos) :: $st)
+                / _ i: id _ a: sigasc_opt _ "=" _ s: str ->
+                  ([P.StructBind($i,$a,$s,!pos)]).
+
+sigasc_opt     <- _":>"_ s: sign -> (P.AscribeOpaque ($s))
+                / _":" _ s: sign -> (P.Ascribe ($s))
+                / -> (P.Implicit).
+
+sigbind        <- _ i: id _ "=" _ s: sign _ "and" _ st: sigbind ->
+                  (P.SigBind($i,$s,!pos) :: $st)
+                / _ i: id _ "=" _ s: sign ->
+                  ([P.SigBind($i,$s,!pos)]).
 
 str            <- _ "struct" _ d: declist _ "end"
                   -> (P.Structure($d,!pos))
                 / longid.
 
-programel      <- _ dec.
+sign           <- _ "sig" _ d: sdeclist _ "end"
+                  -> (P.Signature($d,!pos))
+                / _ i: id -> ($i)
+                .
+
+programel      <- _ dec
+                / _"signature" _ s: sigbind -> (P.SigDec ($s,!pos)).
 
 program        <- p1: programel _ ";" _ p2: program -> ($p1 :: $p2)
                 / p1: programel _ p2: program -> ($p1 :: $p2)

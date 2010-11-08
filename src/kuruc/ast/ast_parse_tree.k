@@ -28,6 +28,11 @@ struct
 
    exception IllegalParseTree of string * pos
 
+   val strfresh = ref 0
+
+   fun freshstrid () = (strfresh := 1 + !strfresh;
+                        "_struct" ^ Int.toString (!strfresh))
+
    (* TODO: need to preserve the path in some other TypedAST element... *)
    fun resolveLongId te ve se (LongId (Ident (s,_),r,p)) = 
          (case (S.look (se,S.symbol s)) of
@@ -203,6 +208,23 @@ struct
           in
              prc l
           end
+        | d te ve se (ValDesc (l,p)) =
+          let
+             fun prc [] = raise IllegalParseTree ("Empty ValDec", p)
+               | prc [b] = d te ve se b
+               | prc l =
+                 let
+                    val (te',ve',r) =  
+                     List.foldl (fn (bind, (te',ve',r)) => 
+                                 let
+                                    val (te'',ve'',se'',r') = d te' ve' se bind
+                                 in (te'',ve'',r@r') end)
+                                    (te,ve,[]) l
+             
+                 in (te',ve',se,[A.DMUTUAL(Vector.fromList r, p)]) end
+          in
+             prc l
+          end
         | d te ve se (Seq (a,b,p)) =
           let
              fun f (Seq (a,b,p)) = f a @ f b
@@ -249,6 +271,14 @@ struct
           in
              (te',ve',se,[])
           end
+        | d te ve se (TypeDesc (l,p)) =
+          let
+             val (te',ve',_,_) = 
+                      List.foldl (fn (b,(te',ve',se',_)) => d te' ve' se b) 
+                        (te,ve,se,[]) l
+          in
+             (te',ve',se,[])
+          end
         | d te ve se (DatatypeAssign (a,b,p)) = 
                raise Fail "DatatypeAssign not implemented"
         | d te ve se (DatatypeDec (l,p)) =
@@ -271,6 +301,17 @@ struct
           in
              (te',ve',se,[A.DVAL (s',e,T.UNKNOWN,p)])
           end
+        | d te ve se (ValDescBind (a,b,p)) =
+          let
+             val (te',ve',(s',_,_)) = 
+               case (cpat te ve se a) of (t,v,A.PID x) => (t,v,x)
+                                    | _ => raise IllegalParseTree ("ValBind",p)
+             val e = t te ve se b
+
+             val ve' = S.enter (ve,s',Env.VarEntry e)
+          in
+             (te',ve',se,[A.DVAL (s',A.ENIL p,e,p)])
+          end
         | d te ve se (TypeBind ([],a,b,p)) =  
           let
              val a' = case (t te ve se a) of T.NAME n => n
@@ -280,13 +321,31 @@ struct
           in
              (te',ve,se,[])
           end
-
         | d te ve se (TypeBind (l,a,b,p)) = 
           let
              val l' = map (t te ve se) l
              val a' = case (t te ve se a) of T.NAME n => n
                                         | _ => raise IllegalParseTree ("TypeBind",p)
              val b' = T.CONSTR(l',t te ve se b)
+             val te' = Symbol.enter (te,a',b')
+          in
+             (te',ve,se,[])
+          end
+        | d te ve se (TypeDescBind ([],a,p)) =  
+          let
+             val a' = case (t te ve se a) of T.NAME n => n
+                         | _ => raise IllegalParseTree ("TypeDescBind",p)
+             val b' = T.UNKNOWN 
+             val te' = Symbol.enter (te,a',b')
+          in
+             (te',ve,se,[])
+          end
+        | d te ve se (TypeDescBind (l,a,p)) = 
+          let
+             val l' = map (t te ve se) l
+             val a' = case (t te ve se a) of T.NAME n => n
+                         | _ => raise IllegalParseTree ("TypeDescBind",p)
+             val b' = T.CONSTR(l',T.UNKNOWN)
              val te' = Symbol.enter (te,a',b')
           in
              (te',ve,se,[])
@@ -390,17 +449,41 @@ struct
           in
              (te,ve,se',[A.DMUTUAL (Vector.fromList l',p)])
           end
-        | d te ve se (StructBind (a,Structure (l,p1),p2)) =
+        | d te ve se (StructDesc ([b],p)) =  
+          let
+             val (te',ve',se',b') = d te ve se b
+          in
+             (te,ve,se',b')
+          end
+        | d te ve se (StructDesc (l,p)) =
+          let
+             val (te',ve',se',l') = convert te ve se l
+          in
+             (te,ve,se',[A.DMUTUAL (Vector.fromList l',p)])
+          end
+        | d te ve se (StructBind (a,c,Structure (l,p1),p2)) =
           let
              val a' = case (s te ve se a) of A.EID (n,t,p) => n
                                         | _ => raise Fail "non-id StructBind"
              val (te',ve',se',l') = convert te ve se l
 
              val se'' = S.enter (se,a',Env.StructEntry (te',ve',se'))
+
+             val (se''',c',si) = 
+               case c of Implicit => (se'',NONE,[])
+                       | Ascribe (Ident (sy,p)) => (se'',SOME (S.symbol sy),[])
+                       | Ascribe (Signature x) =>
+                         let
+                            val sid = freshstrid ()
+                            val ns = SigBind (Ident (sid,p1),Signature x,p1)
+                            val (_,_,ss,si) = d te ve se ns
+                         in
+                            (ss,SOME (S.symbol sid),si)
+                         end
           in
-             (te,ve,se'',[A.DSTRUCTURE (a',Vector.fromList l',p1)])
+             (te,ve,se''',si @ [A.DSTRUCTURE (a',c',Vector.fromList l',p1)])
           end
-        | d te ve se (StructBind (a,b,p)) =
+        | d te ve se (StructBind (a,c,b,p)) =
           let
              fun sb se [] = raise Fail ("Empty long-id in struct assign near: " ^
                                        Int.toString p)
@@ -429,6 +512,30 @@ struct
              val se' = S.enter (se,a',b'')
           in
              (te,ve,se',[A.DSTRUCTASSIGN (a',b',p)])
+          end
+        | d te ve se (SigDec ([s],p)) = 
+            d te ve se s
+        | d te ve se (SigDec (s,p)) =
+          let
+             val (te',ve',se',s') =
+               List.foldl (fn (s,(te,ve,se,r)) => 
+                     let
+                        val (te',ve',se',r') = d te ve se s
+                     in
+                        (te,ve,se',r@r')
+                     end) (te,ve,se,[]) s
+          in
+             (te,ve,se',[A.DMUTUAL (Vector.fromList s',p)])
+          end
+        | d te ve se (SigBind (a,Signature (l,_),p)) = 
+          let
+             val a' = case (s te ve se a) of A.EID (n,t,p) => n
+                                        | _ => raise Fail "non-id SigBind"
+             val (te',ve',se',l') = convert te S.empty se l
+
+             val se'' = S.enter (se,a',Env.SigEntry (te',ve',se'))
+          in
+             (te,ve,se'',[A.DSIGNATURE (a',Vector.fromList l',p)])
           end
         | d te ve se t = raise Fail "decl match"
    in

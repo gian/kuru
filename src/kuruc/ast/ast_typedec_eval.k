@@ -78,7 +78,7 @@ struct
         | s te ve (ConBind (a,NONE,p)) = ConBind (s te ve a,NONE,p)
         | s te ve (ConBind (a,SOME b,p)) = ConBind (s te ve a,SOME (s te ve b),p)
         | s te ve (StructDec (l,p)) = StructDec (map (s te ve) l,p)
-        | s te ve (StructBind (a,b,p)) = StructBind (s te ve a, s te ve b,p)
+        | s te ve (StructBind (a,c,b,p)) = StructBind (s te ve a, c, s te ve b,p)
         | s te ve (Structure (l,p)) = Structure (map (s te ve) l,p)
         | s te ve t = t
    in

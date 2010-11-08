@@ -47,7 +47,8 @@ fun main () =
       val cacheNames = ref [] : string list ref
 
       fun startSymbol s = startFn := 
-        ("fun kupeg_start s = valOf (parse_"^s^" (s,ref 0))\n") 
+        ("fun kupeg_start s = (kupeg_reset (); " ^
+         "valOf (parse_"^s^" (s,ref 0)))\n") 
 
 		fun nameSymbol s = nameSy := s
 
@@ -85,6 +86,21 @@ fun main () =
                          ^ "\n" ^ f t
          in
             f (!cacheNames) ^ "\n"
+         end
+
+      fun genReset () =
+         let
+            fun f [] = ""
+              | f (h::t) = "  val _ = cache_" ^ h ^ " := []\n" ^
+                  f t
+         in
+            "and kupeg_reset () =\n" ^
+            "let\n" ^
+            (f (!cacheNames)) ^ "\n" ^
+            "   val _ = errorPos := 0\n" ^
+            "in\n" ^
+            "   ()\n" ^
+            "end\n"
          end
 
       fun readLines fp = 
@@ -209,6 +225,7 @@ fun main () =
       "  (fn NONE => NONE | SOME (k,v) => SOME v)\n" ^
       "   (List.find (fn (p',v) => p = p') (!c))\n" ^
       "fun cacheupd c p v =  (if length (!c) > 25 then (c := []) else (); c := (p,v) :: (!c)) " ^
+      "fun cachereset c = c := []\n" ^
       "fun error () = !errorPos\n" ^
       (!startFn) ^ "\n" ^ 
       "and parse_char(input, pos) = \n" ^
@@ -221,7 +238,7 @@ fun main () =
       "     val c = String.sub(input,(!pos))\n" ^
       "  in\n" ^
       "     if Char.isAlpha c then " ^
-      "SOME (pos := 1 + !pos; String.str c) else NONE\n"^
+      "SOME (pos := 1 + !pos; setErrPos (!pos); String.str c) else NONE\n"^
       "  end\n" ^
       "and parse_digit (input, pos) =\n" ^
       "  if (!pos >= size input) then NONE else\n" ^
@@ -229,12 +246,12 @@ fun main () =
       "     val c = String.sub(input,(!pos))\n" ^
       "  in\n" ^
       "     if Char.isDigit c then " ^
-      "SOME (pos := 1 + !pos; String.str c) else NONE\n"^
+      "SOME (pos := 1 + !pos; setErrPos (!pos); String.str c) else NONE\n"^
       "  end\n" ^
       "and literal(input, pos, str) = \n" ^
       " (setErrPos (!pos);\n" ^
       "  (if (String.substring(input, !pos, size str) = str) then\n" ^
-      "  (pos := !pos + size str; SOME  (str))\n" ^
+      "  (pos := !pos + size str; setErrPos (!pos); SOME  (str))\n" ^
       "  else NONE) handle Subscript => NONE)\n\n" 
       
 
@@ -250,6 +267,7 @@ fun main () =
       val _ = TextIO.output (fo, genCaches  ())
       val _ = TextIO.output (fo, chlitdefs)
       val _ = TextIO.output (fo, p'')
+      val _ = TextIO.output (fo, genReset  ())
       val _ = TextIO.output (fo, "\nend\n")
       val _ = TextIO.closeOut fo
    in

@@ -25,7 +25,7 @@ structure Set = struct
    type ''a set = ''a list 
 
    val empty = []
-   fun all p sh = List.all p sh;
+   fun all p sh = List.all p sh
    fun delete([], _)    = []
      | delete(e::sh, y) = if e=y then sh else e::delete(sh,y)
    fun member(e, sl) = List.exists (fn y => e = y) sl

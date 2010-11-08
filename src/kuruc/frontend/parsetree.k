@@ -21,10 +21,14 @@
 
 structure ParseTree =
 struct
+   type pos = int
 
-type pos = int
+   datatype ascription =
+      AscribeOpaque of pt
+    | Ascribe of pt
+    | Implicit
 
-   datatype pt =
+   and pt =
       Int of bool * string * pos
     | Real of bool * string * string * (bool * string) option * pos
     | Char of string * pos
@@ -83,8 +87,17 @@ type pos = int
     | DataBind of pt list * pt * pt list * pos
     | ConBind of pt * pt option * pos
     | StructDec of pt list * pos
-    | StructBind of pt * pt * pos
+    | StructBind of pt * ascription * pt * pos
     | Structure of pt list * pos
+    | ValDesc of pt list * pos
+    | TypeDesc of pt list * pos
+    | StructDesc of pt list * pos
+    | ValDescBind of pt * pt * pos 
+    | TypeDescBind of pt list * pt * pos 
+    | StructDescBind of pt * pt * pos
+    | SigBind of pt * pt * pos
+    | Signature of pt list * pos
+    | SigDec of pt list * pos
 
    fun pp (Int (b,s,_)) = "Int [" ^ (if b then "~" else "") ^ s ^ "]" 
      | pp (Real (b,s1,s2,NONE,_)) = 
@@ -179,9 +192,29 @@ type pos = int
      | pp (ConBind (i,SOME t,_)) = "ConBind [" ^ pp i ^ " of " ^ pp t ^ "]"
      | pp (StructDec (l,_)) = "Structure [" ^
                   (String.concatWith "\nand " (map pp l)) ^ "]\n"
-     | pp (StructBind (i,b,_)) = "StructBind ["^ pp i ^" = "^ pp b ^ "]" 
+     | pp (StructBind (i,a,b,_)) = "StructBind ["^ pp i ^ ppa a ^ " = "^
+                                       pp b ^ "]" 
      | pp (Structure (l,_)) = "Struct [\n   " ^
                   (String.concatWith "\n   " (map pp l)) ^ "]"
+     | pp (SigDec (s,_)) = 
+         "SigDec [" ^ String.concatWith "\n  " (map pp s) ^ "]\n"
+     | pp (SigBind (i,s,_)) = 
+         "SigBind " ^ pp i ^ " = " ^ pp s ^ "\n"
+     | pp (Signature (d,_)) = "sig\n" ^ 
+                        (String.concatWith "\n    " (map pp d)) ^ 
+                        "\nend\n"
+     | pp (ValDesc (v,_)) = "val " ^ (String.concatWith "\nand " (map pp v))
+     | pp (TypeDesc (v,_)) = "type " ^ (String.concatWith "\nand " (map pp v))
+     | pp (StructDesc (v,_)) = "structure " ^ 
+         (String.concatWith "\nand " (map pp v))
+     | pp (ValDescBind (i,t,_)) = pp i ^ " : " ^ pp t 
+     | pp (StructDescBind (i,t,_)) = pp i ^ " : " ^ pp t
+     | pp (TypeDescBind (t,i,_)) = String.concatWith "," (map pp t) ^ " " ^ 
+                                       pp i
+
+   and ppa (AscribeOpaque p) = " :> " ^ pp p
+     | ppa (Ascribe p) = " : " ^ pp p
+     | ppa Implicit = ""
 
    fun prettyPrint p = pp p
   

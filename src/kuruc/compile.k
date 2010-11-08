@@ -44,6 +44,9 @@ struct
       val buf = readLines f
       val _ = TextIO.closeIn f
 
+      val _ = Debug.print Debug.debugmore 
+         ("Contents of file: " ^ filename ^ ":\n" ^ buf)
+
       val parseResult = 
          KuruParser.kupeg_start buf handle Option => 
             raise Fail ("kuruc: error near " ^ 
@@ -52,7 +55,7 @@ struct
                                                KuruParser.error(),
                                                buf)))
 
-      val _ = if KuruParser.error() + 20 < size buf then 
+      val _ = if KuruParser.error() + 2 < size buf then 
                  print ("kuruc: maybe error near " ^ 
                      (Error.resolveErrorPos(filename,
                                             !linepositions,
@@ -65,14 +68,49 @@ struct
    
    fun deserialiseFile f = raise Fail "deserialiseFile not implemented"
 
+   fun parseBuildFile [] = []
+     | parseBuildFile (h::t) = 
+       let
+          fun ws (#" "::t) = ws t
+            | ws (#"\t"::t) = ws t
+            | ws (#"#"::t) = []
+            | ws x = x
+
+          val h' = String.implode (ws (String.explode h))
+       in
+          if h' = "" then parseBuildFile t else
+          if String.isPrefix "$/" h' 
+                     then 
+                          Config.resolveLibrary (String.extract(h',2,NONE)) ::
+                           parseBuildFile t
+                     else h' :: parseBuildFile t
+       end
+      
 
    fun compile [] = raise Fail "No input files given"
      | compile fl = 
       let
          (* Stage 1 - Parse/Deserialise files *)
-         val fl' = map (fn f => if String.isSuffix ".k" f then parseFile f
+         fun genInputs fl = 
+              map (fn f => if (String.isSuffix ".k" f) orelse
+                              (String.isSuffix ".ks" f) then parseFile f
                            else if String.isSuffix ".ki" f then deserialiseFile f
+                           else if String.isSuffix ".kb" f then
+                           let
+                              val _ = Debug.print Debug.verbose
+                                 ("Reading from Kuru build file: " ^ f ^ "\n")
+                              val fp = TextIO.openIn f
+                              val cont = TextIO.input fp
+                              val cont' = 
+                                 String.fields (fn #"\n" => true | _ => false) cont
+                              val cont'' = parseBuildFile cont'
+                              val _ = TextIO.closeIn fp
+                           in
+                              List.concat (genInputs cont'')
+                           end
                            else raise Fail ("Unknown file type: " ^ f)) fl
+
+         val fl' = genInputs fl
 
          (* Stage 2 - Parse tree passes *)
          val (te',ve',se',fl'') = 

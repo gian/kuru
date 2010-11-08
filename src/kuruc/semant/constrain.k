@@ -376,12 +376,53 @@ struct
        in
           (te',ve',se',cs,t',A.DMUTUAL (Vector.fromList v',p))
        end
-     | constr_dec te ve se b (A.DSTRUCTURE (s,v,p)) =
+     | constr_dec te ve se b (A.DSTRUCTURE (s,NONE,v,p)) =
        let
           val (te',ve',se',cn,v') = generateConstraints' te ve se (vtol v)
           val se'' = S.enter (se,s,E.StructEntry (te',ve',se'))
        in
-          (te,ve,se'',cn,T.UNKNOWN,A.DSTRUCTURE (s,Vector.fromList v',p))
+          (te,ve,se'',cn,T.UNKNOWN,A.DSTRUCTURE (s,NONE,Vector.fromList v',p))
+       end
+     | constr_dec te ve se b (A.DSTRUCTURE (s,SOME sign,v,p)) =
+       let
+          val (te',ve',se',cn,v') = generateConstraints' te ve se (vtol v)
+          val se'' = S.enter (se,s,E.StructEntry (te',ve',se'))
+          val sigse = 
+           (case S.look (se,sign) of
+               NONE => []
+             | (SOME (Env.StructEntry _)) => 
+                  raise Fail "constr_dec: Structure ascribes to structure?"
+             | (SOME (Env.SigEntry (ste,sve,sse))) =>
+               let
+                  val keys = 
+                     map (fn (k,v) => (S.unhash k, v)) (S.keys sve)
+
+                  val _ = List.app (Debug.print Debug.debug)
+                     (map (fn (SOME k,Env.VarEntry v) => 
+                              "Signature spec: " ^ S.name k ^ 
+                              " : " ^ T.prettyPrint v ^ "\n"
+                            | _ => "Unknown signature spec element\n") keys)
+                     
+               in
+                  keys
+               end)
+          val cn' = 
+            (map (fn (SOME k,Env.VarEntry v) => 
+                    let
+                       val structTy =
+                        case (S.look (ve',k)) of
+                           NONE =>
+                              raise Fail ("Structure near " ^ Int.toString p ^ 
+                                          " is missing definition for " ^ 
+                                          S.name k ^ " required by signature")
+                         | SOME (Env.VarEntry t) => t
+                    in
+                       (inst v,inst structTy)
+                    end
+                   | _ => raise Fail ("constr_dec: BUG 415?")) sigse)
+       in
+          (te,ve,se'',cn@cn',T.UNKNOWN,A.DSTRUCTURE (s,SOME sign,
+                                                     Vector.fromList v',p))
        end
      | constr_dec te ve se b (A.DSTRUCTASSIGN (s,e,p)) =
        let
@@ -402,6 +443,13 @@ struct
           val se' = S.enter (se,s,rhs)
        in
           (te,ve,se',[],T.UNKNOWN,A.DSTRUCTASSIGN (s,e,p))
+       end
+     | constr_dec te ve se b (A.DSIGNATURE (s,l,p)) =
+       let
+          (* The signature should already be in se. *)
+          val _ = ()
+       in
+          (te,ve,se,[],T.UNKNOWN,A.DNULL p)
        end
      | constr_dec _ _ _ _ k = raise 
                Fail ("Unhandled constr_dec: " ^ A.prettyPrint [k])

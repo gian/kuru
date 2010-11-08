@@ -717,7 +717,7 @@ struct
             in
                (te',ve',se',b@b')
             end) (te,ve,se,[]) v 
-     | tr_ast te ve se (A.DSTRUCTURE (s,v,p)) = 
+     | tr_ast te ve se (A.DSTRUCTURE (s,c,v,p)) = 
        let
           val (te',ve',se',instr) =
             Vector.foldl (fn (e,(te,ve,se,b)) =>

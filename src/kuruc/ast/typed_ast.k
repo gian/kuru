@@ -63,8 +63,9 @@ struct
    and      tast = DVAL of S.symbol * texp * T.ty * pos
                  | DVALREC of tast * T.ty * pos
                  | DMUTUAL of tast vector * pos
-                 | DSTRUCTURE of S.symbol * tast vector * pos
+                 | DSTRUCTURE of S.symbol * S.symbol option * tast vector * pos
                  | DSTRUCTASSIGN of S.symbol * texp * pos
+                 | DSIGNATURE of S.symbol * tast vector * pos
                  | DNULL of pos (* For things we've removed *)
 
    val ppty = T.pp
@@ -215,8 +216,8 @@ struct
                      p)
      | subst_ty_dec tn th (DMUTUAL (v,p)) =
             DMUTUAL (Vector.map (subst_ty_dec tn th) v, p)
-     | subst_ty_dec tn th (DSTRUCTURE (s,v,p)) =
-            DSTRUCTURE (s,
+     | subst_ty_dec tn th (DSTRUCTURE (s,c,v,p)) =
+            DSTRUCTURE (s,c,
                         Vector.map (subst_ty_dec tn th) v,
                         p)
      | subst_ty_dec tn th d = d 
@@ -282,12 +283,21 @@ struct
      | prettyPrint ((DMUTUAL(v,p))::t) = "DMUTUAL [\n" ^ 
                                           prettyPrint (vtol v) ^ "]\n" ^ 
                                           prettyPrint t
-	  | prettyPrint ((DSTRUCTURE (s,l,p))::t) = "DSTRUCTURE " ^ S.name s ^ " [\n" ^
-	  																prettyPrint (vtol l)  ^ "]\n" ^
-																	prettyPrint t
+	  | prettyPrint ((DSTRUCTURE (s,NONE,l,p))::t) = 
+         "DSTRUCTURE " ^ S.name s ^ " [\n" ^
+	  	   prettyPrint (vtol l)  ^ "]\n" ^
+		   prettyPrint t
+     | prettyPrint ((DSTRUCTURE (s,SOME c,l,p))::t) = 
+         "DSTRUCTURE " ^ S.name s ^ " : " ^ S.name c ^ " [\n" ^
+	  	   prettyPrint (vtol l)  ^ "]\n" ^
+		   prettyPrint t
 	  | prettyPrint ((DSTRUCTASSIGN (a,b,p))::t) = "DSTRUCTASSIGN " ^ S.name a ^ 
 	  															  " = " ^ ppe b ^ "\n" ^ 
 																  prettyPrint t
+ 	  | prettyPrint ((DSIGNATURE (s,l,p))::t) = 
+               "DSIGNATURE " ^ S.name s ^ " [\n" ^
+	  				     prettyPrint (vtol l)  ^ "]\n" ^
+							prettyPrint t                                    
      | prettyPrint (_::t) = "???\n" ^ prettyPrint t
 end
 

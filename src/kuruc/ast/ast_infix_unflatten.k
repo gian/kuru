@@ -149,7 +149,7 @@ struct
         | s i (ConBind (a,NONE,p)) = ConBind (s i a,NONE,p)
         | s i (ConBind (a,SOME b,p)) = ConBind (s i a,SOME (s i b),p)
         | s i (StructDec (l,p)) = StructDec (map (s i) l,p)
-        | s i (StructBind (a,b,p)) = StructBind (s i a, s i b,p)
+        | s i (StructBind (a,c,b,p)) = StructBind (s i a,c, s i b,p)
         | s i (Structure (l,p)) = Structure (map (s i) l,p)
         | s i t = t 
 
