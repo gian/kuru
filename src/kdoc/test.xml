@@ -2,8 +2,14 @@
 <?xml-stylesheet type="text/xsl" href="kdoc.xsl"?>
 <kdoc>
 <file>
-<name>../kuruc/tests/test-all.k</name>
-<dec>
+<name>tests/test-all.k</name>
+<body>
+<doc>
+  <description>
+  <usercontent>
+ <p>Error handling and reporting structure.</p>   </usercontent>
+  </description>
+  <body><dec>
 <structure>
   <name><identifier>Error</identifier></name>
   <body><struct>
@@ -18,9 +24,17 @@
 </structure>
 </dec>
 
+</body>
+</doc>
 
-
-<dec>
+<doc>
+  <description>
+  <usercontent>
+ <p>Data structure for parsing.</p>
+	 <author>Gian Perrone</author>
+  </usercontent>
+  </description>
+  <body><dec>
 <structure>
   <name><identifier>ParseTree</identifier></name>
   <body><struct>
@@ -251,28 +265,35 @@
 
 
 
-   <dec>
+   <doc>
+  <description>
+  <usercontent>
+ Pretty Printer function   </usercontent>
+  </description>
+  <body><dec>
 <fun>
   <name><identifier>prettyPrint</identifier></name>
   <params><identifier>p</identifier></params>
 </fun></dec>
 
-
+</body>
+</doc>
 </struct></body>
 </structure>
 </dec>
 
-
+</body>
+</doc>
 
 <dec>
 <structure>
   <name><identifier>KuruParser</identifier></name>
   <body><struct>
 <dec>
-<structure>
+<structureassign>
   <name><identifier>P</identifier></name>
   <body><identifier>ParseTree</identifier></body>
-</structure>
+</structureassign>
 </dec>
 
 
@@ -372,7 +393,7 @@
   <name><identifier>res_int</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -385,7 +406,7 @@
   <name><identifier>res_real</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -408,7 +429,7 @@
   <name><identifier>res_charconst</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -421,7 +442,7 @@
   <name><identifier>res_string</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -444,7 +465,7 @@
   <name><identifier>res_con</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -487,7 +508,7 @@
   <name><identifier>res_id</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -510,7 +531,7 @@
   <name><identifier>res_var</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -523,7 +544,7 @@
   <name><identifier>res_longid</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -536,7 +557,7 @@
   <name><identifier>res_exp</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -549,7 +570,7 @@
   <name><identifier>res_expel</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -562,7 +583,7 @@
   <name><identifier>res_explist</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>list</identifier> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -575,7 +596,7 @@
   <name><identifier>res_expseq</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>list</identifier> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -588,7 +609,7 @@
   <name><identifier>res_match</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>list</identifier> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -601,7 +622,7 @@
   <name><identifier>res_pat</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -614,7 +635,7 @@
   <name><identifier>res_patel</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -627,7 +648,7 @@
   <name><identifier>res_patlist</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>list</identifier> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -640,7 +661,7 @@
   <name><identifier>res_patapp</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>list</identifier> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -653,7 +674,7 @@
   <name><identifier>res_typ</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -666,7 +687,7 @@
   <name><identifier>res_typel</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -679,7 +700,7 @@
   <name><identifier>res_tyannopt</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>option</identifier> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -692,7 +713,7 @@
   <name><identifier>res_declist</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>list</identifier> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -705,7 +726,7 @@
   <name><identifier>res_dec</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -718,7 +739,7 @@
   <name><identifier>res_valbind</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>list</identifier> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -731,7 +752,7 @@
   <name><identifier>res_tyvarlist</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>list</identifier> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -744,7 +765,7 @@
   <name><identifier>res_tyvars</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>list</identifier> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -757,7 +778,7 @@
   <name><identifier>res_typebind</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>list</identifier> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -770,7 +791,7 @@
   <name><identifier>res_funbind</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>list</identifier> <identifier>list</identifier> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -783,7 +804,7 @@
   <name><identifier>res_funmatch</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>list</identifier> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -796,7 +817,7 @@
   <name><identifier>res_databind</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>list</identifier> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -809,7 +830,7 @@
   <name><identifier>res_conbind</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>list</identifier> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -822,7 +843,7 @@
   <name><identifier>res_strbind</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>list</identifier> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -835,7 +856,7 @@
   <name><identifier>res_str</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -848,7 +869,7 @@
   <name><identifier>res_programel</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -861,7 +882,7 @@
   <name><identifier>res_program</identifier></name>
   <body><longid>
   <prefix><identifier>P</identifier></prefix>
-  <identifier><identifier>pt</identifier></identifier>
+  <suffix><identifier>pt</identifier></suffix>
 </longid> <identifier>list</identifier> <identifier>option</identifier></body>
 </typebind>
 </dec>
@@ -2052,13 +2073,7 @@
 
 
 
-   <dec>
-<valbind>
-  <name></name>
-  <body></body>
-</valbind>
-</dec>
-
+   
 
 
    <dec>
@@ -2117,13 +2132,7 @@
 
 
 
-   <dec>
-<valbind>
-  <name></name>
-  <body></body>
-</valbind>
-</dec>
-
+   
 
 
    <dec>
@@ -2135,13 +2144,7 @@
 
 
 
-   <dec>
-<valbind>
-  <name></name>
-  <body></body>
-</valbind>
-</dec>
-
+   
 
 
    <dec>
@@ -2166,14 +2169,9 @@
 
 
 
-<dec>
-<valbind>
-  <name></name>
-  <body></body>
-</valbind>
-</dec>
 
 
+</body>
 </file>
 
 </kdoc>

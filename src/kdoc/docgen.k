@@ -29,7 +29,7 @@ struct
      | dg (TyId (p,_)) = dg p
      | dg (LongId (l1,l2,_)) = "<longid>\n" ^ 
                                "  <prefix>" ^ dg l1 ^ "</prefix>\n" ^ 
-                               "  <identifier>" ^ dg l2 ^ "</identifier>\n" ^
+                               "  <suffix>" ^ dg l2 ^ "</suffix>\n" ^
                                "</longid>"
      | dg (Seq (p1, p2,_)) = dg p1 ^ "\n" ^ dg p2
      | dg (TyAnn (p1,p2,_)) = "<typedexpr>\n" ^ 
@@ -60,17 +60,17 @@ struct
          "</dec>\n"  
      | dg (DatatypeAssign (i1,i2,_)) = 
          "<dec>\n" ^ 
-          "<datatype>\n" ^ 
+          "<datatypeassign>\n" ^ 
           "  <name>" ^ dg i1 ^ "</name>\n" ^ 
           "  <body>" ^ dg i2 ^ "</body>\n" ^
-          "</datatype>\n" ^
+          "</datatypeassign>\n" ^
          "</dec>\n" 
      | dg (DatatypeDec (d,_)) =
           String.concatWith "\n" (map dg d)
      | dg (FunDec (d,_)) = 
           String.concatWith "\n" 
             (map (fn x => String.concatWith "\n" (map dg x)) d)
-     | dg (ValBind (p,e,_)) = 
+     | dg (ValBind (p as IdPat _,e,_)) = 
          "<dec>\n" ^ 
           "<valbind>\n" ^ 
           "  <name>" ^ dg p ^ "</name>\n" ^ 
@@ -135,12 +135,19 @@ struct
           "    </con>"
      | dg (StructDec (l,_)) =
           String.concatWith "\n" (map dg l)
-     | dg (StructBind (i,b,_)) = 
+     | dg (StructBind (i,b as Structure _,_)) = 
          "<dec>\n" ^ 
           "<structure>\n" ^ 
           "  <name>" ^ dg i ^ "</name>\n" ^
           "  <body>" ^ dg b ^ "</body>\n" ^ 
           "</structure>\n" ^ 
+         "</dec>\n"
+     | dg (StructBind (i,b,_)) = 
+         "<dec>\n" ^ 
+          "<structureassign>\n" ^ 
+          "  <name>" ^ dg i ^ "</name>\n" ^
+          "  <body>" ^ dg b ^ "</body>\n" ^ 
+          "</structureassign>\n" ^ 
          "</dec>\n" 
      | dg (Structure (l,_)) =
           "<struct>\n" ^ 
@@ -150,13 +157,19 @@ struct
           dg p ^ "\n" 
      | dg (DocNode (s,p)) = 
           "<doc>\n" ^ 
-          "  <description>" ^ s ^ "</description>\n" ^ 
+          "  <description>\n" ^ 
+          "  <usercontent>\n" ^ 
+                s ^ 
+          "  </usercontent>\n" ^ 
+          "  </description>\n" ^ 
           "  <body>" ^ dg p ^ "</body>\n" ^
           "</doc>\n"
      | dg (FileNode (f,p)) = 
-          "<file>\n" ^ 
+          "<file>\n" ^
           "<name>" ^ f ^ "</name>\n" ^ 
+          "<body>\n" ^ 
           (String.concatWith "\n" (map dg p)) ^
+          "</body>\n" ^
           "</file>\n"
      | dg x = ""
 
