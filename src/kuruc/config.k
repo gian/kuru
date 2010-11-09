@@ -47,6 +47,7 @@ struct
       in
          p'
       end
+   val maxErrors = ref 30
 
    (* Setters and getters *)
    fun setOutputFile s = outputFile := s
@@ -58,12 +59,17 @@ struct
      | setMachineWord 64 = machineWord := 64
      | setMachineWord x = 
          raise Fail ("Invalid machine word size: " ^ Int.toString x)
+   fun setMaxErrors m = 
+      case (Int.fromString m) of NONE => 
+            raise Fail "Invalid argument to -max-errors option"
+         | SOME i => maxErrors := i
 
    fun getOutputFile () = !outputFile
    fun getOptimiser () = !optimiserLevel
    fun getMachineWord () = !machineWord
    fun getKeepLLVM () = !keepLLVM
    fun getLibPath () = !libPath
+   fun getMaxErrors () = !maxErrors
 
    (* Resolve a full path to a library, based on the library path *)
 

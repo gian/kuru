@@ -43,6 +43,7 @@ struct
 				 "\t-m64\t\tSet machine word size to 64 bits.\n" ^
              "\t-L [path]\t\tSet the library search path (colon-separated)\n" ^
              "\t-keep-llvm\tKeep intermediate LLVM bitcode files.\n" ^
+             "\t-max-errors <n>\tReport no more than n errors.\n" ^
 				 "\t-V\t\tOutput version information and exit.\n")
 
 	fun printVersion () =
@@ -78,6 +79,7 @@ struct
      | parseArgs ("-m32"::t) = (Config.setMachineWord 32; parseArgs t)
      | parseArgs ("-m64"::t) = (Config.setMachineWord 64; parseArgs t)
      | parseArgs ("-keep-llvm"::t) = (Config.setKeepLLVM true; parseArgs t)
+     | parseArgs ("-max-errors"::m::t) = (Config.setMaxErrors m; parseArgs t)
      | parseArgs ("-o"::f::t) = (Config.setOutputFile f; parseArgs t)
      | parseArgs ("-L"::f::t) = (Config.setLibPath f; parseArgs t)
      | parseArgs (h::t) = h :: parseArgs t
