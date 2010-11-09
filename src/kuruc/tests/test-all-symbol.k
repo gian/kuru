@@ -36,6 +36,8 @@ struct
   fun look _ = NONE
   fun keys _ = []
 
+  val empty = []
+
   fun symbol s = (s,0)
 
 end
