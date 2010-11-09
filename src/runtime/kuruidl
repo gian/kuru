@@ -13,11 +13,11 @@ def type2ctype(ty):
 
 def type2ktype(ty):
 	if ty == "void":
-		return "()"
+		return "unit"
 	elif ty in ["kstring","string"]:
-		return "String"
+		return "string"
 	elif ty == "int":
-		return "Int"
+		return "int"
 	raise Exception("Unknown kuru type %s" % ty)
 
 def type2llvmtype(ty):
@@ -85,6 +85,9 @@ for line in f:
 		exports.append([word[2]]+word[3:])
 
 	elif word[0] == "pure":
+		if word[3] == "void":
+			print "Pure function %s cannot return void/unit" % word[1]
+			continue
 		pure.append({
 			"kname" : word[1],
 			"cname" : word[2],
@@ -115,6 +118,17 @@ for i in imports:
 		kuru_h.write(type2ctype(i[1])+" k_"+name+"_"+i[0]+"("+",".join(map(spec2cvar,i[2:]))+");\n")
 	else:
 		kuru_h.write(type2ctype(i[1])+" k_"+name+"_"+i[0]+"(void);\n")
+for func in pure:
+	if func["arg"] != []:
+		args = ",".join(map(spec2cvar,func["arg"]))
+	else:
+		args = "void"
+	kuru_h.write("%(cret)s k_%(name)s_%(fname)s(%(args)s);\n" % {
+		"cret" : type2ctype(func["ret"]),
+		"name" : name,
+		"fname" : func["kname"],
+		"args" : args,
+	})
 kuru_h.write("void %s_done(void);\n" % name.lower())
 kuru_h.write("#endif\n")
 kuru_h.close()
@@ -284,6 +298,23 @@ for i in imports:
 	else:
 		kuru_c.write("\treturn;\n")
 	kuru_c.write("}\n\n")
+
+for func in pure:
+	if func["arg"] != []:
+		args = ",".join(map(spec2cvar,func["arg"]))
+	else:
+		args = "void"
+	kuru_c.write("%(cret)s k_%(name)s_%(kname)s(%(args)s)\n" % {
+		"cret" : type2ctype(func["ret"]),
+		"name" : name,
+		"kname" : func["kname"],
+		"args" : args,
+	})
+	kuru_c.write("{ ")
+	kuru_c.write(" return "+func["cname"]+"("+",".join(map(
+		lambda x: ctype2nativectype(spec2type(x),spec2name(x)),
+		func["arg"]))+");\n")
+	kuru_c.write("} ")
 kuru_c.close()
 
 kuru_ll = open(rootpath+"_kuru.ll","w")
@@ -297,10 +328,19 @@ for i in imports:
 	kuru_ll.write("(")
 	kuru_ll.write(", ".join(map(lambda x:type2llvmtype(spec2type(x)),i[2:])))
 	kuru_ll.write(")\n")
+for func in pure:
+	kuru_ll.write("declare ")
+	kuru_ll.write(type2llvmtype(func["ret"]))
+	kuru_ll.write(" @")
+	kuru_ll.write("k_" + name + "_" + func["kname"])
+	kuru_ll.write("(")
+	kuru_ll.write(", ".join(map(lambda x:type2llvmtype(spec2type(x)),func["arg"])))
+	kuru_ll.write(")\n")
 kuru_ll.close()
 
 kuru_k = open(rootpath+".k","w")
 kuru_k.write("""
+(** Generated from %(name)s.idl *)
 structure %(name)s =
 struct
 """ % {
@@ -328,5 +368,28 @@ for e,i in zip(exports,imports):
 			"ret" : type2ktype(i[1]),
 			"ktype" : ktype,
 	})
+for func in pure:
+	if i[2:]==[]:
+		kargs = "unit -> " + type2ktype(func["ret"])
+		ktype = "unit -> " + type2ktype(func["ret"])
+	else:
+		kargs = " -> ".join(
+			map(spec2annotatedktype,func["arg"])
+			+[type2ktype(func["ret"])])
+		ktype = " -> ".join(
+			map(spec2ktype,func["arg"])
+			+[type2ktype(func["ret"])])
+
+	kuru_k.write("""
+	(** %(kname)s : %(kannotatedtype)s *)
+	_import %(cname)s : %(ktype)s as %(kname)s
+""" % {
+	"cname" : func["cname"],
+	"kname" : func["kname"],
+	"ret" : type2ktype(func["ret"]),
+	"kannotatedtype" : kargs,
+	"ktype" : ktype,
+
+})
 kuru_k.write("\n".join(kuru))
 kuru_k.write("end\n")

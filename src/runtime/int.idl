@@ -14,3 +14,4 @@ c }
 #  kstring -- kuru_string_t
 #  int -- integer
 export_as to_string kuru_to_string kstring value:int
+pure to_string2 kuru_to_string kstring value:int
