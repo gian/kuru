@@ -1,0 +1,4 @@
+structure Vector =
+struct
+
+end

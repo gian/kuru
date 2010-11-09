@@ -33,15 +33,32 @@ struct
    fun freshstrid () = (strfresh := 1 + !strfresh;
                         "_struct" ^ Int.toString (!strfresh))
 
-   (* TODO: need to preserve the path in some other TypedAST element... *)
-   fun resolveLongId te ve se (LongId (Ident (s,pk),r,p)) = 
-         (case (S.look (se,S.symbol s)) of
-               NONE => Error.fail ("Unknown structure id: " ^ s,pk)
-             | SOME (Env.StructEntry (te',ve',se')) => 
-                     (Symbol.symbol s) :: 
-                        resolveLongId te' ve' se' r)
-     | resolveLongId te ve se (Ident (s,_)) = [Symbol.symbol s] 
-     | resolveLongId te ve se _ = raise Fail "Not implemented resolveLongId"
+   fun resolveLongId te ve se l =
+   let
+      val path = ref [] : string list ref
+
+      fun reportPath i = 
+         if length (!path) > 0 then " in " ^ 
+            (String.concatWith "." (!path)) ^ "." ^ i else
+            ""
+
+      fun resolveLongId' te ve se (LongId (Ident (s,pk),r,p)) = 
+            (case (S.look (se,S.symbol s)) of
+                NONE => Error.fail ("Unknown structure '" ^ s ^ "'" ^ 
+                                       reportPath s,pk)
+              | SOME (Env.StructEntry (te',ve',se')) => 
+                      (path := !path @ [s];
+                        (Symbol.symbol s) :: 
+                         resolveLongId' te' ve' se' r))
+       | resolveLongId' te ve se (Ident (s,pk)) = 
+            (case (S.look (ve,S.symbol s)) of
+                NONE => Error.fail ("Unknown identifier '" ^ s ^ "'" ^ 
+                                       reportPath s,pk)
+              | SOME _ => [Symbol.symbol s])
+       | resolveLongId' te ve se _ = raise Fail "Not implemented resolveLongId'"
+   in
+      resolveLongId' te ve se l
+   end
 
    fun convert tenv venv senv pt = 
    let

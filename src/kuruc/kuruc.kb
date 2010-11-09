@@ -3,6 +3,7 @@ debug.k
 config.k
 frontend/error.k
 lib/set.k
+tests/test-all-symbol.k
 ast/type.k
 semant/env.k
 frontend/parsetree.k

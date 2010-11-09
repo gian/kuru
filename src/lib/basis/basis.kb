@@ -1,1 +1,10 @@
+general.k
+list.k
+string.k
+int.k
+char.k
+real.k
+vector.k
 text-io.k
+os.k
+unix.k

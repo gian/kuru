@@ -1,0 +1,4 @@
+structure Int =
+struct
+
+end

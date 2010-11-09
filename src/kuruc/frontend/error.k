@@ -49,7 +49,7 @@ struct
 
    fun fail (msg,p) = 
       let
-         val _ = if !errorCount >= 20 
+         val _ = if !errorCount >= 30 
                      then (TextIO.output(TextIO.stdErr,
                               "Aborted: too many errors.\n");
                            OS.Process.exit OS.Process.failure)
@@ -61,7 +61,7 @@ struct
                                resolveErrorPos p ^ ": " ^ msg ^ "\n")
 
              in
-         if !errorCount < 20 then raise CompileError
+         if !errorCount < 30 then raise CompileError
             else raise Fail "Aborted: too many errors."
       end
 

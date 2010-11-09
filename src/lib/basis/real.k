@@ -1,0 +1,4 @@
+structure Real =
+struct
+
+end

@@ -1,0 +1,4 @@
+structure Unix =
+struct
+
+end

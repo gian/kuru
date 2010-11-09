@@ -1,0 +1,4 @@
+structure String =
+struct
+
+end

@@ -1,0 +1,4 @@
+structure Char =
+struct
+
+end
