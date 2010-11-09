@@ -314,7 +314,7 @@ for func in pure:
 	kuru_c.write(" return "+func["cname"]+"("+",".join(map(
 		lambda x: ctype2nativectype(spec2type(x),spec2name(x)),
 		func["arg"]))+");\n")
-	kuru_c.write("} ")
+	kuru_c.write("}\n")
 kuru_c.close()
 
 kuru_ll = open(rootpath+"_kuru.ll","w")
@@ -341,9 +341,65 @@ kuru_ll.close()
 kuru_k = open(rootpath+".k","w")
 kuru_k.write("""
 (** Generated from %(name)s.idl *)
-structure %(name)s =
+signature %(sig)s =
+sig
+""" % {
+	"sig" : name.upper(),
+	"name" : name,
+})
+for e,i in zip(exports,imports):
+	if i[2:]==[]:
+		kargs = "unit -> " + type2ktype(i[1])
+		ktype = "unit -> " + type2ktype(i[1])
+	else:
+		kargs = " -> ".join(
+			map(spec2annotatedktype,i[2:])
+			+[type2ktype(i[1])])
+		ktype = " -> ".join(
+			map(spec2ktype,i[2:])
+			+[type2ktype(i[1])])
+
+	kuru_k.write(""" 
+	(** %(kname)s : %(kannotatedtype)s *)
+	val %(kname)s : %(ktype)s
+""" % {
+			"cname" : e[0],
+			"kname" : i[0],
+			"kannotatedtype" : kargs,
+			"ret" : type2ktype(i[1]),
+			"ktype" : ktype,
+	})
+for func in pure:
+	if i[2:]==[]:
+		kargs = "unit -> " + type2ktype(func["ret"])
+		ktype = "unit -> " + type2ktype(func["ret"])
+	else:
+		kargs = " -> ".join(
+			map(spec2annotatedktype,func["arg"])
+			+[type2ktype(func["ret"])])
+		ktype = " -> ".join(
+			map(spec2ktype,func["arg"])
+			+[type2ktype(func["ret"])])
+
+	kuru_k.write("""
+	(** %(kname)s : %(kannotatedtype)s *)
+	val %(kname)s : %(ktype)s
+""" % {
+	"cname" : func["cname"],
+	"kname" : func["kname"],
+	"ret" : type2ktype(func["ret"]),
+	"kannotatedtype" : kargs,
+	"ktype" : ktype,
+
+})
+
+kuru_k.write("""
+end
+
+structure %(name)s : %(sig)s =
 struct
 """ % {
+	"sig" : name.upper(),
 	"name" : name,
 })
 for e,i in zip(exports,imports):

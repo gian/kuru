@@ -1,0 +1,16 @@
+c static int kstrlen(kuru_string_t *ks)
+c { return ks->length; }
+
+c static kuru_string_t *kconcat(kuru_string_t *lhs, kuru_string_t *rhs)
+c { 
+c   kuru_string_t *ret = malloc(sizeof(kuru_string_t));
+c   ret->length = lhs->length + rhs->length;
+c   ret->data = malloc(ret->length+1);
+c   memcpy(ret->data, lhs->data, lhs->length);
+c   memcpy(ret->data+lhs->length, rhs->data, rhs->length);
+c   *(ret->data+lhs->length+rhs->length) = '\0';
+c   return ret;
+c }
+
+pure concat kconcat kstring lhs:kstring rhs:kstring
+pure strlen kstrlen int str:kstring
