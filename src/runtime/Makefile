@@ -25,4 +25,6 @@ clean:
 
 
 .PHONY: gc
-.SECONDARY: $(wildcard *_kuru.c) $(wildcard *_kuru.h) $(wildcard *_kuru.ll)
+.SECONDARY: $(wildcard *_kuru.c) \
+		$(wildcard *_kuru.h) \
+		$(wildcard *_kuru.ll)

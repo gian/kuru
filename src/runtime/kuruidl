@@ -9,6 +9,8 @@ def type2ctype(ty):
 		return "kuru_string_t *"
 	elif ty=="int":
 		return "int"
+	elif ty=="opaque":
+		return "void *"
 	raise Exception("Unknown type %s" % ty)
 
 def type2ktype(ty):
@@ -18,6 +20,8 @@ def type2ktype(ty):
 		return "string"
 	elif ty == "int":
 		return "int"
+	elif ty == "opaque":
+		return "opaque"
 	raise Exception("Unknown kuru type %s" % ty)
 
 def type2llvmtype(ty):
@@ -27,6 +31,8 @@ def type2llvmtype(ty):
 		return "{ i32, i8 *}*"
 	elif ty == "int":
 		return "i32"
+	elif ty == "opaque":
+		return "i8 *"
 	raise Exception("Unknown type %s" % ty)
 
 def ctype2nativectype(ty,expr):
@@ -44,6 +50,8 @@ def type2nctype(ty):
 		return "kuru_string_t *"
 	elif ty=="int":
 		return "int"
+	elif ty=="opaque":
+		return "void *"
 	raise Exception("Unknown type %s" % ty)
 
 def spec2cvar(spec):
