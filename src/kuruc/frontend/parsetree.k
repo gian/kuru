@@ -57,6 +57,8 @@ struct
     | CaseExp of pt * pt list * pos
     | FnExp of pt list * pos
     | HandleExp of pt * pt list * pos
+    | ExnDec of pt * pt option * pos
+    | OpenDec of pt * pos
     | Match of pt * pt * pos
     | AsPat of pt * pt * pos
     | UnitPat of pos
@@ -98,6 +100,7 @@ struct
     | SigBind of pt * pt * pos
     | Signature of pt list * pos
     | SigDec of pt list * pos
+    | Import of pt * pt * pt * pos
 
    fun pp (Int (b,s,_)) = "Int [" ^ (if b then "~" else "") ^ s ^ "]" 
      | pp (Real (b,s1,s2,NONE,_)) = 
@@ -211,6 +214,12 @@ struct
      | pp (StructDescBind (i,t,_)) = pp i ^ " : " ^ pp t
      | pp (TypeDescBind (t,i,_)) = String.concatWith "," (map pp t) ^ " " ^ 
                                        pp i
+     | pp (ExnDec (i,NONE,_)) = "exception " ^ pp i ^ "\n"
+     | pp (ExnDec (i,SOME t,_)) = "exception " ^ pp i ^ " of " ^ pp t ^ "\n"
+     | pp (OpenDec (i,_)) = "open " ^ pp i ^ "\n"
+     | pp (Import (i1,t,i2,_)) = "_import " ^ pp i1 ^ " : " ^ pp t ^ " as " 
+                                 ^ pp i2 ^ "\n"
+     
 
    and ppa (AscribeOpaque p) = " :> " ^ pp p
      | ppa (Ascribe p) = " : " ^ pp p

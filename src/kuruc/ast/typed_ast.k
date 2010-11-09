@@ -39,6 +39,7 @@ struct
                  | PINFIX of tpat * S.symbol * tpat * T.ty * pos
 					  | PWILD of pos
 					  | PNIL of pos
+					  | PUNIT of pos
 
    and      texp = ELIT of tval * T.ty * pos
                  | EID of S.symbol * T.ty * pos
@@ -52,7 +53,6 @@ struct
                  | ECASE of texp * (tpat * texp) vector * T.ty * pos
                  | EAPP of texp * texp * T.ty * pos
                  | EAPPMULT of texp * texp list * T.ty * pos
-                 | EEXN of texp * T.ty * pos
                  | ERAISE of texp * pos
                  | EHANDLE of tpat * texp * T.ty * pos
                  | ESEQ of texp vector * T.ty * pos
@@ -66,6 +66,8 @@ struct
                  | DSTRUCTURE of S.symbol * S.symbol option * tast vector * pos
                  | DSTRUCTASSIGN of S.symbol * texp * pos
                  | DSIGNATURE of S.symbol * tast vector * pos
+                 | DOPEN of texp * pos
+                 | DIMPORT of S.symbol * T.ty * S.symbol * pos
                  | DNULL of pos (* For things we've removed *)
 
    val ppty = T.pp
@@ -83,7 +85,6 @@ struct
      | getTypeExp (ECASE (_,_,t,_)) = t
      | getTypeExp (EAPP (_,_,t,_)) = t
      | getTypeExp (EAPPMULT (_,_,t,_)) = t
-     | getTypeExp (EEXN (_,t,_)) = t
      | getTypeExp (ERAISE _) = T.fresh ()
      | getTypeExp (EHANDLE (_,_,t,_)) = t 
      | getTypeExp (ESEQ (_,t,p)) = t
@@ -97,6 +98,8 @@ struct
 	  | getType (DSTRUCTURE _) = T.UNKNOWN
 	  | getType (DMUTUAL _) = T.UNKNOWN
      | getType (DSTRUCTASSIGN _) = T.UNKNOWN
+     | getType (DOPEN _) = T.UNKNOWN
+     | getType (DIMPORT (_,t,_,_)) = t
 	  | getType _ = raise Fail "Can't getType for non DVAL or DVALREC"
 
 	fun setType (DVAL (a,b,_,c)) t = DVAL (a,b,t,c)
@@ -172,10 +175,6 @@ struct
      | subst_ty_exp tn th (EAPP (e1,e2,t,p)) =
             EAPP (subst_ty_exp tn th e1,
                   subst_ty_exp tn th e2,
-                  T.substinty tn th t,
-                  p)
-     | subst_ty_exp tn th (EEXN (e,t,p)) =
-            EEXN (subst_ty_exp tn th e,
                   T.substinty tn th t,
                   p)
      | subst_ty_exp tn th (ERAISE (e,p)) =
@@ -297,7 +296,12 @@ struct
  	  | prettyPrint ((DSIGNATURE (s,l,p))::t) = 
                "DSIGNATURE " ^ S.name s ^ " [\n" ^
 	  				     prettyPrint (vtol l)  ^ "]\n" ^
-							prettyPrint t                                    
+							prettyPrint t                  
+     | prettyPrint ((DOPEN (e,l))::t) = "DOPEN [" ^ ppe e ^ "]\n" ^ 
+                                          prettyPrint t
+     | prettyPrint ((DIMPORT (i1,t,i2,p))::r) = 
+            "DIMPORT [" ^ S.name i1 ^ " : " ^ ppty t ^ " as " ^ S.name i2 ^ "]\n" ^ 
+             prettyPrint r
      | prettyPrint (_::t) = "???\n" ^ prettyPrint t
 end
 

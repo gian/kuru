@@ -451,6 +451,59 @@ struct
        in
           (te,ve,se,[],T.UNKNOWN,A.DNULL p)
        end
+     | constr_dec te ve se b (A.DOPEN (e,p)) = 
+       let
+          fun sb se [] = raise Fail ("Empty long-id in 'open' near: " ^
+                                       Int.toString p)
+               | sb se [h] = (case (S.look (se,h)) of 
+                                 (SOME e) => e
+                               | NONE => raise Fail ("Invalid id in 'open' " ^
+                                                     "near: " ^
+                                                     Int.toString p))
+               | sb se (h::t) = (case (S.look (se,h)) of
+                                  (SOME (Env.StructEntry (_,_,e))) => sb e t
+                                | NONE => raise Fail ("Invalid id in 'open' " ^
+                                                      "near: " ^ 
+                                                      Int.toString p))
+
+             val a'' = case e of A.EID (n,t,p') => sb se [n]
+                                | A.ELID (nl,t,p') => sb se nl
+
+             val (ste,sve,sse) = 
+               case a'' of
+                  Env.StructEntry s => s
+                | _ => raise 
+                  Fail "constrain.k: Attempted to open non-struct!"
+
+             val tkeys = 
+                     map (fn (k,v) => (S.unhash k, v)) (S.keys ste)
+             val vkeys = 
+                     map (fn (k,v) => (S.unhash k, v)) (S.keys sve)
+             val skeys = 
+                     map (fn (k,v) => (S.unhash k, v)) (S.keys sse)
+
+             val te' =
+               List.foldl (fn ((SOME k,t),te) =>
+                                  S.enter (te,k,t)
+                            | ((NONE,_),_) => te) te tkeys
+             val ve' =
+               List.foldl (fn ((SOME k,t),ve) =>
+                                  S.enter (ve,k,t)
+                            | ((NONE,_),_) => ve) ve vkeys
+             
+             val se' =
+               List.foldl (fn ((SOME k,t),se) =>
+                                  S.enter (se,k,t)
+                            | ((NONE,_),_) => se) se skeys
+       in
+          (te',ve',se',[],T.UNKNOWN,A.DOPEN (e,p))
+       end
+     | constr_dec te ve se b (A.DIMPORT (i1,t,i2,p)) = 
+       let
+          val ve' = S.enter(ve,i2,Env.VarEntry t)
+       in
+         (te,ve',se,[],t,A.DIMPORT (i1,t,i2,p))
+       end
      | constr_dec _ _ _ _ k = raise 
                Fail ("Unhandled constr_dec: " ^ A.prettyPrint [k])
 

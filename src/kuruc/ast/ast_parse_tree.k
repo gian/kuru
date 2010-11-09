@@ -127,6 +127,7 @@ struct
         | cpat te ve se (WildcardPat p) = 
             (te,ve,A.PWILD p)
         | cpat te ve se (NilPat p) = (te,ve,A.PNIL p)
+        | cpat te ve se (UnitPat p) = (te,ve,A.PUNIT p)
         | cpat te ve se p = 
             raise IllegalParseTree ("cpat Match: " ^ prettyPrint p,0)
 
@@ -290,7 +291,9 @@ struct
                                  in (te'',ve'',r@r') end)
                                     (te,ve,[]) l
              
-          in (te',ve',se,[A.DMUTUAL(Vector.fromList r,p)]) end
+          in 
+            (te',ve',se,r)
+          end
         | d te ve se (FunDec (ll,p)) = raise IllegalParseTree ("FunDec",p)
         | d te ve se (ValBind (a,b,p)) =
           let
@@ -358,10 +361,10 @@ struct
           let
              val a' = case (s te ve se a) of A.EID (n,t,p) => n
                                         | _ => raise Fail "non-id DataBind"
-             
-             val te' = S.enter (te,a',T.UNION (a',[]))
-
+            
+             val te' = S.enter (te,a',T.NAME a')
              val cbi = ref 0
+             val cons = ref [] : T.ty list ref
 
              val (te'',ve',ins) = 
                 List.foldl (fn (cb, (te,ve,ins)) =>
@@ -375,15 +378,8 @@ struct
                                                                      !cbi,
                                                                      NONE,
                                                                      T.NAME a')))
-                                 val te' = (case S.look (te,a') of
-                                               SOME (T.UNION (n',l)) =>
-                                                  S.enter (te,
-                                                            a',
-                                                            T.UNION (n',
-                                                            l @ [T.NAME 
-                                                                 (S.symbol id)]))
-                                             | _ => raise Fail 
-                                                   "ast_parse_tree: UNION bug")
+                                 val _ = cons := !cons @ [T.NAME (S.symbol id)]
+                                 
                                  val ins' =
                                              [A.DVAL (S.symbol id,
                                                       A.ECON (!cbi,NONE,
@@ -403,17 +399,8 @@ struct
                                                                 SOME f',
                                                                 T.NAME a')))
 
-                              val te' = (case S.look (te,a') of
-                                               SOME (T.UNION (n',l)) =>
-                                                  S.enter (te,
-                                                            a',
-                                                            T.UNION (n',
-                                                            l @ 
-                                                            [T.FN ([f'],
-                                                               T.NAME
-                                                               (S.symbol id))]))
-                                             | _ => raise Fail 
-                                                   "ast_parse_tree: UNION bug")
+                              val _ = cons := !cons @ 
+                                    [T.FN ([f'],T.NAME (S.symbol id))]
 
                               val p = S.symbol ("_p" ^ Int.toString (!cbi)) 
                               val ins' = [A.DVAL (S.symbol id,
@@ -433,8 +420,10 @@ struct
                    in
                       (te',ve',ins @ ins')
                    end) (te',ve,[]) b
+
+             val te''' = S.enter (te'',a',T.UNION (a',!cons))
           in
-             (te'',ve',se,ins)
+             (te''',ve',se,ins)
           end
         | d te ve se (ConBind (a,_,p)) = raise Fail "ConBind not implemented"
         | d te ve se (StructDec ([b],p)) =  
@@ -537,7 +526,93 @@ struct
           in
              (te,ve,se'',[A.DSIGNATURE (a',Vector.fromList l',p)])
           end
-        | d te ve se t = raise Fail "decl match"
+        | d te ve se (ExnDec (a,x,p)) =
+            (* We've already translated this into a datatype in ast-promote-exns *)
+             (te,ve,se,[])
+        | d te ve se (OpenDec (a,p)) =
+          let
+             fun sb se [] = raise Fail ("Empty long-id in 'open' near: " ^
+                                       Int.toString p)
+               | sb se [h] = (case (S.look (se,h)) of 
+                                 (SOME e) => e
+                               | NONE => raise Fail ("Invalid id in 'open' " ^
+                                                     "near: " ^
+                                                     Int.toString p))
+               | sb se (h::t) = (case (S.look (se,h)) of
+                                  (SOME (Env.StructEntry (_,_,e))) => sb e t
+                                | NONE => raise Fail ("Invalid id in 'open' " ^
+                                                      "near: " ^ 
+                                                      Int.toString p))
+
+             val a' = s te ve se a
+             val a'' = case a' of A.EID (n,t,p') => sb se [n]
+                                | A.ELID (nl,t,p') => sb se nl
+
+             val (ste,sve,sse) = 
+               case a'' of
+                  Env.StructEntry s => s
+                | _ => raise Fail "ast-parse-tree: Attempted to open non-struct!"
+
+             val tkeys = 
+                     map (fn (k,v) => (S.unhash k, v)) (S.keys ste)
+             val vkeys = 
+                     map (fn (k,v) => (S.unhash k, v)) (S.keys sve)
+             val skeys = 
+                     map (fn (k,v) => (S.unhash k, v)) (S.keys sse)
+
+             val _ = List.app (Debug.print Debug.debug)
+                     (map (fn (SOME k,v) => 
+                              "opening structure: " ^ prettyPrint a ^ ": type "
+                              ^ S.name k ^ 
+                              " = " ^ T.prettyPrint v ^ "\n"
+                            | _ => "Unknown structure element\n") tkeys)
+
+             val _ = List.app (Debug.print Debug.debug)
+                     (map (fn (SOME k,Env.VarEntry v) => 
+                              "opening structure: " ^ prettyPrint a ^ ": val "
+                              ^ S.name k ^ 
+                              " : " ^ T.prettyPrint v ^ "\n"
+                            | _ => "Unknown structure element\n") vkeys)
+
+             val _ = List.app (Debug.print Debug.debug)
+                     (map (fn (SOME k,v) => 
+                              "opening structure: " ^ prettyPrint a ^ ": structure "
+                              ^ S.name k ^ "\n" 
+                            | _ => "Unknown structure element\n") skeys)
+            
+             val te' =
+               List.foldl (fn ((SOME k,t),te) =>
+                                  S.enter (te,k,t)
+                            | ((NONE,_),_) => te) te tkeys
+             val ve' =
+               List.foldl (fn ((SOME k,t),ve) =>
+                                  S.enter (ve,k,t)
+                            | ((NONE,_),_) => ve) ve vkeys
+             
+             val se' =
+               List.foldl (fn ((SOME k,t),se) =>
+                                  S.enter (se,k,t)
+                            | ((NONE,_),_) => se) se skeys
+          in
+             (te',ve',se',[A.DOPEN(a',p)])
+          end
+        | d te ve se (Import (i1,tt,i2,p)) =
+          let
+             val t' = t te ve se tt
+
+             val i1' = s te ve se i1
+             val i1'' = case i1' of A.EID (n,t,p') => n 
+                          | _ => raise Fail "Invalid symbol for _import."
+
+             val i2' = s te ve se i2
+             val i2'' = case i2' of A.EID (n,t,p') => n 
+                          | _ => raise Fail "Invalid local name for _import."
+
+             val ve' = S.enter(ve,i2'',Env.VarEntry t')
+          in
+             (te,ve',se,[A.DIMPORT (i1'',t',i2'',p)])
+          end
+        | d te ve se t = raise Fail "ast-parse-tree.k: decl match"
    in
         List.foldl (fn (a,(te',ve',se',k)) =>
                      let

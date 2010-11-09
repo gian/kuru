@@ -81,7 +81,7 @@ struct
           if h' = "" then parseBuildFile t else
           if String.isPrefix "$/" h' 
                      then 
-                          Config.resolveLibrary (String.extract(h',2,NONE)) ::
+                          Config.resolveLibrary (String.extract(h',1,NONE)) ::
                            parseBuildFile t
                      else h' :: parseBuildFile t
        end
@@ -124,7 +124,7 @@ struct
                                     )
                        in
                           (te',ve',se',r @ r')
-                       end) (Env.tenv_base, Env.venv_base, S.empty, []) fl'
+                       end) (Env.tenv_base, Env.venv_base, Env.senv_base, []) fl'
          
          (* Stage 3 - Type inference/checking *)
          val (te'',ve'',se'',cs,fl''') = 

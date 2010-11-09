@@ -36,6 +36,7 @@ struct
       ("ast-list-cons",AstListCons.apply),
       ("ast-fun-curry",AstFunCurry.apply),
       ("ast-typedec-eval",AstTypedecEval.apply),
+      ("ast-promote-exns",AstPromoteExns.apply),
       ("ast-match-compile", AstMatchCompile.apply),
       ("ast-datatype-unfold", AstDatatypeUnfold.apply)
    ]

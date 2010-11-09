@@ -118,7 +118,7 @@ real           <- n1: negat d1: num "." d2: num "e" n2: negat d3: num ->
 negat          <- "~" -> (true)
                 /     -> (false).
 
-charconst      <- "#" "\"" c: char "\"" -> (P.Char ($c,!pos)).
+charconst      <- "#" "\"" c: stringcont "\"" -> (P.Char ($c,!pos)).
 
 string         <- "\"" s: stringcont "\"" _ -> (P.String ($s,!pos)).
 
@@ -142,13 +142,15 @@ keyword        <- "val" / "let" / "if" / "then" / "else" / "datatype"
                 / "type" / "fn" / "fun" / "and" / "end" / "in" /
                   "structure" / "struct" / "of" / "case" /
                   "handle" / "raise" / "infixr" / "infix" /
-                  "signature" / "sig" / "exception" .
+                  "signature" / "sig" / "exception" / "open" / "local" /
+                  "_import" / "as"
+                  .
 
 id             <-  r1: reserved r2: (reserved*) -> 
                   (P.Ident(String.concat($r1 :: $r2),!pos))
                 / k: keyword i1: idrest i2: (idrest*) -> 
                   (P.Ident($k ^ $i1 ^String.concat($i2),!pos))
-                / !keyword !nonid l: alpha r: (idrest*) -> 
+                / !"_" !keyword !nonid l: alpha r: (idrest*) -> 
                   (P.Ident(String.concat ($l :: $r),!pos))
                 . 
 
@@ -221,29 +223,28 @@ match          <- _ p: pat _"=>"_ e: exp _ "|"_ m: match ->
 % Patterns
 
 pat            <- _ p1: patel _"as"_ p2: pat -> (P.AsPat($p1,$p2,!pos))
-                / _"("_ p1: patel _ "::" _ p2: pat _")" ->
+                / _ p1: patel _ "::" _ p2: pat ->
                   (P.InfixPat($p1,P.Ident ("::",!pos),$p2,!pos))
                 / _ p: patel _ ":"_ t: typ -> (P.TyAnnPat ($p,$t,!pos))
+                / _ i: longid _ p: patel -> (P.ConstrPat ($i,SOME ($p),!pos))
                 / _ patel.
 
 patel          <- "_" -> (P.WildcardPat (!pos))
+                / i: longid -> (P.IdPat ($i,!pos))
+                / c: con -> (P.ConPat ($c,!pos))
                 / "(" _ p1: pat _ "," _ p2: patlist _ ")" ->
                   (P.TuplePat ($p1 :: $p2,!pos))
-                / i: longid _ p: patel -> 
-                     (P.ConstrPat ($i,SOME ($p),!pos))
                 / "(" _ p: pat _ ")" -> ($p)
                 / "()" -> (P.UnitPat (!pos))
                 / "[" _ p: patlist _ "]" -> (P.ListPat ($p,!pos))
                 / "[" _ "]" -> (P.ListPat ([],!pos))
-                / c: con -> (P.ConPat ($c,!pos))
-                / i: longid -> (P.IdPat ($i,!pos))
                 .
 
 patlist        <- _ p1: pat _ "," _ p2: patlist -> ($p1 :: $p2)
                 / _ p1: pat _ -> ([$p1]).
 
-patapp         <- _ p1: pat _ p2: patlist -> ($p1 :: $p2)
-                / _ p1: pat -> ([$p1]).
+patapp         <- _ p1: patel _ p2: patapp -> ($p1 :: $p2)
+                / _ p1: patel -> ([$p1]).
 
 % Types
 
@@ -285,6 +286,12 @@ dec            <- _ "val" _ v: valbind -> (P.ValDec($v,!pos))
                 / _"infixr" _ i: id -> (P.InfixrDec ("",$i,!pos))
                 / _"infix" _ d: digit _ i: id -> (P.InfixDec ($d,$i,!pos))
                 / _"infix" _ i: id -> (P.InfixDec ("",$i,!pos))
+                / _"exception" _ i: id _ "of" _ t: typ -> 
+                     (P.ExnDec ($i,SOME ($t),!pos))
+                / _"exception" _ i: id -> (P.ExnDec ($i,NONE,!pos))
+                / _"open" _ i: longid -> (P.OpenDec ($i,!pos))
+                / _"_import" _ i1: id _":"_ t: typ _"as"_ i2: id ->
+                     (P.Import ($i1,$t,$i2,!pos))
                 .
 
 sdec           <- _"val" _ v: valdesc -> (P.ValDesc($v,!pos))
@@ -315,9 +322,9 @@ valbind        <- "rec" _ v1: valbind ->
                   ([P.ValRec ($v1,!pos)])
                 / "rec" _ v: valbind _ ->
                   ([P.ValRec ($v,!pos)])
-                / p: pat _"="_ e: exp _ "and" v: valbind ->
+                / p: patel _"="_ e: exp _ "and" v: valbind ->
                   (P.ValBind ($p,$e,!pos) :: $v)
-                / p: pat _"="_ e: exp ->
+                / p: patel _"="_ e: exp ->
                   ([P.ValBind ($p,$e,!pos)]).
 
 tyvarlist      <- _ v: var _ "," _ t: tyvarlist -> ($v :: $t)

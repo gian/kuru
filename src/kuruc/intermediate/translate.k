@@ -96,7 +96,6 @@ struct
           | "bool" => Temp.i1
           | "unit" => Temp.ptr (Temp.i8)
           | "cvoid" => Temp.void
-          | "exn" => Temp.void
           | x => (case S.look (te,s) of
                      NONE => raise Fail "tr_ty: unhandled NAME type"
                    | SOME t => tr_ty te t
@@ -622,7 +621,6 @@ struct
           else
              (te,ve,se,I.TEMP rt,instr1 @ instr2 @ [I.MOVE (I.TEMP rt,c)])
        end
-     | tr_exp te ve se (A.EEXN (e,t,p)) = raise Fail "tr_exp: EEXN not impl." 
      | tr_exp te ve se (A.EHANDLE (pa,e,t,p)) = raise Fail "tr_exp: EHANDLE"
      | tr_exp te ve se (A.ESEQ (v,t,p)) =
        let
@@ -749,6 +747,60 @@ struct
           val se' = S.enter (se,s,rhs)
        in
           (te,ve,se',[])
+       end
+     | tr_ast te ve se (A.DOPEN (e,p)) =
+       let
+          fun sb se [] = raise Fail ("Empty long-id in 'open' near: " ^
+                                       Int.toString p)
+               | sb se [h] = (case (S.look (se,h)) of 
+                                 (SOME e) => e
+                               | NONE => raise Fail ("Invalid id in 'open' " ^
+                                                     "near: " ^
+                                                     Int.toString p))
+               | sb se (h::t) = (case (S.look (se,h)) of
+                                  (SOME (StructEntry (_,_,e))) => sb e t
+                                | NONE => raise Fail ("Invalid id in 'open' " ^
+                                                      "near: " ^ 
+                                                      Int.toString p))
+
+             val a'' = case e of A.EID (n,t,p') => sb se [n]
+                                | A.ELID (nl,t,p') => sb se nl
+
+             val (ste,sve,sse) = 
+               case a'' of
+                  StructEntry s => s
+                | _ => raise 
+                  Fail "translate.k: Attempted to open non-struct!"
+
+             val tkeys = 
+                     map (fn (k,v) => (S.unhash k, v)) (S.keys ste)
+             val vkeys = 
+                     map (fn (k,v) => (S.unhash k, v)) (S.keys sve)
+             val skeys = 
+                     map (fn (k,v) => (S.unhash k, v)) (S.keys sse)
+
+             val te' =
+               List.foldl (fn ((SOME k,t),te) =>
+                                  S.enter (te,k,t)
+                            | ((NONE,_),_) => te) te tkeys
+             val ve' =
+               List.foldl (fn ((SOME k,t),ve) =>
+                                  S.enter (ve,k,t)
+                            | ((NONE,_),_) => ve) ve vkeys
+             
+             val se' =
+               List.foldl (fn ((SOME k,t),se) =>
+                                  S.enter (se,k,t)
+                            | ((NONE,_),_) => se) se skeys
+       in
+          (te',ve',se',[])
+       end
+     | tr_ast te ve se (A.DIMPORT (i1,t,i2,p)) =
+       let
+          val bi = I.BUILTIN (S.name i1)
+          val ve' = S.enter (ve,i2,bi)
+       in
+          (te,ve',se,[])
        end
      | tr_ast te ve se (A.DNULL p) = (te,ve,se,[])
      | tr_ast te ve se _ = raise Fail "tr_ast: Not implemented"

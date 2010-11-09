@@ -47,7 +47,9 @@ struct
          b
       end
 
-	val venv_base = 
+   val venv_base = Symbol.empty : enventry Symbol.table
+
+	val senv_base = 
       let
          val consty = T.POLY 0
          val listty = T.CONSTR ([consty],T.t_list)
@@ -77,8 +79,15 @@ struct
             List.foldl (fn ((s,t),st) => 
                S.enter (st,  S.symbol s, VarEntry t))
                   Symbol.empty benv
+
+         val b' = S.enter (Symbol.empty, S.symbol "Internal",
+                              StructEntry (S.empty, b, S.empty))
+
+         val b'' = S.enter (Symbol.empty, S.symbol "Compiler",
+                              StructEntry (S.empty, S.empty, b'))
+
       in
-         b
+         b''
       end
 end
 
