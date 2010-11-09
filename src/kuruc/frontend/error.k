@@ -21,16 +21,50 @@
 
 structure Error =
 struct
-   fun resolveErrorPos (filename,linePositions,pos,buf) =
+   exception CompileError
+
+   val gLinePositions = ref [] : (string * int list) list ref
+
+   val errorCount = ref 0
+
+   fun setLinePositions (filename,linePositions) =
+      (gLinePositions := !gLinePositions @ [(filename,linePositions)])
+
+   fun getLinePositions filename =
+     (case (List.find (fn (f,l) => f = filename) (!gLinePositions)) of
+         NONE => []
+       | SOME (_,x) => x)
+
+   fun resolveErrorPos (pos,filename) =
       let
          val k = ref 0
          fun l [] = (!k,0)
            | l (h::t) = 
            if pos <= h then (!k,h-pos) else (k := 1 + !k; l t)
          
-         val (line,col) = l linePositions
+         val (line,col) = l (getLinePositions filename)
       in
          filename ^ ":" ^ Int.toString line ^ "." ^ Int.toString col
       end
+
+   fun fail (msg,p) = 
+      let
+         val _ = if !errorCount >= 20 
+                     then (TextIO.output(TextIO.stdErr,
+                              "Aborted: too many errors.\n");
+                           OS.Process.exit OS.Process.failure)
+                     else ()
+
+         val _ = errorCount := !errorCount + 1
+
+         val _ = TextIO.output(TextIO.stdErr, "\n * " ^ 
+                               resolveErrorPos p ^ ":\n\t" ^ msg ^ "\n")
+
+             in
+         if !errorCount < 20 then raise CompileError
+            else raise Fail "Aborted: too many errors."
+      end
+
+   fun getErrorCount () = !errorCount
 end
 

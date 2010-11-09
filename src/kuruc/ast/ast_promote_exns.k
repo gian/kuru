@@ -16,35 +16,36 @@
 *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *******************************************************************************
 *  This file:
-*    Replace all AppList nodes with nested App nodes.
-*  e.g. AppList [a,b,c] --> App(App(a,b),c)
+*    Turn exceptions into a top-level (global) datatype declaration of
+*    type exn.
 ******************************************************************************)
 
-structure AstAppApply =
+structure AstPromoteExns =
 struct
    open ParseTree
 
+   val exns = ref [] : pt list ref
+
+   fun add_con x = exns := !exns @ [ConBind x]
+
    fun apply tenv venv pt = 
    let
-      fun s (AndAlso (a,b,pos)) = AndAlso (s a, s b, pos) 
-        | s (OrElse (a,b,pos)) = OrElse (s a, s b, pos)
-        | s (Infix (a,opr,b,pos)) = Infix (s a, opr, s b, pos)
+      fun s (AndAlso (a,b,pos)) = 
+            App(Ident("_andalso",pos),
+                TupleExp ([s a, s b],pos),pos)
+        | s (OrElse (a,b,pos)) = 
+            App(Ident("_orelse",pos),
+               TupleExp ([s a, s b],pos),pos)
+        | s (Infix (a,opr,b,pos)) =
+            App(opr,
+               TupleExp ([s a, s b],pos),pos)
         | s (LongId (a,b,p)) = LongId (s a, s b,p)
         | s (Var (a,p)) = Var (s a,p)
         | s (Raise (a,p)) = Raise (s a,p)
         | s (Seq (a,b,p)) = Seq (s a, s b,p)
         | s (OpExp (a,p)) = OpExp (s a,p)
         | s (App (a,b,p)) = App (s a, s b,p)
-        | s (AppList ([e],p)) = s e
-        | s (AppList (l,p)) =
-            let
-               fun a [] = Error.fail ("Invalid application", p)
-                 | a [e] = s e
-                 | a ([e1,e2]) = App (s e1,s e2,p)
-                 | a (e1::e2::t) = App (App (s e1, s e2, p), a t, p)
-            in
-               a l
-            end
+        | s (AppList (l,p)) = AppList (map s l,p)
         | s (TyAnn (a,b,p)) = TyAnn (s a, s b,p)
         | s (TupleExp (l,p)) = TupleExp (map s l,p)
         | s (SeqExp (l,p)) = SeqExp (map s l,p)
@@ -84,11 +85,21 @@ struct
         | s (ConBind (a,NONE,p)) = ConBind (s a,NONE,p)
         | s (ConBind (a,SOME b,p)) = ConBind (s a,SOME (s b),p)
         | s (StructDec (l,p)) = StructDec (map s l,p)
-        | s (StructBind (a,c,b,p)) = StructBind (s a, c, s b,p)
+        | s (StructBind (a,c, b,p)) = StructBind (s a, c, s b,p)
         | s (Structure (l,p)) = Structure (map s l,p)
+        | s (ExnDec (a,b,p)) = (add_con (a,b,p);ExnDec (a,b,p))
         | s t = t
+
+      val pt' = map s pt
+      val exs =
+         DatatypeDec ([DataBind ([],Ident ("exn",(0,"_INTERNAL_")),!exns,
+                                                         (0,"_INTERNAL_"))],
+                                                         (0,"_INTERNAL_")) 
+
+      (* TODO: This is probably the appropriate place to construct
+         a global "handle" that preserves exception names *)
    in
-      (tenv,venv,map s pt) 
+      (tenv,venv,exs :: pt')
    end
 
 end

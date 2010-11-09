@@ -88,6 +88,8 @@ structure P = ParseTree
 
 val srcFileLineNum = ref 1
 
+val kuruFile = ref "__UNKNOWN__"
+
 fun escape "n" = "\n"
   | escape "\\" = "\\"
   | escape "0" = String.str (Char.chr 0)
@@ -108,19 +110,19 @@ commentc       <- !"*)" char commentc
 % Constants
 num            <- d: digit n: (digit*) -> (String.concat($d :: $n)). 
 
-int            <- n: negat d: num -> (P.Int ($n,$d,!pos)).
+int            <- n: negat d: num -> (P.Int ($n,$d,(!pos,!kuruFile))).
 
 real           <- n1: negat d1: num "." d2: num "e" n2: negat d3: num ->
-                  (P.Real ($n1,$d1,$d2,SOME ($n2,$d3),!pos))
+                  (P.Real ($n1,$d1,$d2,SOME ($n2,$d3),(!pos,!kuruFile)))
                 / n1: negat d1: num "." d2: num ->
-                  (P.Real ($n1,$d1,$d2,NONE,!pos)).
+                  (P.Real ($n1,$d1,$d2,NONE,(!pos,!kuruFile))).
 
 negat          <- "~" -> (true)
                 /     -> (false).
 
-charconst      <- "#" "\"" c: stringcont "\"" -> (P.Char ($c,!pos)).
+charconst      <- "#" "\"" c: stringcont "\"" -> (P.Char ($c,(!pos,!kuruFile))).
 
-string         <- "\"" s: stringcont "\"" _ -> (P.String ($s,!pos)).
+string         <- "\"" s: stringcont "\"" _ -> (P.String ($s,(!pos,!kuruFile))).
 
 stringcont     <- !"\\" !"\"" c: char s: stringcont -> ($c ^ $s)
                 / b: "\\" c: char s: stringcont -> ((escape ($c)) ^ $s)
@@ -147,60 +149,60 @@ keyword        <- "val" / "let" / "if" / "then" / "else" / "datatype"
                   .
 
 id             <-  r1: reserved r2: (reserved*) -> 
-                  (P.Ident(String.concat($r1 :: $r2),!pos))
+                  (P.Ident(String.concat($r1 :: $r2),(!pos,!kuruFile)))
                 / k: keyword i1: idrest i2: (idrest*) -> 
-                  (P.Ident($k ^ $i1 ^String.concat($i2),!pos))
+                  (P.Ident($k ^ $i1 ^String.concat($i2),(!pos,!kuruFile)))
                 / !"_" !keyword !nonid l: alpha r: (idrest*) -> 
-                  (P.Ident(String.concat ($l :: $r),!pos))
+                  (P.Ident(String.concat ($l :: $r),(!pos,!kuruFile)))
                 . 
 
 idrest         <- !sp !nonid !reserved c: char -> ($c).
 
-var            <- "''" i: id -> (P.Var ($i,!pos))
-                / "'" i: id -> (P.Var ($i,!pos)).
+var            <- "''" i: id -> (P.Var ($i,(!pos,!kuruFile)))
+                / "'" i: id -> (P.Var ($i,(!pos,!kuruFile))).
 
-longid         <- i: id "." l: longid -> (P.LongId ($i,$l,!pos))
+longid         <- i: id "." l: longid -> (P.LongId ($i,$l,(!pos,!kuruFile)))
                 / i: id -> ($i).
 
 % Expressions
 
-exp            <- _ "raise" _ e: exp -> (P.Raise ($e,!pos))
+exp            <- _ "raise" _ e: exp -> (P.Raise ($e,(!pos,!kuruFile)))
                 / _ e1: expapp _ "andalso" _ e2: exp ->
-                  (P.AndAlso(P.AppList($e1,!pos),$e2,!pos))
+                  (P.AndAlso(P.AppList($e1,(!pos,!kuruFile)),$e2,(!pos,!kuruFile)))
                 / _ e1: expapp _ "orelse" _ e2: exp ->
-                  (P.OrElse(P.AppList($e1,!pos),$e2,!pos))
+                  (P.OrElse(P.AppList($e1,(!pos,!kuruFile)),$e2,(!pos,!kuruFile)))
                 / _ e: expapp _ "handle" _ m: match ->
-                  (P.HandleExp(P.AppList($e,!pos),$m,!pos))
+                  (P.HandleExp(P.AppList($e,(!pos,!kuruFile)),$m,(!pos,!kuruFile)))
                 / _ e: expapp _ ":" _ t: typ ->
-                  (P.TyAnn (P.AppList ($e,!pos),$t,!pos))
+                  (P.TyAnn (P.AppList ($e,(!pos,!kuruFile)),$t,(!pos,!kuruFile)))
                 / _ e1: expapp _"="_ e2: exp -> 
-                  (P.Infix (P.AppList ($e1,!pos),P.Ident ("=",!pos),$e2,!pos))
-                / _ e1: expapp -> (P.AppList ($e1,!pos)).
+                  (P.Infix (P.AppList ($e1,(!pos,!kuruFile)),P.Ident ("=",(!pos,!kuruFile)),$e2,(!pos,!kuruFile)))
+                / _ e1: expapp -> (P.AppList ($e1,(!pos,!kuruFile))).
                 
-expel          <- "op" _ l: longid -> (P.OpExp ($l,!pos))
+expel          <- "op" _ l: longid -> (P.OpExp ($l,(!pos,!kuruFile)))
                 / "let"_ d: declist _"in"_ 
                      e1: exp _ ";"_ e2: expseq _ "end" ->
-                        (P.LetExp($d,P.SeqExp($e1 :: $e2,!pos),!pos))
+                        (P.LetExp($d,P.SeqExp($e1 :: $e2,(!pos,!kuruFile)),(!pos,!kuruFile)))
                 / "let"_ d: declist _"in"_ e: exp _ "end" ->
-                        (P.LetExp($d,$e,!pos))
+                        (P.LetExp($d,$e,(!pos,!kuruFile)))
                 / con
                 / "(" _ e1: exp _ "," e2: explist _ ")" ->
-                 (P.TupleExp ($e1 :: $e2,!pos))
+                 (P.TupleExp ($e1 :: $e2,(!pos,!kuruFile)))
                 / "(" _ e1: exp _ ";" e2: expseq _ ")" ->
-                  (P.SeqExp ($e1 :: $e2,!pos))
+                  (P.SeqExp ($e1 :: $e2,(!pos,!kuruFile)))
                 / "(" _ e: exp _ ")" -> ($e)
-                / "()" -> (P.UnitExp (!pos))
+                / "()" -> (P.UnitExp ((!pos,!kuruFile)))
                 / "[" _ e1: exp _ "," _ e2: explist _ "]" ->
-                  (P.ListExp ($e1 :: $e2,!pos))
-                / "[" _ e: exp _ "]" -> (P.ListExp ([$e],!pos))
-                / "[" _ "]" -> (P.ListExp ([],!pos))
+                  (P.ListExp ($e1 :: $e2,(!pos,!kuruFile)))
+                / "[" _ e: exp _ "]" -> (P.ListExp ([$e],(!pos,!kuruFile)))
+                / "[" _ "]" -> (P.ListExp ([],(!pos,!kuruFile)))
                 / "if"_ e1: exp _"then"_ e2: exp _"else"_ e3: exp
-                   -> (P.IfExp($e1,$e2,$e3,!pos))
+                   -> (P.IfExp($e1,$e2,$e3,(!pos,!kuruFile)))
                 / "while"_ e1: exp _"do"_ e2: exp ->
-                  (P.WhileExp($e1,$e2,!pos))
+                  (P.WhileExp($e1,$e2,(!pos,!kuruFile)))
                 / "case"_ e: exp _"of"_ m: match ->
-                  (P.CaseExp($e,$m,!pos))
-                / "fn"_ m: match -> (P.FnExp($m,!pos))
+                  (P.CaseExp($e,$m,(!pos,!kuruFile)))
+                / "fn"_ m: match -> (P.FnExp($m,(!pos,!kuruFile)))
                 / longid 
                 .
 
@@ -216,28 +218,28 @@ expseq         <- _ e1: exp _";"_ e2: expseq ->
                 / _ e: exp -> (([$e])).
 
 match          <- _ p: pat _"=>"_ e: exp _ "|"_ m: match ->
-                  ((P.Match($p,$e,!pos)) :: $m)
+                  ((P.Match($p,$e,(!pos,!kuruFile))) :: $m)
                 / _ p: pat _"=>"_ e: exp ->
-                  ([P.Match($p,$e,!pos)]).
+                  ([P.Match($p,$e,(!pos,!kuruFile))]).
 
 % Patterns
 
-pat            <- _ p1: patel _"as"_ p2: pat -> (P.AsPat($p1,$p2,!pos))
+pat            <- _ p1: patel _"as"_ p2: pat -> (P.AsPat($p1,$p2,(!pos,!kuruFile)))
                 / _ p1: patel _ "::" _ p2: pat ->
-                  (P.InfixPat($p1,P.Ident ("::",!pos),$p2,!pos))
-                / _ p: patel _ ":"_ t: typ -> (P.TyAnnPat ($p,$t,!pos))
-                / _ i: longid _ p: patel -> (P.ConstrPat ($i,SOME ($p),!pos))
+                  (P.InfixPat($p1,P.Ident ("::",(!pos,!kuruFile)),$p2,(!pos,!kuruFile)))
+                / _ p: patel _ ":"_ t: typ -> (P.TyAnnPat ($p,$t,(!pos,!kuruFile)))
+                / _ i: longid _ p: patel -> (P.ConstrPat ($i,SOME ($p),(!pos,!kuruFile)))
                 / _ patel.
 
-patel          <- "_" -> (P.WildcardPat (!pos))
-                / i: longid -> (P.IdPat ($i,!pos))
-                / c: con -> (P.ConPat ($c,!pos))
+patel          <- "_" -> (P.WildcardPat ((!pos,!kuruFile)))
+                / i: longid -> (P.IdPat ($i,(!pos,!kuruFile)))
+                / c: con -> (P.ConPat ($c,(!pos,!kuruFile)))
                 / "(" _ p1: pat _ "," _ p2: patlist _ ")" ->
-                  (P.TuplePat ($p1 :: $p2,!pos))
+                  (P.TuplePat ($p1 :: $p2,(!pos,!kuruFile)))
                 / "(" _ p: pat _ ")" -> ($p)
-                / "()" -> (P.UnitPat (!pos))
-                / "[" _ p: patlist _ "]" -> (P.ListPat ($p,!pos))
-                / "[" _ "]" -> (P.ListPat ([],!pos))
+                / "()" -> (P.UnitPat ((!pos,!kuruFile)))
+                / "[" _ p: patlist _ "]" -> (P.ListPat ($p,(!pos,!kuruFile)))
+                / "[" _ "]" -> (P.ListPat ([],(!pos,!kuruFile)))
                 .
 
 patlist        <- _ p1: pat _ "," _ p2: patlist -> ($p1 :: $p2)
@@ -249,15 +251,15 @@ patapp         <- _ p1: patel _ p2: patapp -> ($p1 :: $p2)
 % Types
 
 typ            <- _ t1: typel _ "->" _ t2: typ ->
-                     (P.TyArrow ($t1,$t2,!pos))
+                     (P.TyArrow ($t1,$t2,(!pos,!kuruFile)))
                 / _ t1: typapp ->
-                     (P.TyPair ($t1,!pos))
+                     (P.TyPair ($t1,(!pos,!kuruFile)))
                 / _ t1: typel _ t2: typ ->
-                     (P.TyCon ($t1,$t2,!pos))
+                     (P.TyCon ($t1,$t2,(!pos,!kuruFile)))
                 / _ t: typel -> ($t).
 
 typel          <- v: var -> ($v)
-                / !"*" i: longid -> (P.TyName ($i,!pos))
+                / !"*" i: longid -> (P.TyName ($i,(!pos,!kuruFile)))
                 / "(" _ t: typ _ ")" -> ($t).
 
 typapp			<- t1: typel _"*"_ t2: typapp ->
@@ -274,58 +276,58 @@ declist        <- dec*.
 
 sdeclist        <- sdec*.
 
-dec            <- _ "val" _ v: valbind -> (P.ValDec($v,!pos))
-                / _ "type" _ v: typebind -> (P.TypeDec($v,!pos))
+dec            <- _ "val" _ v: valbind -> (P.ValDec($v,(!pos,!kuruFile)))
+                / _ "type" _ v: typebind -> (P.TypeDec($v,(!pos,!kuruFile)))
                 / _ "datatype" _ i: id _"="_ "datatype"_ l: longid
-                  -> (P.DatatypeAssign ($i,$l,!pos))
+                  -> (P.DatatypeAssign ($i,$l,(!pos,!kuruFile)))
                 / _ "datatype" _ d: databind -> 
-                     (P.DatatypeDec ($d,!pos))
-                / _"fun" _ f: funbind -> (P.FunDec ($f,!pos))
-                / _"structure" _ s: strbind -> (P.StructDec ($s,!pos))
-                / _"infixr" _ d: digit _ i: id -> (P.InfixrDec ($d,$i,!pos))
-                / _"infixr" _ i: id -> (P.InfixrDec ("",$i,!pos))
-                / _"infix" _ d: digit _ i: id -> (P.InfixDec ($d,$i,!pos))
-                / _"infix" _ i: id -> (P.InfixDec ("",$i,!pos))
+                     (P.DatatypeDec ($d,(!pos,!kuruFile)))
+                / _"fun" _ f: funbind -> (P.FunDec ($f,(!pos,!kuruFile)))
+                / _"structure" _ s: strbind -> (P.StructDec ($s,(!pos,!kuruFile)))
+                / _"infixr" _ d: digit _ i: id -> (P.InfixrDec ($d,$i,(!pos,!kuruFile)))
+                / _"infixr" _ i: id -> (P.InfixrDec ("",$i,(!pos,!kuruFile)))
+                / _"infix" _ d: digit _ i: id -> (P.InfixDec ($d,$i,(!pos,!kuruFile)))
+                / _"infix" _ i: id -> (P.InfixDec ("",$i,(!pos,!kuruFile)))
                 / _"exception" _ i: id _ "of" _ t: typ -> 
-                     (P.ExnDec ($i,SOME ($t),!pos))
-                / _"exception" _ i: id -> (P.ExnDec ($i,NONE,!pos))
-                / _"open" _ i: longid -> (P.OpenDec ($i,!pos))
+                     (P.ExnDec ($i,SOME ($t),(!pos,!kuruFile)))
+                / _"exception" _ i: id -> (P.ExnDec ($i,NONE,(!pos,!kuruFile)))
+                / _"open" _ i: longid -> (P.OpenDec ($i,(!pos,!kuruFile)))
                 / _"_import" _ i1: id _":"_ t: typ _"as"_ i2: id ->
-                     (P.Import ($i1,$t,$i2,!pos))
+                     (P.Import ($i1,$t,$i2,(!pos,!kuruFile)))
                 .
 
-sdec           <- _"val" _ v: valdesc -> (P.ValDesc($v,!pos))
-                / _ "type" _ v: typedesc -> (P.TypeDesc($v,!pos))
+sdec           <- _"val" _ v: valdesc -> (P.ValDesc($v,(!pos,!kuruFile)))
+                / _ "type" _ v: typedesc -> (P.TypeDesc($v,(!pos,!kuruFile)))
                 / _ "datatype" _ i: id _"="_ "datatype"_ l: longid
-                  -> (P.DatatypeAssign ($i,$l,!pos))
+                  -> (P.DatatypeAssign ($i,$l,(!pos,!kuruFile)))
                 / _ "datatype" _ d: databind -> 
-                     (P.DatatypeDec ($d,!pos))
-                / _ "structure" _ s: strdesc -> (P.StructDesc($s,!pos))
+                     (P.DatatypeDec ($d,(!pos,!kuruFile)))
+                / _ "structure" _ s: strdesc -> (P.StructDesc($s,(!pos,!kuruFile)))
                 .
 
 valdesc        <- _ i: id _ ":" _ t: typ _ "and" _ v: valdesc ->
-                     (P.ValDescBind (P.IdPat($i,!pos),$t,!pos) :: $v)
+                     (P.ValDescBind (P.IdPat($i,(!pos,!kuruFile)),$t,(!pos,!kuruFile)) :: $v)
                 / _ i: id _ ":" _ t: typ ->
-                     ([P.ValDescBind (P.IdPat($i,!pos),$t,!pos)]).
+                     ([P.ValDescBind (P.IdPat($i,(!pos,!kuruFile)),$t,(!pos,!kuruFile))]).
 
 typedesc        <- _ t: tyvars _ i: id _ "and" _ v: typedesc ->
-                     (P.TypeDescBind ($t,$i,!pos) :: $v)
+                     (P.TypeDescBind ($t,$i,(!pos,!kuruFile)) :: $v)
                  / _ t: tyvars _ i: id ->
-                     ([P.TypeDescBind ($t,$i,!pos)]).
+                     ([P.TypeDescBind ($t,$i,(!pos,!kuruFile))]).
 
 strdesc        <- _ i: id _ ":" _ s: sign _ "and" _ st: strdesc
-                  -> (P.StructDescBind ($i,$s,!pos) :: $st)
+                  -> (P.StructDescBind ($i,$s,(!pos,!kuruFile)) :: $st)
                 / _ i: id _ ":" _ s: sign ->
-                     ([P.StructDescBind ($i,$s,!pos)]).
+                     ([P.StructDescBind ($i,$s,(!pos,!kuruFile))]).
 
 valbind        <- "rec" _ v1: valbind ->
-                  ([P.ValRec ($v1,!pos)])
+                  ([P.ValRec ($v1,(!pos,!kuruFile))])
                 / "rec" _ v: valbind _ ->
-                  ([P.ValRec ($v,!pos)])
+                  ([P.ValRec ($v,(!pos,!kuruFile))])
                 / p: patel _"="_ e: exp _ "and" v: valbind ->
-                  (P.ValBind ($p,$e,!pos) :: $v)
+                  (P.ValBind ($p,$e,(!pos,!kuruFile)) :: $v)
                 / p: patel _"="_ e: exp ->
-                  ([P.ValBind ($p,$e,!pos)]).
+                  ([P.ValBind ($p,$e,(!pos,!kuruFile))]).
 
 tyvarlist      <- _ v: var _ "," _ t: tyvarlist -> ($v :: $t)
                 / _ v: var -> ([$v]).
@@ -336,9 +338,9 @@ tyvars         <- _"("_ l: tyvarlist _ ")" -> ($l)
 
 typebind       <- _ tv: tyvars _ i: id _"="_ t: typ _ "and" 
                      l: typebind -> (P.TypeBind($tv,
-                                     P.TyName ($i,!pos),$t,!pos) :: $l)
+                                     P.TyName ($i,(!pos,!kuruFile)),$t,(!pos,!kuruFile)) :: $l)
                 / _ tv: tyvars _ i: id _"="_ t: typ ->
-                     ([P.TypeBind($tv,P.TyName ($i,!pos),$t,!pos)]).
+                     ([P.TypeBind($tv,P.TyName ($i,(!pos,!kuruFile)),$t,(!pos,!kuruFile))]).
 
 funbind        <- _ f: funmatch _ "and" _ l: funbind ->
                  ($f :: $l)
@@ -346,54 +348,54 @@ funbind        <- _ f: funmatch _ "and" _ l: funbind ->
 
 funmatch       <- "op" _ i: id _ l: patapp _ t: tyannopt _"="_
                    e: exp _ "|"_ f: funmatch ->
-                     (P.FunMatch (P.OpExp ($i,!pos),$l,$t,$e,!pos) :: $f)
+                     (P.FunMatch (P.OpExp ($i,(!pos,!kuruFile)),$l,$t,$e,(!pos,!kuruFile)) :: $f)
                 / "op" _ i: id _ l: patapp _ t: tyannopt _"="_
-                   e: exp -> ([P.FunMatch(P.OpExp ($i,!pos),$l,$t,$e,!pos)])
+                   e: exp -> ([P.FunMatch(P.OpExp ($i,(!pos,!kuruFile)),$l,$t,$e,(!pos,!kuruFile))])
                 / i: id l: patapp t: tyannopt _"="_ e: exp _
                      "|"_ f: funmatch -> 
-                     (P.FunMatch ($i,$l,$t,$e,!pos) :: $f)
+                     (P.FunMatch ($i,$l,$t,$e,(!pos,!kuruFile)) :: $f)
                 / i: id l: patapp t: tyannopt _"="_ e: exp ->
-                     ([P.FunMatch ($i,$l,$t,$e,!pos)]).
+                     ([P.FunMatch ($i,$l,$t,$e,(!pos,!kuruFile))]).
 
 databind       <- _ tv: tyvars _ i: id _ "=" _ c: conbind _ "and" d: databind
-                  -> (P.DataBind($tv,$i,$c,!pos) :: $d)
+                  -> (P.DataBind($tv,$i,$c,(!pos,!kuruFile)) :: $d)
                 / _ tv: tyvars _ i: id _ "=" _ c: conbind
-                  -> ([P.DataBind($tv,$i,$c,!pos)]).
+                  -> ([P.DataBind($tv,$i,$c,(!pos,!kuruFile))]).
 
 conbind        <- _ i: id _ "of" _ t: typ _"|"_ c: conbind ->
-                  (P.ConBind($i,SOME ($t),!pos) :: $c)
+                  (P.ConBind($i,SOME ($t),(!pos,!kuruFile)) :: $c)
                 / _ i: id _ "of" _ t: typ ->
-                  ([P.ConBind($i,SOME ($t),!pos)])
+                  ([P.ConBind($i,SOME ($t),(!pos,!kuruFile))])
                 / _ i: id _ "|" _ c: conbind ->
-                  (P.ConBind($i,NONE,!pos) :: $c)
+                  (P.ConBind($i,NONE,(!pos,!kuruFile)) :: $c)
                 / _ i: id ->
-                  ([P.ConBind($i,NONE,!pos)]).
+                  ([P.ConBind($i,NONE,(!pos,!kuruFile))]).
 
 strbind        <- _ i: id _ a: sigasc_opt _ "=" _ s: str _ "and" _ st: strbind ->
-                  (P.StructBind($i,$a,$s,!pos) :: $st)
+                  (P.StructBind($i,$a,$s,(!pos,!kuruFile)) :: $st)
                 / _ i: id _ a: sigasc_opt _ "=" _ s: str ->
-                  ([P.StructBind($i,$a,$s,!pos)]).
+                  ([P.StructBind($i,$a,$s,(!pos,!kuruFile))]).
 
 sigasc_opt     <- _":>"_ s: sign -> (P.AscribeOpaque ($s))
                 / _":" _ s: sign -> (P.Ascribe ($s))
                 / -> (P.Implicit).
 
 sigbind        <- _ i: id _ "=" _ s: sign _ "and" _ st: sigbind ->
-                  (P.SigBind($i,$s,!pos) :: $st)
+                  (P.SigBind($i,$s,(!pos,!kuruFile)) :: $st)
                 / _ i: id _ "=" _ s: sign ->
-                  ([P.SigBind($i,$s,!pos)]).
+                  ([P.SigBind($i,$s,(!pos,!kuruFile))]).
 
 str            <- _ "struct" _ d: declist _ "end"
-                  -> (P.Structure($d,!pos))
+                  -> (P.Structure($d,(!pos,!kuruFile)))
                 / longid.
 
 sign           <- _ "sig" _ d: sdeclist _ "end"
-                  -> (P.Signature($d,!pos))
+                  -> (P.Signature($d,(!pos,!kuruFile)))
                 / _ i: id -> ($i)
                 .
 
 programel      <- _ dec
-                / _"signature" _ s: sigbind -> (P.SigDec ($s,!pos)).
+                / _"signature" _ s: sigbind -> (P.SigDec ($s,(!pos,!kuruFile))).
 
 program        <- p1: programel _ ";" _ p2: program -> ($p1 :: $p2)
                 / p1: programel _ p2: program -> ($p1 :: $p2)

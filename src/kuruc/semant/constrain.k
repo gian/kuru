@@ -33,7 +33,9 @@ struct
    fun vtol f = Vector.foldr (fn (a,b) => a::b) [] f
 
    fun prettyPrint c =
-      String.concatWith "\n" (map (fn (a,b) => T.prettyPrint a ^ "\t\t:\t" ^
+      String.concatWith "\n" (map (fn (a,b,p) =>
+                                               Error.resolveErrorPos p ^ ": " ^
+                                               T.prettyPrint a ^ "\t\t:\t" ^
                                                T.prettyPrint b) c)
 
    fun inst l =
@@ -85,7 +87,7 @@ struct
              (fn (e,(te,ve,se,cs,ts,es)) => 
                let
                   val (te',ve',se',cs',t',e') = constr_pat te ve se e
-                  val cs'' = cs @ cs' @ [(t',ts)]
+                  val cs'' = cs @ cs' @ [(t',ts,p)]
                in
                   (te',ve',se',cs@cs',t',es@[e'])
                end) (te,ve,se,[],tx,[]) (vtol v)
@@ -115,7 +117,7 @@ struct
      | constr_pat te ve se (A.PCONSTR(i,SOME (e,t1), t2, p)) =
        let
           val (te',ve',se',cs,t1',e') = constr_pat te ve se e
-          val cs' = cs @ [(t1',t1)]
+          val cs' = cs @ [(t1',t1,p)]
        in
           (te',ve',se',cs',t2,A.PCONSTR(i,SOME (e',t1'),t2,p))
        end
@@ -127,7 +129,7 @@ struct
           val (te'',ve'',se'',cs',rt,r') = constr_pat te ve' se r
           val tx = T.fresh ()
           val t' = T.CONSTR ([tx],T.t_list)
-          val cs'' = cs @ cs' @ [(tx,lt),(rt,t')]
+          val cs'' = cs @ cs' @ [(tx,lt,p),(rt,t',p)]
        in
           (te,ve'',se,cs'',t',A.PINFIX (l',s,r',t',p))
        end
@@ -210,7 +212,7 @@ struct
           val (_,_,_,c1,t1,e1') = constr_exp te ve se e1
           val (_,_,_,c2,t2,e2') = constr_exp te ve se e2
           val (_,_,_,c3,t3,e3') = constr_exp te ve se e3
-          val cs = c1 @ c2 @ c3 @ [(t1,T.t_bool),(t',t2),(t',t3)]
+          val cs = c1 @ c2 @ c3 @ [(t1,T.t_bool,p),(t',t2,p),(t',t3,p)]
        in
           (te,ve,se,cs,t',A.EIF (e1',e2',e3',t',p))
        end
@@ -240,7 +242,7 @@ struct
           
           val tx = T.fresh ()
           
-          val cs' = [(te1',T.FN([te2],tx))]
+          val cs' = [(te1',T.FN([te2],tx),p)]
        in
           (te,ve,se, cs' @ cs1 @ cs2, tx, A.EAPP(e1',e2',tx,p))
        end
@@ -257,11 +259,11 @@ struct
           
           val tx = T.fresh ()
           
-          val cs' = [(te1',T.FN(te2,tx))]
+          val cs' = [(te1',T.FN(te2,tx),p)]
        in
           (te,ve,se, cs' @ cs1 @ cs2, tx, A.EAPPMULT(e1',e2'',tx,p))
        end
-     | constr_exp te ve se (A.ECASE (e1,v,t,p)) =
+     | constr_exp te ve se (A.ECASE (e1,v,t,po)) =
        let
           val (te',ve',se',cs, t1,e1') = constr_exp te ve se e1
 
@@ -274,8 +276,8 @@ struct
                         let
                            val (te',ve',se',pcs',pt,p') = constr_pat te ve se p
                            val (_,_,_,ecs',et,e') = constr_exp te' ve' se' e
-                 				val _ = kcs := (!kcs) @ [(rt,et)] @
-															[(pt,t1)] @ pcs' @ ecs'
+                 				val _ = kcs := (!kcs) @ [(rt,et,po)] @
+															[(pt,t1,po)] @ pcs' @ ecs'
 
 									val _ = Debug.print Debug.debug (
 												"case constraint: " ^ T.prettyPrint t1 ^ " = " ^
@@ -286,7 +288,7 @@ struct
                         end) (vtol v)
                    )
        in
-          (te,ve,se,!kcs,rt,A.ECASE (e1',v',rt,p))
+          (te,ve,se,!kcs,rt,A.ECASE (e1',v',rt,po))
        end
      | constr_exp te ve se (A.ESEQ (v,t,p)) =
        let
@@ -301,7 +303,7 @@ struct
                               (t',cs@cs',v'@[el'])
                            end) (rt,[],[]) v
 
-          val cs' = cs @ [(rt,rty)]
+          val cs' = cs @ [(rt,rty,p)]
        in
           (te,ve,se,cs',rt,A.ESEQ (Vector.fromList v',rt,p))
        end
@@ -315,14 +317,14 @@ struct
      | constr_exp te ve se (A.EANN (e,t,p)) =
        let
           val (te',ve',se',cs,t',e') = constr_exp te ve se e
-          val cs' = cs @ [(t',t)]
+          val cs' = cs @ [(t',t,p)]
        in
           (te,ve,se,cs',t',e)
        end
      | constr_exp te ve se (A.ERAISE (e,p)) = 
        let
           val (te',ve',se',cs,t',e') = constr_exp te ve se e
-          val cs' = cs @ [(t',T.t_exn)]
+          val cs' = cs @ [(t',T.t_exn,p)]
        in
           (te,ve,se,cs',T.fresh (),A.ERAISE (e',p))
        end
@@ -331,7 +333,7 @@ struct
      | constr_exp te ve se (A.ECON (i,SOME (e',t1),t2,p)) =
        let
           val (te',ve',se',cs',t',e'') = constr_exp te ve se e'
-          val constr = cs' @ [(t',t1)]
+          val constr = cs' @ [(t',t1,p)]
        in
           (te,ve,se,constr,t2,A.ECON (i,SOME (e'',t'),t2,p))
        end
@@ -353,7 +355,7 @@ struct
           
           val (te',ve',se',cs',t',e') = constr_exp te ve'' se e
 
-			 val cs'' = cs' @ [(tx,t')]
+			 val cs'' = cs' @ [(tx,t',p)]
        in
           (te,ve',se,cs'',t',A.DVAL (s,e',t',p))
        end
@@ -412,12 +414,12 @@ struct
                        val structTy =
                         case (S.look (ve',k)) of
                            NONE =>
-                              raise Fail ("Structure near " ^ Int.toString p ^ 
-                                          " is missing definition for " ^ 
-                                          S.name k ^ " required by signature")
+                              Error.fail ("Structure '" ^ S.name s ^ 
+                                          "' is missing element '" ^ 
+                                          S.name k ^ "' required by signature",p)
                          | SOME (Env.VarEntry t) => t
                     in
-                       (inst v,inst structTy)
+                       (inst v,inst structTy,p)
                     end
                    | _ => raise Fail ("constr_dec: BUG 415?")) sigse)
        in
@@ -453,18 +455,13 @@ struct
        end
      | constr_dec te ve se b (A.DOPEN (e,p)) = 
        let
-          fun sb se [] = raise Fail ("Empty long-id in 'open' near: " ^
-                                       Int.toString p)
+          fun sb se [] = Error.fail ("Empty long-id in 'open'",p)
                | sb se [h] = (case (S.look (se,h)) of 
                                  (SOME e) => e
-                               | NONE => raise Fail ("Invalid id in 'open' " ^
-                                                     "near: " ^
-                                                     Int.toString p))
+                               | NONE => Error.fail ("Invalid id in 'open'",p))
                | sb se (h::t) = (case (S.look (se,h)) of
                                   (SOME (Env.StructEntry (_,_,e))) => sb e t
-                                | NONE => raise Fail ("Invalid id in 'open' " ^
-                                                      "near: " ^ 
-                                                      Int.toString p))
+                                | NONE => Error.fail ("Invalid id in 'open'",p))
 
              val a'' = case e of A.EID (n,t,p') => sb se [n]
                                 | A.ELID (nl,t,p') => sb se nl
@@ -507,12 +504,12 @@ struct
      | constr_dec _ _ _ _ k = raise 
                Fail ("Unhandled constr_dec: " ^ A.prettyPrint [k])
 
-   and substinenv (tn,tr) ve =
+   and substinenv (tn,tr,p) ve =
       let
 			val vkeys = S.keys ve 
 		
 			fun upd ve NONE _ = 
-				raise Fail "[BUG] constr updates unknown symbol"
+				 Error.fail ("[BUG] constr updates unknown symbol",p)
 			  | upd ve (SOME s) t = 
 			  		S.enter (ve,s,t)
 		in
@@ -594,7 +591,7 @@ struct
                                                    "\n")
                       in
                          (te'',ve''',se'',csg,gty)
-                      end)
+                      end handle CompileError => (te',ve',se',cs',d'))
                         (te,ve,se,[],[]) c
 
    fun generateConstraints tenv venv senv c =
@@ -604,9 +601,7 @@ struct
          val _ = Debug.print Debug.debugmore (A.prettyPrint k)
       in
          (te,ve,se,cn,k)
-      end handle IdUnknown (s,p) => raise Fail ("Unknown identifier: " ^
-                                                s ^ " near " ^
-                                                Int.toString p)
+      end handle IdUnknown (s,p) => Error.fail ("Unknown symbol '" ^ s ^ "'",p) 
 end
 
 

@@ -21,7 +21,7 @@
 
 structure ParseTree =
 struct
-   type pos = int
+   type pos = int * string
 
    datatype ascription =
       AscribeOpaque of pt

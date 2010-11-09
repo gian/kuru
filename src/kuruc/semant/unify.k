@@ -25,7 +25,9 @@ struct
    structure A = TypedAST
    
    fun ppc c = String.concatWith "\n" 
-                        (map (fn (l,r) => T.prettyPrint l ^ " : " ^
+                        (map (fn (l,r,p) => 
+                                          Error.resolveErrorPos p ^ ":  " ^
+                                          T.prettyPrint l ^ " : " ^
                                           T.prettyPrint r) c)
 
           val _ = Debug.print Debug.debug "generalise constraint set:\n"
@@ -39,8 +41,8 @@ struct
          val _ = Debug.print Debug.debug ("===== before subst =====\n") 
          val _ = Debug.print Debug.debug ("\n" ^ ppc l ^ "\n")
          
-         val c' = map (fn (a,b) => (T.substinty tn th a,
-                                    T.substinty tn th b)) l
+         val c' = map (fn (a,b,p) => (T.substinty tn th a,
+                                      T.substinty tn th b,p)) l
 
          val _ = Debug.print Debug.debug ("===== after subst =====\n") 
          val _ = Debug.print Debug.debug ("\n" ^ ppc c' ^ "\n")
@@ -50,52 +52,58 @@ struct
 
    fun substinconstr_rhs tn th l = 
       let
-         val c' = map (fn (a,b) => (a,
-                                    T.substinty tn th b)) l
+         val c' = map (fn (a,b,p) => (a,
+                                    T.substinty tn th b,p)) l
       in
          c'
       end
 
 
+   fun conzip ([],[],p) = []
+     | conzip (h1::t1,h2::t2,p) = (h1,h2,p) :: conzip (t1,t2,p)
+     | conzip ([],l,p) = 
+         Error.fail ("Encountered type lists of different lengths",p)
+     | conzip (l,[],p) =
+         Error.fail ("Encountered type lists of different lengths",p)
+
    fun unify' [] = []
-     | unify' ((T.META x,t2) :: rest) = 
+     | unify' ((T.META x,t2,p) :: rest) = 
          if T.equal t2 (T.META x) then unify rest
          else if T.occursin (T.META x) t2 then
-                  raise (Fail "Circular constraints")
-         else (unify (substinconstr (T.META x) t2 rest)) @ [(T.META x, t2)]
-     | unify' ((t1,T.META x) :: rest) = 
+               Error.fail ("Circular type constraints",p)
+         else (unify (substinconstr (T.META x) t2 rest)) @ [(T.META x,t2,p)]
+     | unify' ((t1,T.META x,p) :: rest) = 
          if T.equal t1 (T.META x) then unify rest
          else if T.occursin (T.META x) t1 then
-                  raise (Fail "Circular constraints")
-         else (unify (substinconstr (T.META x) t1 rest)) @ [(T.META x, t1)]
-
-     | unify' ((T.NAME s,T.NAME t) :: rest) =
+               Error.fail ("Circular type constraints",p)
+         else (unify (substinconstr (T.META x) t1 rest)) @ [(T.META x,t1,p)]
+     | unify' ((T.NAME s,T.NAME t,p) :: rest) =
          if s = t then unify rest
-         else raise (Fail ("Type error: " ^ S.name s ^ " != " ^ S.name t))
-     | unify' ((T.FN(t1,t2),T.FN(t3,t4)) :: rest) =
-	  		unify ((ListPair.zip (t1,t3)) @ [(t2,t4)] @ rest)
-     | unify' ((T.TUPLE l1,T.TUPLE l2) :: rest) =
-         unify ((ListPair.zip (l1,l2)) @ rest)
-     | unify' ((T.CONSTR (l1,lt),T.CONSTR (r1,rt)) :: rest) =
-	  		unify ((ListPair.zip (l1,r1)) @ [(lt,rt)] @ rest)
-     | unify' ((T.POLY i, T.POLY j) :: rest) =
+         else Error.fail ("Type error: " ^ S.name s ^ " != " ^ S.name t,p)
+     | unify' ((T.FN(t1,t2),T.FN(t3,t4),p) :: rest) =
+	  		unify ((conzip (t1,t3,p)) @ [(t2,t4,p)] @ rest)
+     | unify' ((T.TUPLE l1,T.TUPLE l2,p) :: rest) =
+         unify ((conzip (l1,l2,p)) @ rest)
+     | unify' ((T.CONSTR (l1,lt),T.CONSTR (r1,rt),p) :: rest) =
+	  		unify ((conzip (l1,r1,p)) @ [(lt,rt,p)] @ rest)
+     | unify' ((T.POLY i, T.POLY j,p) :: rest) =
          if i = j then unify rest else 
-            raise Fail ("Type error: Polymorphic unification")
-     | unify' ((t1,t2) :: rest) = 
-         raise Fail ("Type error: " ^ T.prettyPrint t1 ^ " != " ^ 
-                                      T.prettyPrint t2)
+            Error.fail ("Type error: Polymorphic unification",p)
+     | unify' ((t1,t2,p) :: rest) = 
+         Error.fail ("Type error: " ^ T.prettyPrint t1 ^ " != " ^ 
+                                      T.prettyPrint t2,p)
 
    and unify [] = []
-     | unify ((t1,t2) :: rest) =
+     | unify ((t1,t2,p) :: rest) =
        let
           val _ = Debug.print Debug.debug ("Unifying " ^ T.prettyPrint t1 ^ 
                                            " with " ^ T.prettyPrint t2 ^ "\n")
        in
-          unify' ((t1,t2) :: rest)
+          unify' ((t1,t2,p) :: rest) handle CompileError => unify' rest
        end
 
    fun apply [] d = d
-     | apply ((l,r)::t) d = apply t (A.subst_ty l r d)
+     | apply ((l,r,p)::t) d = apply t (A.subst_ty l r d)
 
    fun generalise cs t =
       let
@@ -113,7 +121,7 @@ struct
                      val _ = st := S.enter (!st,S.symbol (Int.toString i),
                                             p)
                      val _ = csr := (substinconstr_rhs (T.META i) p (!csr)) @
-                                       [(T.META i, p)]
+                                       [(T.META i, p, (0,"_GENERALISE_"))]
                   in
                      p
                   end)

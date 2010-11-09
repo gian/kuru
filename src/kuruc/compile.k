@@ -27,6 +27,7 @@ struct
       val p = ref 0
       val linepositions = ref [] : int list ref
       val _ = KuruParser.errorPos := 0
+      val _ = KuruParser.kuruFile := (OS.Path.mkCanonical filename)
 
       fun readLines fp = 
          let
@@ -44,23 +45,22 @@ struct
       val buf = readLines f
       val _ = TextIO.closeIn f
 
+      val _ = Error.setLinePositions (OS.Path.mkCanonical filename,!linepositions)
+
       val _ = Debug.print Debug.debugmore 
          ("Contents of file: " ^ filename ^ ":\n" ^ buf)
 
       val parseResult = 
          KuruParser.kupeg_start buf handle Option => 
-            raise Fail ("kuruc: error near " ^ 
-                        (Error.resolveErrorPos(filename,
-                                               !linepositions,
-                                               KuruParser.error(),
-                                               buf)))
+            raise Fail ("kuruc: syntax error near " ^ 
+                        (Error.resolveErrorPos(KuruParser.error (),
+                                               OS.Path.mkCanonical filename)))
 
-      val _ = if KuruParser.error() + 2 < size buf then 
-                 print ("kuruc: maybe error near " ^ 
-                     (Error.resolveErrorPos(filename,
-                                            !linepositions,
-                                            KuruParser.error(),
-                                            buf)) ^ "\n") else ()
+      val _ = if KuruParser.error() + 3 < size buf then 
+            raise Fail ("kuruc: syntax error near " ^ 
+                        (Error.resolveErrorPos(KuruParser.error (),
+                                               OS.Path.mkCanonical filename)))
+              else ()
 	in
       map ParseTree.sanitise parseResult
    end
@@ -68,8 +68,9 @@ struct
    
    fun deserialiseFile f = raise Fail "deserialiseFile not implemented"
 
-   fun parseBuildFile [] = []
-     | parseBuildFile (h::t) = 
+   (* FIXME: Something should prevent infinite cycles of build files. *)
+   fun parseBuildFile _ [] = []
+     | parseBuildFile pre (h::t) = 
        let
           fun ws (#" "::t) = ws t
             | ws (#"\t"::t) = ws t
@@ -77,13 +78,15 @@ struct
             | ws x = x
 
           val h' = String.implode (ws (String.explode h))
+
+          val pre' = if pre = "" then "." else pre
        in
-          if h' = "" then parseBuildFile t else
+          if h' = "" then parseBuildFile pre t else
           if String.isPrefix "$/" h' 
                      then 
                           Config.resolveLibrary (String.extract(h',1,NONE)) ::
-                           parseBuildFile t
-                     else h' :: parseBuildFile t
+                           parseBuildFile pre t
+                     else (pre' ^ "/" ^ h') :: parseBuildFile pre t
        end
       
 
@@ -99,11 +102,16 @@ struct
                            let
                               val _ = Debug.print Debug.verbose
                                  ("Reading from Kuru build file: " ^ f ^ "\n")
+
+                              val pre = OS.Path.getParent f
+
+                              val _ = Debug.print Debug.verbose
+                                 ("Making buildfile paths relative to: " ^pre ^"\n")
                               val fp = TextIO.openIn f
                               val cont = TextIO.input fp
                               val cont' = 
                                  String.fields (fn #"\n" => true | _ => false) cont
-                              val cont'' = parseBuildFile cont'
+                              val cont'' = parseBuildFile pre cont'
                               val _ = TextIO.closeIn fp
                            in
                               List.concat (genInputs cont'')
@@ -140,6 +148,11 @@ struct
          val _ = Debug.print Debug.internal ("\n" ^ TypedAST.prettyPrint d ^ "\n")
 
          (* Stage 4 - Optimisation *)
+
+         (* Error Checking State: We proceed no further if errors occurred. *)
+         val _ = if Error.getErrorCount () > 0 then 
+                  raise Fail ("Errors: " ^ Int.toString (Error.getErrorCount()))
+                  else ()
 
          (* Stage 5 - Typed Intermediate Representation *)
 

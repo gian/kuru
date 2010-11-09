@@ -34,9 +34,9 @@ struct
                         "_struct" ^ Int.toString (!strfresh))
 
    (* TODO: need to preserve the path in some other TypedAST element... *)
-   fun resolveLongId te ve se (LongId (Ident (s,_),r,p)) = 
+   fun resolveLongId te ve se (LongId (Ident (s,pk),r,p)) = 
          (case (S.look (se,S.symbol s)) of
-               NONE => raise Fail ("Unknown structure id: " ^ s)
+               NONE => Error.fail ("Unknown structure id: " ^ s,pk)
              | SOME (Env.StructEntry (te',ve',se')) => 
                      (Symbol.symbol s) :: 
                         resolveLongId te' ve' se' r)
@@ -85,9 +85,8 @@ struct
                    = (case t of 
                         T.CON (i,NONE,ty) => (i,ty)
                       | T.CON (i,SOME _,ty) =>
-                           raise Fail ("Constructor near " ^ Int.toString p ^ 
-                                       " expects argument")
-                      | _ => raise Fail ("Non-constructor near: " ^ Int.toString p))
+                           Error.fail ("Constructor expects argument",p) 
+                      | _ => Error.fail ("Non-constructor in pattern",p)) 
           in
              (te,ve,A.PCONSTR (i,NONE,t',p))
           end
@@ -96,16 +95,16 @@ struct
              val s' = S.symbol n 
              val t = case (S.look (ve,s')) of
                         SOME (Env.VarEntry t') => t'
-                      | NONE => raise IllegalParseTree ("Unrecognised constructor!" , p)
+                      | NONE => Error.fail ("Unrecognised constructor: " ^ n,p)
              val (te',ve',b') = cpat te ve se b
 
              val (i,t',t'')
                    = (case t of 
                         T.CON (i,NONE,ty) => 
-                           raise Fail ("Constructor given unexpected argument near "
-                                       ^ Int.toString p)
+                           Error.fail ("Constructor given unexpected argument",p)
                       | T.CON (i,SOME ty1,ty2) => (i,ty2,ty1)
-                      | _ => raise Fail ("Non-constructor near: " ^ Int.toString p))
+                      | _ => Error.fail 
+                           ("Non-constructor in pattern", p))
           in
              (te',ve',A.PCONSTR (i,SOME (b',t''),t',p))
           end
@@ -115,8 +114,8 @@ struct
             SOME (Env.VarEntry (T.CON (i,NONE,t))) =>
             cpat te ve se (ConstrPat (Ident (n,p),NONE,p))
           | SOME (Env.VarEntry (T.CON (i,SOME _,t))) =>
-            raise Fail ("Using constructor pattern without arguments near" ^ 
-                        Int.toString p)
+            Error.fail ("Using constructor pattern '" ^ n ^ "' without arguments", 
+                        p)
           | _ => let
                val s' = S.symbol n
                val ve' = S.enter (ve,s',Env.VarEntry T.UNKNOWN) 
@@ -129,7 +128,7 @@ struct
         | cpat te ve se (NilPat p) = (te,ve,A.PNIL p)
         | cpat te ve se (UnitPat p) = (te,ve,A.PUNIT p)
         | cpat te ve se p = 
-            raise IllegalParseTree ("cpat Match: " ^ prettyPrint p,0)
+            raise IllegalParseTree ("cpat Match: " ^ prettyPrint p,(0,""))
 
       and s te ve se ((TupleExp (l,p)) : pt) : A.texp = 
             A.ETUPLE (Vector.fromList (map (s te ve se) l),T.UNKNOWN,p) : A.texp
@@ -147,7 +146,7 @@ struct
         | s te ve se (SeqExp (l,p)) =
             A.ESEQ (Vector.fromList (map (s te ve se) l),T.UNKNOWN,p) : A.texp
         | s te ve se (ListExp (l,p)) =
-            raise Fail ("ast_parse_tree: ListExp node remains!")
+            raise IllegalParseTree ("ast_parse_tree: ListExp node remains!",p)
         | s te ve se (NilExp p) = A.ENIL p
         | s te ve se (LetExp (l,e,p)) = 
           let
@@ -166,8 +165,9 @@ struct
                                   val (te',ve',a') = cpat te ve se a
                                in (a', s te' ve' se b) end
                                              | _ => 
-                                               raise Fail 
-                                                "non-Match in case expression") m)
+                                               raise IllegalParseTree  
+                                                ("non-Match in case expression",p))
+                                                m)
           in
              A.ECASE (s te ve se a, m', T.UNKNOWN, p)
           end
@@ -360,7 +360,7 @@ struct
         | d te ve se (DataBind (l,a,b,p)) =
           let
              val a' = case (s te ve se a) of A.EID (n,t,p) => n
-                                        | _ => raise Fail "non-id DataBind"
+                       | _ => Error.fail ("non-id DataBind",p)
             
              val te' = S.enter (te,a',T.NAME a')
              val cbi = ref 0
@@ -416,7 +416,7 @@ struct
                            in
                                (te',ve',ins')
                            end
-                         | _ => raise Fail "ast-parse-tree: Non-ConBind?")
+                         | _ => Error.fail ("ast-parse-tree: Non-ConBind?",p))
                    in
                       (te',ve',ins @ ins')
                    end) (te',ve,[]) b
@@ -453,7 +453,7 @@ struct
         | d te ve se (StructBind (a,c,Structure (l,p1),p2)) =
           let
              val a' = case (s te ve se a) of A.EID (n,t,p) => n
-                                        | _ => raise Fail "non-id StructBind"
+                         | _ => Error.fail ("non-id StructBind",p1)
              val (te',ve',se',l') = convert te ve se l
 
              val se'' = S.enter (se,a',Env.StructEntry (te',ve',se'))
@@ -474,25 +474,19 @@ struct
           end
         | d te ve se (StructBind (a,c,b,p)) =
           let
-             fun sb se [] = raise Fail ("Empty long-id in struct assign near: " ^
-                                       Int.toString p)
+             fun sb se [] = Error.fail ("Empty long-id in struct assign",p)
                | sb se [h] = (case (S.look (se,h)) of 
                                  (SOME e) => e
-                               | NONE => raise Fail ("Invalid id in struct " ^
-                                                     "assign near: " ^
-                                                     Int.toString p))
+                               | NONE => Error.fail("Invalid id in struct assign",p)
+                             )
                | sb se (h::t) = (case (S.look (se,h)) of
                                   (SOME (Env.StructEntry (_,_,e))) => sb e t
-                                | NONE => raise Fail ("Invalid id in struct " ^
-                                                      "assign near: " ^ 
-                                                      Int.toString p))
-
-
+                               | NONE => Error.fail("Invalid id in struct assign",p)
+                                )
 
              val a' = case (s te ve se a) of A.EID (n,t,p') => n
                                            | A.ELID (nl,t,p') =>
-                                             raise Fail("Unexpected long-id: " ^
-                                                      Int.toString p)
+                                             Error.fail("Unexpected long-id",p)
 
              val b' = s te ve se b
              val b'' = case b' of A.EID (n,t,p') => sb se [n]
@@ -519,7 +513,7 @@ struct
         | d te ve se (SigBind (a,Signature (l,_),p)) = 
           let
              val a' = case (s te ve se a) of A.EID (n,t,p) => n
-                                        | _ => raise Fail "non-id SigBind"
+                                        | _ => Error.fail("non-id SigBind",p)
              val (te',ve',se',l') = convert te S.empty se l
 
              val se'' = S.enter (se,a',Env.SigEntry (te',ve',se'))
@@ -531,18 +525,15 @@ struct
              (te,ve,se,[])
         | d te ve se (OpenDec (a,p)) =
           let
-             fun sb se [] = raise Fail ("Empty long-id in 'open' near: " ^
-                                       Int.toString p)
+             fun sb se [] = Error.fail ("Empty long-id in 'open'",p)
                | sb se [h] = (case (S.look (se,h)) of 
                                  (SOME e) => e
-                               | NONE => raise Fail ("Invalid id in 'open' " ^
-                                                     "near: " ^
-                                                     Int.toString p))
+                               | NONE => 
+                               Error.fail("Invalid id in 'open'",p)) 
                | sb se (h::t) = (case (S.look (se,h)) of
                                   (SOME (Env.StructEntry (_,_,e))) => sb e t
-                                | NONE => raise Fail ("Invalid id in 'open' " ^
-                                                      "near: " ^ 
-                                                      Int.toString p))
+                                 | NONE => 
+                               Error.fail("Invalid id in 'open'",p)) 
 
              val a' = s te ve se a
              val a'' = case a' of A.EID (n,t,p') => sb se [n]
@@ -551,7 +542,7 @@ struct
              val (ste,sve,sse) = 
                case a'' of
                   Env.StructEntry s => s
-                | _ => raise Fail "ast-parse-tree: Attempted to open non-struct!"
+                | _ => Error.fail ("Attempted to open non-structure.",p)
 
              val tkeys = 
                      map (fn (k,v) => (S.unhash k, v)) (S.keys ste)
@@ -602,11 +593,11 @@ struct
 
              val i1' = s te ve se i1
              val i1'' = case i1' of A.EID (n,t,p') => n 
-                          | _ => raise Fail "Invalid symbol for _import."
+                          | _ => Error.fail ("Invalid symbol for _import",p)
 
              val i2' = s te ve se i2
              val i2'' = case i2' of A.EID (n,t,p') => n 
-                          | _ => raise Fail "Invalid local name for _import."
+                          | _ => Error.fail ("Invalid local name for _import",p)
 
              val ve' = S.enter(ve,i2'',Env.VarEntry t')
           in
@@ -616,11 +607,13 @@ struct
    in
         List.foldl (fn (a,(te',ve',se',k)) =>
                      let
-                        val (te'',ve'',se'',k') = d te' ve' se' a 
+                        val (te'',ve'',se'',k') = 
+                           d te' ve' se' a handle CompileError => (te',ve',se',[])
                      in
                         (te'',ve'',se'',k@k')
                      end) (tenv,venv,senv,[]) pt
-   end handle IllegalParseTree (m,p) => raise Fail ("Illegal Parse Tree: " ^ m ^
-																	 " near " ^ Int.toString p)
+   end handle IllegalParseTree (m,p) => 
+         Error.fail ("IllegalParseTree: " ^ m ^ 
+                     ".  This is likely a compiler bug.",p) 
 end
 

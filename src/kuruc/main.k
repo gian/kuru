@@ -94,6 +94,7 @@ struct
    end
 end   
    
-val _ = Main.main ()
+val _ = Main.main () handle Fail s => 
+      TextIO.output(TextIO.stdErr, "Exception: " ^ s ^ "\n")
 
 

@@ -750,18 +750,13 @@ struct
        end
      | tr_ast te ve se (A.DOPEN (e,p)) =
        let
-          fun sb se [] = raise Fail ("Empty long-id in 'open' near: " ^
-                                       Int.toString p)
+          fun sb se [] = Error.fail ("Empty long-id in 'open'",p)
                | sb se [h] = (case (S.look (se,h)) of 
                                  (SOME e) => e
-                               | NONE => raise Fail ("Invalid id in 'open' " ^
-                                                     "near: " ^
-                                                     Int.toString p))
+                               | NONE => Error.fail("Invalid id in 'open'",p))
                | sb se (h::t) = (case (S.look (se,h)) of
                                   (SOME (StructEntry (_,_,e))) => sb e t
-                                | NONE => raise Fail ("Invalid id in 'open' " ^
-                                                      "near: " ^ 
-                                                      Int.toString p))
+                                | NONE => Error.fail("Invalid id in 'open'",p))
 
              val a'' = case e of A.EID (n,t,p') => sb se [n]
                                 | A.ELID (nl,t,p') => sb se nl
