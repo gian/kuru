@@ -44,7 +44,7 @@ struct
          
          val (line,col) = l (getLinePositions filename)
       in
-         filename ^ ":" ^ Int.toString line ^ "." ^ Int.toString col
+         filename ^ ":" ^ Int.toString line ^ ":" ^ Int.toString col
       end
 
    fun fail (msg,p) = 
@@ -57,8 +57,8 @@ struct
 
          val _ = errorCount := !errorCount + 1
 
-         val _ = TextIO.output(TextIO.stdErr, "\n * " ^ 
-                               resolveErrorPos p ^ ":\n\t" ^ msg ^ "\n")
+         val _ = TextIO.output(TextIO.stdErr,  
+                               resolveErrorPos p ^ ": " ^ msg ^ "\n")
 
              in
          if !errorCount < 20 then raise CompileError
