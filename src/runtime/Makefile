@@ -12,14 +12,14 @@ LIBKURU= \
 
 all: $(LIBKURU) gc
 
-%_kuru.c %_kuru.h %_kuru.ll: %.idl kuruidl
+%_kuru.c %_kuru.h %_kuru.ll %.k: %.idl kuruidl
 	./kuruidl $< -o $@
 
 gc:
 	make -C gc
 
 clean:
-	rm -f $(LIB)/libkuru.a io_test *_kuru.[ch] *_kuru.ll *.o io_test
+	rm -f $(LIB)/libkuru.a io_test *_kuru.[ch] *_kuru.ll *.o *.k io_test
 	make -C gc clean
 
 

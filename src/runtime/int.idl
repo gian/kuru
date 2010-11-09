@@ -13,4 +13,4 @@ c }
 #  string -- standard C string (char *)
 #  kstring -- kuru_string_t
 #  int -- integer
-export_as to_string kuru_to_string kstring message:int
+export_as to_string kuru_to_string kstring value:int

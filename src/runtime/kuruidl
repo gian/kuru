@@ -11,6 +11,15 @@ def type2ctype(ty):
 		return "int"
 	raise Exception("Unknown type %s" % ty)
 
+def type2ktype(ty):
+	if ty == "void":
+		return "()"
+	elif ty in ["kstring","string"]:
+		return "String"
+	elif ty == "int":
+		return "Int"
+	raise Exception("Unknown kuru type %s" % ty)
+
 def type2llvmtype(ty):
 	if ty=="void":
 		return "void"
@@ -37,7 +46,7 @@ def type2nctype(ty):
 		return "int"
 	raise Exception("Unknown type %s" % ty)
 
-def spec2var(spec):
+def spec2cvar(spec):
 	name,ty = spec.split(":")
 	return type2ctype(ty)+" "+name
 
@@ -49,11 +58,20 @@ def spec2type(spec):
 	name, ty = spec.split(":")
 	return ty
 
+def spec2ktype(spec):
+	return type2ktype(spec2type(spec))
+
+def spec2annotatedktype(spec):
+	name,ty = spec.split(":")
+	return name+":"+type2ktype(ty)
+
 f=open(sys.argv[1],"r")
 
 imports=[]
 exports=[]
 includes=[]
+kuru=[]
+pure=[]
 
 for line in f:
 	if line.startswith("#"):
@@ -66,8 +84,19 @@ for line in f:
 		imports.append([word[1]]+word[3:])
 		exports.append([word[2]]+word[3:])
 
+	elif word[0] == "pure":
+		pure.append({
+			"kname" : word[1],
+			"cname" : word[2],
+			"ret" : word[3],
+			"arg" : word[4:],
+		})
+
 	elif word[0] == "c":
 		includes.append(" ".join(word[1:]))
+
+	elif word[0] == "k":
+		kuru.append(" ".join(word[1:]))
 
 	else:
 		print "Unknown declaration %r" % word
@@ -83,7 +112,7 @@ kuru_h.write("#include \"kuru_types.h\"\n")
 kuru_h.write("void %s_init(void);\n" % name.lower())
 for i in imports:
 	if i[2:]!=[]:
-		kuru_h.write(type2ctype(i[1])+" k_"+name+"_"+i[0]+"("+",".join(map(spec2var,i[2:]))+");\n")
+		kuru_h.write(type2ctype(i[1])+" k_"+name+"_"+i[0]+"("+",".join(map(spec2cvar,i[2:]))+");\n")
 	else:
 		kuru_h.write(type2ctype(i[1])+" k_"+name+"_"+i[0]+"(void);\n")
 kuru_h.write("void %s_done(void);\n" % name.lower())
@@ -118,7 +147,7 @@ channel_t *%(name)s_reply_channel;
 for i in imports:
 	kuru_c.write("typedef struct %s_msg_t {\n" % i[0])
 	for arg in i[2:]:
-		kuru_c.write("\t%s;\n" % spec2var(arg))
+		kuru_c.write("\t%s;\n" % spec2cvar(arg))
 	kuru_c.write("} %s_msg_t;\n\n" % i[0])
 	if i[1] != "void":
 		kuru_c.write("typedef struct %s_reply_t {\n" % i[0])
@@ -222,7 +251,7 @@ void %(name)s_done(void)
 for i in imports:
 	kuru_c.write(type2ctype(i[1])+" k_"+name+"_"+i[0]+"(")
 	if i[2:]!=[]:
-		kuru_c.write(",".join(map(spec2var,i[2:])))
+		kuru_c.write(",".join(map(spec2cvar,i[2:])))
 	else:
 		kuru_c.write("void")
 	kuru_c.write(")\n")
@@ -269,3 +298,35 @@ for i in imports:
 	kuru_ll.write(", ".join(map(lambda x:type2llvmtype(spec2type(x)),i[2:])))
 	kuru_ll.write(")\n")
 kuru_ll.close()
+
+kuru_k = open(rootpath+".k","w")
+kuru_k.write("""
+structure %(name)s =
+struct
+""" % {
+	"name" : name,
+})
+for e,i in zip(exports,imports):
+	if i[2:]==[]:
+		kargs = "unit -> " + type2ktype(i[1])
+		ktype = "unit -> " + type2ktype(i[1])
+	else:
+		kargs = " -> ".join(
+			map(spec2annotatedktype,i[2:])
+			+[type2ktype(i[1])])
+		ktype = " -> ".join(
+			map(spec2ktype,i[2:])
+			+[type2ktype(i[1])])
+
+	kuru_k.write(""" 
+	(** %(kname)s : %(kannotatedtype)s *)
+	_import %(cname)s : %(ktype)s as %(kname)s
+""" % {
+			"cname" : e[0],
+			"kname" : i[0],
+			"kannotatedtype" : kargs,
+			"ret" : type2ktype(i[1]),
+			"ktype" : ktype,
+	})
+kuru_k.write("\n".join(kuru))
+kuru_k.write("end\n")
