@@ -1,5 +1,5 @@
 structure Int =
 struct
-	val toString = Compiler.Internal.toString
+	fun toString s = Compiler.Internal.toString s
 	fun fromString s = NONE
 end

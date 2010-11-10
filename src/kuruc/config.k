@@ -38,7 +38,7 @@ struct
          val p = 
             (case OS.Process.getEnv "KURU_LIBRARY_PATH" of
                NONE => 
-                  (Debug.print Debug.warning 
+                  (Debug.print Debug.verbose 
                      "$KURU_LIBRARY_PATH is not set - using defaults.\n";
                    homeDir ^ "/.kuru/:/usr/local/lib/kuru/:/usr/lib/kuru/")
              | SOME x => x)

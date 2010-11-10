@@ -11,11 +11,13 @@ def type2ctype(ty):
 		return "int"
 	elif ty=="opaque":
 		return "void *"
+	elif ty=="unit":
+		return "void *"
 	raise Exception("Unknown type %s" % ty)
 
 def type2ktype(ty):
 	if ty == "void":
-		return "unit"
+		return "cvoid"
 	elif ty in ["kstring","string"]:
 		return "string"
 	elif ty == "int":
@@ -32,6 +34,8 @@ def type2llvmtype(ty):
 	elif ty == "int":
 		return "i32"
 	elif ty == "opaque":
+		return "i8 *"
+	elif ty == "unit":
 		return "i8 *"
 	raise Exception("Unknown type %s" % ty)
 
@@ -51,6 +55,8 @@ def type2nctype(ty):
 	elif ty=="int":
 		return "int"
 	elif ty=="opaque":
+		return "void *"
+	elif ty=="unit":
 		return "void *"
 	raise Exception("Unknown type %s" % ty)
 

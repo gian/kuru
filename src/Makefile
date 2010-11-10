@@ -8,6 +8,7 @@ kuruc: kupeg
 
 tests: kuruc kil 
 	$(MAKE) -C tests
+	$(MAKE) -C kuruc tests
 
 runtime:
 	$(MAKE) -C runtime

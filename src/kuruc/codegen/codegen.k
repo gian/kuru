@@ -244,29 +244,25 @@ struct
          val _ = OS.FileSys.mkDir dirName
          val fp = TextIO.openOut (dirName ^ "/main.ll")
 
-         val gc = Config.resolveLibrary "gc.ll"
-         val gclib = TextIO.openIn gc
-         val gclib' = TextIO.input gclib
-         val _ = TextIO.closeIn gclib
-         val _ = TextIO.output (fp, gclib' ^ "\n")
-
-         (* Include the IO library -
-              This is a bit dirty and hardcoded at the moment,
-              so it qualifies for a FIXME *)
-         val io = Config.resolveLibrary "io_kuru.ll"
-         val iolib = TextIO.openIn io
-         val iolib' = TextIO.input iolib
-         val _ = TextIO.closeIn iolib
-         val _ = TextIO.output (fp, iolib' ^ "\n")
-
-         val intl = Config.resolveLibrary "int_kuru.ll"
-         val intlib = TextIO.openIn intl
-         val intlib' = TextIO.input intlib
-         val _ = TextIO.closeIn intlib
-
-         val _ = TextIO.output (fp, intlib' ^ "\n")
+         fun includeLib s = 
+            let
+               val g = Config.resolveLibrary s 
+               val lib = TextIO.openIn g
+               val lib' = TextIO.input lib
+               val _ = TextIO.closeIn lib
+               val _ = TextIO.output (fp, lib' ^ "\n")
+            in
+               ()
+            end
+         
+         val _ = includeLib "gc.ll"
+         val _ = includeLib "io_kuru.ll"
+         val _ = includeLib "int_kuru.ll"
+         
+         (* Final code emit *)
          val _ = TextIO.output (fp, code)
          val _ = TextIO.closeOut (fp)
+
          val _ = Debug.print Debug.verbose ("Output LLVM asm file: " ^ 
                                              dirName ^ "/main.ll" ^ "\n")
       in

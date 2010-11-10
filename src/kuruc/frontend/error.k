@@ -50,14 +50,17 @@ struct
    fun fail (msg,p) = 
       let
          val _ = if !errorCount >= Config.getMaxErrors () 
-                     then (TextIO.output(TextIO.stdErr,
+                     then (if Debug.getDebugLevel () = 0 then () else
+                              TextIO.output(TextIO.stdErr,
                               "Aborted: too many errors.\n");
                            OS.Process.exit OS.Process.failure)
                      else ()
 
          val _ = errorCount := !errorCount + 1
 
-         val _ = TextIO.output(TextIO.stdErr,  
+         
+         val _ = if Debug.getDebugLevel() = 0 then () else
+                     TextIO.output(TextIO.stdErr,  
                                resolveErrorPos p ^ ": " ^ msg ^ "\n")
 
              in

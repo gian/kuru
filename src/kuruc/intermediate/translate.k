@@ -584,12 +584,16 @@ struct
           val (_,_,_,a',instr2) = tr_exp te ve se a
 
           val (a'',instr2')
-            = if Polymorphism.is_polymorphic a 
+         (*   = if Polymorphism.is_polymorphic a *)
+              = if false
                      then 
                         let
-                           val lbl = case a' of I.NAME l => l
+                           val lbl = case a' of 
+                                         I.NAME l => l
+                                       | I.TEMP t => t
                                        | _ => raise Fail 
-                                          "tr_exp: BUG: Monomorphisation"
+                                 ("tr_exp: BUG: Monomorphisation: " ^ 
+                                  I.ppe a')
 
 
                            val _ = Debug.print Debug.debug

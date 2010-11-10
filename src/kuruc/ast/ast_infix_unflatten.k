@@ -39,7 +39,7 @@ struct
              else (p1,o1,d1) :: ins (t,p2,o2,d1)
 
    fun add_infix ("",opr,d) = infixes := ins (!infixes,8,opr,d)
-     | add_infix (p,opr,d) = (print ("add infix!\n"); infixes :=
+     | add_infix (p,opr,d) = (infixes :=
             ins(!infixes,valOf(Int.fromString p),opr,d))
 
    fun is_operator (Ident (i,_)) = 

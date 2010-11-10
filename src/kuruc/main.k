@@ -96,8 +96,8 @@ struct
    end
 end   
    
-val _ = Main.main () handle Fail s => 
-      (TextIO.output(TextIO.stdErr, "Exception: " ^ s ^ "\n");
+val _ = Main.main () handle Fail s => (if Debug.getDebugLevel () = 0 then () else
+         TextIO.output(TextIO.stdErr, "Exception: " ^ s ^ "\n");
          OS.Process.exit OS.Process.failure)
 
 val _ = OS.Process.exit OS.Process.success
