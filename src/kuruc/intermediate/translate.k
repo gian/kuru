@@ -106,11 +106,13 @@ struct
          Temp.fn_ptr (map (tr_ty te) a, tr_ty te b)
      | tr_ty te (T.CONSTR ([t1],t2)) = 
          (case t2 of (T.NAME n) => 
-            if S.name n = "list" then (Temp.ptr (Temp.aggr [
-                                                    Temp.ptr (Temp.i8),
-                                                    Temp.ptr (Temp.self_ref 2)]))
-                                 else raise Fail "tr_ty: CONSTR not impl."
-                   | _ => raise Fail "tr_ty: Invalid CONSTR type.")
+            (case S.name n of 
+               "list" => (Temp.ptr (Temp.aggr [
+                                      Temp.ptr (Temp.i8),
+                                      Temp.ptr (Temp.self_ref 2)]))
+             | "_opaque" => (Temp.ptr Temp.i8)
+             | _ => raise Fail "tr_ty: CONSTR not impl.")
+            | _ => raise Fail "tr_ty: Invalid CONSTR type.")
      | tr_ty te (T.TUPLE l) = Temp.aggr (map (tr_ty te) l)
      | tr_ty te (T.UNION _) = Temp.ptr (Temp.aggr [Temp.i32, Temp.ptr Temp.i8])
      | tr_ty te (T.VAR _) = Temp.ptr (Temp.i8)

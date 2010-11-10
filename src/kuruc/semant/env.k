@@ -42,7 +42,24 @@ struct
 
 	val tenv_base = 
       let
-         val b = Symbol.empty : T.ty Symbol.table
+         val benv =
+          [
+            ("int",        T.t_int),
+            ("string",     T.t_string),
+            ("char",       T.t_char),
+            ("real",       T.t_real),
+            ("_opaque",    T.t_opaque),
+            ("list",       T.t_list),
+            ("cvoid",      T.t_void),
+            ("unit",       T.t_unit),
+            ("bool",       T.t_bool),
+            ("exn",        T.t_exn)
+          ]
+
+         val b = 
+            List.foldl (fn ((s,t),st) => 
+               S.enter (st,  S.symbol s, t))
+                  Symbol.empty benv
       in
          b
       end

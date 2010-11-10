@@ -22,6 +22,7 @@ structure Type =
 struct
 
 	datatype ty = NAME of Symbol.symbol
+               | LNAME of Symbol.symbol list
 	            | FN of ty list * ty
 					| TUPLE of ty list
 					| CONSTR of ty list * ty
@@ -47,6 +48,8 @@ struct
      | freevars _ = []
 
    fun substinty (NAME s) th (NAME t) = if s = t then th else NAME t
+     | substinty (LNAME l1) th (LNAME l2) = 
+         if (List.all (op =) (ListPair.zip(l1,l2))) then th else LNAME l2
      | substinty tn th (FN (t1,t2)) = FN (map (substinty tn th) t1,
                                           substinty tn th t2)
      | substinty tn th (TUPLE l) = TUPLE (map (substinty tn th) l)
@@ -69,6 +72,7 @@ struct
      | equal (META i) (META j) = i = j
      | equal (VAR s) (VAR t) = s = t
      | equal (POLY i) (POLY j) = i = j
+     | equal (LNAME l1) (LNAME l2) = (List.all (op =) (ListPair.zip(l1,l2)))
      | equal _ _ = false
 
 	fun occursin (META tyX) tyT =
@@ -85,6 +89,7 @@ struct
 	  | occursin _ _ = raise Fail "Non-UVar argument to occursin"
 
 	fun pp (NAME s) = Symbol.name s
+     | pp (LNAME s) = String.concatWith "." (map Symbol.name s)
      | pp (FN (f as [FN _],t2)) = "(" ^ pp (hd f) ^ ") -> " ^ pp t2
 	  | pp (FN ([t1],t2)) = pp t1 ^ " -> " ^ pp t2
 	  | pp (FN (l,t2)) = "("^(String.concatWith "," (map pp l)) ^ ") -> " ^ pp t2
@@ -116,6 +121,7 @@ struct
    val t_exn    = NAME (Symbol.symbol "exn")
    val t_list   = NAME (Symbol.symbol "list")
    val t_void   = NAME (Symbol.symbol "cvoid")
+   val t_opaque = NAME (Symbol.symbol "_opaque")
 end
 
 

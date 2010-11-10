@@ -25,7 +25,7 @@ struct
    
    fun llvmas (llvmSourceLoc) = 
       let
-         val llas = exec "llvm-as" [llvmSourceLoc ^ "/main.ll"]
+         val llas = exec "llvm-as" ["-f", llvmSourceLoc ^ "/main.ll"]
 
          val _ = if not (OS.Process.isSuccess (llas))
                      then raise Fail 

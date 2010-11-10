@@ -60,15 +60,58 @@ struct
       resolveLongId' te ve se l
    end
 
+   fun resolveTypeId te ve se l =
+   let
+      val path = ref [] : S.symbol list ref
+
+      fun reportPath i = 
+         if length (!path) > 0 then " in " ^ 
+            (String.concatWith "." (map S.name (!path))) ^ "." ^ i else
+            ""
+
+      fun resolveLongId' te ve se (LongId (Ident (s,pk),r,p)) = 
+            (case (S.look (se,S.symbol s)) of
+                NONE => Error.fail ("Unknown structure '" ^ s ^ "'" ^ 
+                                       reportPath s,pk)
+              | SOME (Env.StructEntry (te',ve',se')) => 
+                      (path := !path @ [S.symbol s];
+                         resolveLongId' te' ve' se' r))
+       | resolveLongId' te ve se (Ident (s,pk)) = 
+            (case (S.look (te,S.symbol s)) of
+                NONE => Error.fail ("Unknown type identifier '" ^ s ^ "'" ^ 
+                                       reportPath s,pk)
+              | SOME t => (!path, t))
+       | resolveLongId' te ve se _ = raise Fail "Not implemented resolveLongId'"
+   in
+      resolveLongId' te ve se l
+   end
+
+
    fun convert tenv venv senv pt = 
    let
       fun t te ve se (Var (Ident (a,_),p)) = T.VAR (S.symbol a)
         | t te ve se (TyArrow (a,b,p)) = T.FN ([t te ve se a], t te ve se b)
         | t te ve se (TyPair (a,p)) = T.TUPLE (map (t te ve se) a) 
         | t te ve se (TyCon (a,b,p)) = T.CONSTR ([t te ve se a], t te ve se b)
-        | t te ve se (TyName (Ident (a,_),p)) = T.NAME (S.symbol a) 
-        | t te ve se n = raise Fail ("Unknown type not handled: " ^ 
-                                    ParseTree.prettyPrint n)
+        | t te ve se (TyName (a,p)) = 
+          let
+             val _ = Debug.print Debug.debug 
+                        ("Converting TyName: " ^ prettyPrint a ^ "\n")
+
+             val (path,a') = resolveTypeId te ve se a
+
+             fun tr [] x = x
+               | tr p (T.VAR a) = T.VAR a
+               | tr p (T.FN (a,b)) = T.FN (map (tr p) a, tr p b)
+               | tr p (T.TUPLE a) = T.TUPLE (map (tr p) a)
+               | tr p (T.CONSTR (a,b)) = T.CONSTR (map (tr p) a, tr p b)
+               | tr p (T.NAME a) = T.LNAME (p @ [a]) 
+          in 
+             tr path a'
+          end
+        | t te ve se (Ident (a,p)) = T.NAME (S.symbol a)
+        | t te ve se n = Error.fail ("Unknown type not handled: " ^ 
+                                    ParseTree.prettyPrint n,(0,""))
 
       and cpat te ve se (AsPat (a,b,p)) = raise Fail "aspat not implemented"
         | cpat te ve se (InfixPat (a,Ident (n,p),c,pos)) =  
@@ -332,25 +375,22 @@ struct
           in
              (te',ve',se,[A.DVAL (s',A.ENIL p,e,p)])
           end
-        | d te ve se (TypeBind ([],a,b,p)) =  
+        | d te ve se (TypeBind ([],TyName (Ident(a,_),_),b,p)) =  
           let
-             val a' = case (t te ve se a) of T.NAME n => n
-                                        | _ => raise IllegalParseTree ("TypeBind",p)
+             val _ = Debug.print Debug.internal 
+               ("Type binding: " ^ a ^ " = " ^ prettyPrint b ^ "\n")
+
              val b' = t te ve se b
-             val te' = Symbol.enter (te,a',b')
+             
+             val _ = Debug.print Debug.internal 
+               ("Type binding resolved to: " ^ a ^ " = " ^ T.prettyPrint b' ^ "\n")
+
+             val te' = Symbol.enter (te,S.symbol a,b')
           in
              (te',ve,se,[])
           end
-        | d te ve se (TypeBind (l,a,b,p)) = 
-          let
-             val l' = map (t te ve se) l
-             val a' = case (t te ve se a) of T.NAME n => n
-                                        | _ => raise IllegalParseTree ("TypeBind",p)
-             val b' = T.CONSTR(l',t te ve se b)
-             val te' = Symbol.enter (te,a',b')
-          in
-             (te',ve,se,[])
-          end
+        | d te ve se (TypeBind (l,a,b,p)) =
+            raise Fail "ast-parse-tree: TypeBind not fully implemented"
         | d te ve se (TypeDescBind ([],a,p)) =  
           let
              val a' = case (t te ve se a) of T.NAME n => n

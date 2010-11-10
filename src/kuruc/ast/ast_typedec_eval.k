@@ -25,6 +25,10 @@ struct
    structure T = Type
    open ParseTree
 
+   val fr = ref 0
+
+   fun freshop () = (fr := !fr + 1; "(op" ^ Int.toString (!fr) ^ ")")
+
    fun apply te ve pt =
    let
       fun s te ve (AndAlso (a,b,p)) = AndAlso (s te ve a,s te ve b,p)
@@ -62,6 +66,12 @@ struct
         | s te ve (TyArrow (a,b,p)) = TyArrow (s te ve a, s te ve b,p)
         | s te ve (TyPair (a,p)) = TyPair (map (s te ve) a,p)
         | s te ve (TyCon (a,b,p)) = TyCon (s te ve a, s te ve b,p)
+        | s te ve (TyName (Ident("opaque",p1),p2)) =
+          let
+             val _ = Debug.print Debug.debug "opaque type!\n"
+          in
+            TyCon (Ident(freshop(),p1), TyName (Ident("_opaque",p1),p1),p1)
+          end
         | s te ve (TyName (a,p)) = TyName (s te ve a,p)
         | s te ve (ValDec (l,p)) = ValDec (map (s te ve) l,p)
         | s te ve (ValRec (l,p)) = ValRec (map (s te ve) l,p)
