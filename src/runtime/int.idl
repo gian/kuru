@@ -8,9 +8,21 @@ c   sprintf(msg,"%d",message);
 c   return c2ks(msg);
 c }
 
+c static int int_add(int lhs, int rhs) { return lhs + rhs; }
+c static int int_sub(int lhs, int rhs) { return lhs - rhs; }
+c static int int_div(int lhs, int rhs) { return lhs / rhs; }
+c static int int_mul(int lhs, int rhs) { return lhs * rhs; }
+
+k fun neg x = sub 0 x
+
 # export_as <kuruname> <cname> <returntype> [<argname:argtype>...]
 # valid argtypes:
 #  string -- standard C string (char *)
 #  kstring -- kuru_string_t
 #  int -- integer
-export_as to_string kuru_to_string kstring message:int
+export_as to_string kuru_to_string kstring value:int
+pure to_string2 kuru_to_string kstring value:int
+pure add int_add int lhs:int rhs:int
+pure sub int_sub int lhs:int rhs:int
+pure div int_div int lhs:int rhs:int
+pure mul int_mul int lhs:int rhs:int
