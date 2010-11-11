@@ -562,19 +562,19 @@ struct
 
                          val d''' = Unify.apply cs'''' [d'']
 
-						      val _ = Debug.print Debug.internal 
+						      val _ = Debug.print Debug.debugmore 
                                  "Constraint Set ununified:\n================\n"
-                         val _ = Debug.print Debug.internal 
+                         val _ = Debug.print Debug.debugmore 
                                  ("\n" ^prettyPrint (cs'') ^"\n")
-                         val _ = Debug.print Debug.internal 
+                         val _ = Debug.print Debug.debugmore 
                                  "\n================\n"
 
 
-                         val _ = Debug.print Debug.internal 
+                         val _ = Debug.print Debug.debugmore 
                                  "Constraint Set unified:\n================\n"
-                         val _ = Debug.print Debug.internal 
+                         val _ = Debug.print Debug.debugmore
                                  ("\n" ^prettyPrint (cs'''') ^"\n")
-                         val _ = Debug.print Debug.internal 
+                         val _ = Debug.print Debug.debugmore
                                  "\n================\n"
 
                          val d'''' = Unify.apply cs'''' (d'@d''')

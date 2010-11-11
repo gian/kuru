@@ -9,11 +9,11 @@ do
 		OUT=`md5sum $i.out`
 		EXP=`grep "$i.out" expected.dat`
 		if [ "$OUT" != "$EXP" ]; then
-			echo "	[FAILED]"
+			echo "	[FAILED (Compiled Output Mismatch)]"
 		else echo "	[passed]"
 		fi
 	else
-		echo "	[FAILED]"
+		echo "	[FAILED (Compilation Failed)]"
 	fi
 done
 
