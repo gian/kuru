@@ -92,9 +92,10 @@ struct
 
       val pt' = map s pt
       val exs =
-         DatatypeDec ([DataBind ([],Ident ("exn",(0,"_INTERNAL_")),!exns,
-                                                         (0,"_INTERNAL_"))],
-                                                         (0,"_INTERNAL_")) 
+         DatatypeDec ([DataBind ([],Ident ("exn",(0,"_INTERNAL_")),
+                                                 !exns,
+                                                 (0,"_INTERNAL_"))],
+                                                 (0,"_INTERNAL_")) 
 
       (* TODO: This is probably the appropriate place to construct
          a global "handle" that preserves exception names *)

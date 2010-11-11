@@ -381,19 +381,24 @@ struct
      | constr_dec te ve se b (A.DSTRUCTURE (s,NONE,v,p)) =
        let
           val (te',ve',se',cn,v') = generateConstraints' te ve se (vtol v)
-          val se'' = S.enter (se,s,E.StructEntry (te',ve',se'))
+          val se'' = S.enter (se,s,E.StructEntry (te',ve',S.empty))
        in
           (te,ve,se'',cn,T.UNKNOWN,A.DSTRUCTURE (s,NONE,Vector.fromList v',p))
        end
      | constr_dec te ve se b (A.DSTRUCTURE (s,SOME sign,v,p)) =
        let
-          val (te',ve',se',cn,v') = generateConstraints' te ve se (vtol v)
+          val separent = S.enter(S.empty,S.symbol "__parent",
+                                       Env.ParentEntry se)
+
+          val (te',ve',se',cn,v') = generateConstraints' te ve separent (vtol v)
+          
           val se'' = S.enter (se,s,E.StructEntry (te',ve',se'))
+          
           val sigse = 
            (case S.look (se,sign) of
                NONE => []
              | (SOME (Env.StructEntry _)) => 
-                  raise Fail "constr_dec: Structure ascribes to structure?"
+                  Error.fail ("Structure ascribes to structure",p)
              | (SOME (Env.SigEntry (ste,sve,sse))) =>
                let
                   val keys = 
@@ -428,6 +433,9 @@ struct
        end
      | constr_dec te ve se b (A.DSTRUCTASSIGN (s,e,p)) =
        let
+          val _ = Debug.print Debug.debug
+            ("Assigning structure: " ^ S.name s ^ " = " ^ A.ppe e ^ "\n")
+
           fun res se [] = raise Fail "constr_dec encountered empty long id"
             | res se [h] = (case (S.look (se,h)) of
                                SOME e => e
@@ -504,20 +512,39 @@ struct
      | constr_dec _ _ _ _ k = raise 
                Fail ("Unhandled constr_dec: " ^ A.prettyPrint [k])
 
-   and substinenv (tn,tr,p) ve =
+   and substinenv (tn,tr,p) ve se =
       let
 			val vkeys = S.keys ve 
+         val skeys = S.keys se
 		
 			fun upd ve NONE _ = 
-				 Error.fail ("[BUG] constr updates unknown symbol",p)
+				 Error.bug ("Constrain","substinenv updates unknown venv symbol",p)
 			  | upd ve (SOME s) t = 
 			  		S.enter (ve,s,t)
-		in
-			(List.foldl (fn ((s,Env.VarEntry t),ve') =>
+
+         fun updVal ve =
+            (List.foldl (fn ((s,Env.VarEntry t),ve') =>
 				upd ve' (S.unhash s) 
 					(Env.VarEntry (T.substinty tn tr t)))
 				) ve vkeys
-		end
+
+         fun updStr se =
+            List.foldl (
+            fn ((k,Env.StructEntry (te,ve,se')),se) =>
+               let
+                  val n = case S.unhash k of NONE => "???" | SOME n => S.name n
+
+                  val _ = 
+                     Debug.print Debug.debug ("substinenv.updStr: " ^n ^ "\n")
+                  val (ve',se'') = substinenv (tn,tr,p) ve se'
+               in
+                  upd se (S.unhash k) (Env.StructEntry (te,ve',se''))
+               end
+             | ((k,v),se) => upd se (S.unhash k) v) se skeys
+
+		in
+		   (updVal ve, updStr se)
+      end
 
 	and generateConstraints' te ve se c =
       List.foldl (fn (d,(te',ve',se',cs',d')) =>
@@ -582,15 +609,16 @@ struct
                                     Debug.debug ("gty: " ^ A.prettyPrint gty ^ 
                                                    "\n")
 
-                         val ve''' = List.foldl (fn (cstr,ve) => 
-                                         substinenv cstr ve) ve'' csg 
+                         val (ve''',se''') 
+                           = List.foldl (fn (cstr,(ve,se)) => 
+                                         substinenv cstr ve se) (ve'',se'') csg 
 
                          val gty' = Unify.apply cs'''' gty
                          val _ = Debug.print
                                     Debug.debug ("gty': " ^ A.prettyPrint gty ^ 
                                                    "\n")
                       in
-                         (te'',ve''',se'',csg,gty)
+                         (te'',ve''',se''',csg,gty)
                       end handle CompileError => (te',ve',se',cs',d'))
                         (te,ve,se,[],[]) c
 

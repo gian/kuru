@@ -33,6 +33,16 @@ struct
    fun freshstrid () = (strfresh := 1 + !strfresh;
                         "_struct" ^ Int.toString (!strfresh))
 
+   fun resolveParent se errorReport =
+      let
+         val _ = Debug.print Debug.debugmore
+            "Chaining to parent to resolve." 
+      in
+         case S.look (se,S.symbol "__parent") of
+            NONE => Error.fail errorReport
+          | SOME (Env.ParentEntry se') => se'
+      end
+
    fun resolveLongId te ve se l =
    let
       val path = ref [] : string list ref
@@ -42,10 +52,12 @@ struct
             (String.concatWith "." (!path)) ^ "." ^ i else
             ""
 
-      fun resolveLongId' te ve se (LongId (Ident (s,pk),r,p)) = 
+      fun resolveLongId' te ve se (l as LongId (Ident (s,pk),r,p)) = 
             (case (S.look (se,S.symbol s)) of
-                NONE => Error.fail ("Unknown structure '" ^ s ^ "'" ^ 
-                                       reportPath s,pk)
+                NONE => (resolveLongId' te ve 
+                         (resolveParent se
+                           ("Unknown structure '" ^ s ^ "'" ^ 
+                                       reportPath s,pk)) l)
               | SOME (Env.StructEntry (te',ve',se')) => 
                       (path := !path @ [s];
                         (Symbol.symbol s) :: 
@@ -69,10 +81,12 @@ struct
             (String.concatWith "." (map S.name (!path))) ^ "." ^ i else
             ""
 
-      fun resolveLongId' te ve se (LongId (Ident (s,pk),r,p)) = 
+      fun resolveLongId' te ve se (l as LongId (Ident (s,pk),r,p)) = 
             (case (S.look (se,S.symbol s)) of
-                NONE => Error.fail ("Unknown structure '" ^ s ^ "'" ^ 
-                                       reportPath s,pk)
+                NONE => (resolveLongId' te ve 
+                         (resolveParent se
+                           ("Unknown structure '" ^ s ^ "'" ^ 
+                                       reportPath s,pk)) l)
               | SOME (Env.StructEntry (te',ve',se')) => 
                       (path := !path @ [S.symbol s];
                          resolveLongId' te' ve' se' r))
@@ -86,10 +100,51 @@ struct
       resolveLongId' te ve se l
    end
 
+   fun resolveStructId te ve se l =
+   let
+      val path = ref [] : string list ref
+
+      fun reportPath i = 
+         if length (!path) > 0 then " in " ^ 
+            (String.concatWith "." (!path)) ^ "." ^ i else
+            ""
+
+      fun resolveLongId' te ve se (l as LongId (Ident (s,pk),r,p)) = 
+            (case (S.look (se,S.symbol s)) of
+                NONE => (resolveLongId' te ve 
+                         (resolveParent se
+                           ("Unknown structure '" ^ s ^ "'" ^ 
+                                       reportPath s,pk)) l)
+              | SOME (Env.StructEntry (te',ve',se')) => 
+                      (path := !path @ [s];
+                        (Symbol.symbol s) :: 
+                         resolveLongId' te' ve' se' r))
+       | resolveLongId' te ve se (Ident (s,pk)) = 
+            (case (S.look (se,S.symbol s)) of
+                NONE => Error.fail ("Unknown structure identifier '" ^ s ^ "'" ^ 
+                                       reportPath s,pk)
+              | SOME _ => [Symbol.symbol s])
+       | resolveLongId' te ve se _ = raise Fail "Not implemented resolveLongId'"
+   in
+      resolveLongId' te ve se l
+   end
+
+   fun symListToStruct p se [] = Error.fail ("Empty long-id in struct assign",p)
+     | symListToStruct p se [h] = 
+       (case (S.look (se,h)) of 
+          SOME e => e
+        | NONE => symListToStruct p (resolveParent se 
+                      ("Unknown id " ^ S.name h ^ " in path.",p)) [h]) 
+     | symListToStruct p se (h::t) = 
+       (case (S.look (se,h)) of
+          SOME (Env.StructEntry (_,_,e)) => symListToStruct p e t
+        | NONE => symListToStruct p (resolveParent se 
+                      ("Unknown id " ^ S.name h ^ " in path.",p)) (h::t))
 
    fun convert tenv venv senv pt = 
    let
-      fun t te ve se (Var (Ident (a,_),p)) = T.VAR (S.symbol a)
+      fun t te ve se (Var (Ident (a,_),p)) = 
+            T.POLY ((Char.ord (String.sub (a,0)))-(Char.ord #"a"))
         | t te ve se (TyArrow (a,b,p)) = T.FN ([t te ve se a], t te ve se b)
         | t te ve se (TyPair (a,p)) = T.TUPLE (map (t te ve se) a) 
         | t te ve se (TyCon (a,b,p)) = T.CONSTR ([t te ve se a], t te ve se b)
@@ -249,7 +304,10 @@ struct
         | s te ve se (String (n,p)) =
             A.ELIT(A.LSTRING (n,p),T.t_string,p)
         | s te ve se (UnitExp p) = A.ELIT(A.LUNIT p, T.t_unit, p)
-        | s te ve se (Ident (x,p)) = A.EID (Symbol.symbol x,T.UNKNOWN,p)
+        | s te ve se (Ident (x,p)) = 
+          (case S.look (ve,Symbol.symbol x) of 
+             NONE => Error.fail ("Unknown identifier '" ^ x ^ "'",p)
+           | SOME (Env.VarEntry t) => A.EID (Symbol.symbol x,t,p))
         | s te ve se pt = raise Fail ("expression match failed in: " ^ pp pt)
 
       fun d te ve se (ValDec (l,p)) =
@@ -414,11 +472,10 @@ struct
         | d te ve se (InfixrDec _) = (te, ve, se, [])
         | d te ve se (FunMatch (a,l,_,c,p)) =
              raise IllegalParseTree ("FunMatch",p)
-        | d te ve se (DataBind (l,a,b,p)) =
+        | d te ve se (DataBind (l,Ident (a,p1),b,p)) =
           let
-             val a' = case (s te ve se a) of A.EID (n,t,p) => n
-                       | _ => Error.fail ("non-id DataBind",p)
-            
+             val a' = S.symbol a
+
              val te' = S.enter (te,a',T.NAME a')
              val cbi = ref 0
              val cons = ref [] : T.ty list ref
@@ -507,11 +564,14 @@ struct
           in
              (te,ve,se',[A.DMUTUAL (Vector.fromList l',p)])
           end
-        | d te ve se (StructBind (a,c,Structure (l,p1),p2)) =
+        | d te ve se (StructBind (Ident(a,p),c,Structure (l,p1),p2)) =
           let
-             val a' = case (s te ve se a) of A.EID (n,t,p) => n
-                         | _ => Error.fail ("non-id StructBind",p1)
-             val (te',ve',se',l') = convert te ve se l
+             val a' = S.symbol a
+
+             val separent = S.enter(S.empty,S.symbol "__parent",
+                                       Env.ParentEntry se)
+
+             val (te',ve',se',l') = convert te ve separent l
 
              val se'' = S.enter (se,a',Env.StructEntry (te',ve',se'))
 
@@ -529,29 +589,26 @@ struct
           in
              (te,ve,se''',si @ [A.DSTRUCTURE (a',c',Vector.fromList l',p1)])
           end
-        | d te ve se (StructBind (a,c,b,p)) =
+        | d te ve se (StructBind (Ident (a,p1),c,b,p)) =
           let
-             fun sb se [] = Error.fail ("Empty long-id in struct assign",p)
-               | sb se [h] = (case (S.look (se,h)) of 
-                                 (SOME e) => e
-                               | NONE => Error.fail("Invalid id in struct assign",p)
-                             )
-               | sb se (h::t) = (case (S.look (se,h)) of
-                                  (SOME (Env.StructEntry (_,_,e))) => sb e t
-                               | NONE => Error.fail("Invalid id in struct assign",p)
-                                )
+             val a' = S.symbol a
 
-             val a' = case (s te ve se a) of A.EID (n,t,p') => n
-                                           | A.ELID (nl,t,p') =>
-                                             Error.fail("Unexpected long-id",p)
+             val b' = resolveStructId te ve se b
+             val b'' = symListToStruct p se b'
 
-             val b' = s te ve se b
-             val b'' = case b' of A.EID (n,t,p') => sb se [n]
-                                | A.ELID (nl,t,p') => sb se nl
+             val b''' = case b' of [h] => A.EID (h,T.UNKNOWN,p)
+                                 | l => A.ELID (l,T.UNKNOWN,p)
 
-             val se' = S.enter (se,a',b'')
+             val se' = case S.look (se,S.symbol "__parent") of
+                           NONE => Error.bug ("AstParseTree",
+                                              "Cannot find __parent in struct",p)
+                         | SOME (Env.ParentEntry se) => se
+                         | _ => Error.bug ("AstParseTree",
+                                           "Non-ParentEntry in __parent",p)
+
+             val se'' = S.enter (se',a',b'')
           in
-             (te,ve,se',[A.DSTRUCTASSIGN (a',b',p)])
+             (te,ve,se'',[A.DSTRUCTASSIGN (a',b''',p)])
           end
         | d te ve se (SigDec ([s],p)) = 
             d te ve se s
@@ -578,7 +635,7 @@ struct
              (te,ve,se'',[A.DSIGNATURE (a',Vector.fromList l',p)])
           end
         | d te ve se (ExnDec (a,x,p)) =
-            (* We've already translated this into a datatype in ast-promote-exns *)
+            (* We've already translated this to a datatype in ast-promote-exns *)
              (te,ve,se,[])
         | d te ve se (OpenDec (a,p)) =
           let
@@ -644,21 +701,17 @@ struct
           in
              (te',ve',se',[A.DOPEN(a',p)])
           end
-        | d te ve se (Import (i1,tt,i2,p)) =
+        | d te ve se (Import (Ident(i1,p1),tt,Ident(i2,p2),p)) =
           let
              val t' = t te ve se tt
 
-             val i1' = s te ve se i1
-             val i1'' = case i1' of A.EID (n,t,p') => n 
-                          | _ => Error.fail ("Invalid symbol for _import",p)
+             val i1' = S.symbol i1
 
-             val i2' = s te ve se i2
-             val i2'' = case i2' of A.EID (n,t,p') => n 
-                          | _ => Error.fail ("Invalid local name for _import",p)
+             val i2' = S.symbol i2
 
-             val ve' = S.enter(ve,i2'',Env.VarEntry t')
+             val ve' = S.enter(ve,i2',Env.VarEntry t')
           in
-             (te,ve',se,[A.DIMPORT (i1'',t',i2'',p)])
+             (te,ve',se,[A.DIMPORT (i1',t',i2',p)])
           end
         | d te ve se t = raise Fail "ast-parse-tree.k: decl match"
    in

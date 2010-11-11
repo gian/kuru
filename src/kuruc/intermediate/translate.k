@@ -806,17 +806,23 @@ struct
      | tr_ast te ve se (A.DNULL p) = (te,ve,se,[])
      | tr_ast te ve se _ = raise Fail "tr_ast: Not implemented"
 
-   val tr_venv_base = Builtins.builtins
 
    fun translate te ast =
       let
+         val tr_venv_base = S.empty 
+
+         val senv1 = StructEntry (te,Builtins.builtins,S.empty)
+         val senv2 = S.enter(S.empty,S.symbol "Internal",senv1)
+         val senv3 = S.enter(S.empty,S.symbol "Compiler",
+                        StructEntry (te,S.empty,senv2))
+
          val (te,ve,se,ast') =
             List.foldl (fn (a,(te,ve,se,b)) =>
                     let
                        val (te',ve',se',a') = tr_ast te ve se a
                     in
                        (te',ve',se',b@a')
-                    end) (te,tr_venv_base,S.empty,[]) ast
+                    end) (te,tr_venv_base,senv3,[]) ast
          val fr = !fragments
          val _ = fragments := []
       in

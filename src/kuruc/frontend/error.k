@@ -68,6 +68,13 @@ struct
             else raise Fail "Aborted: too many errors."
       end
 
+   fun bug (module,msg,p) =
+      raise Fail (resolveErrorPos p ^ 
+                  ": Code near this location triggered a compiler bug in " ^ 
+                  "module " ^ module ^ ":\n   " ^ 
+                  msg ^ "\nPlease consider reporting this at " ^
+                  "http://www.kuru-lang.org/bugs")
+
    fun getErrorCount () = !errorCount
 end
 
