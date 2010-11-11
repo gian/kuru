@@ -302,7 +302,8 @@ struct
        let
           fun res vtbl stbl [] = raise Fail "tr_exp: BUG: empty long id?"
             | res vtbl stbl [id] = (case S.look (vtbl,id) of
-                               NONE => raise Fail "tr_exp: BUG: unknown id?" 
+                               NONE => 
+                                 Error.bug ("tr_exp","unknown l-id: "^S.name id,p)
                              | SOME k => k)
             | res vtbl stbl (h::rest) = 
                                    (case S.look (stbl,h) of
@@ -521,7 +522,7 @@ struct
        in
           (te,ve,se,I.TEMP rt,ins)
        end    
-      | tr_exp te ve se (A.EAPP(A.EID((r as "_andalso",_),t1,p1),
+      | tr_exp te ve se (A.EAPP(A.EID((r as "andalso",_),t1,p1),
          A.ETUPLE (v,t2,p2),t3,p3)) =
        let
           val (_,_,_,a,ins1) = tr_exp te ve se (Vector.sub (v,0))
@@ -531,7 +532,7 @@ struct
        in
           (te,ve,se,I.TEMP rt,ins)
        end    
-      | tr_exp te ve se (A.EAPP(A.EID((r as "_orelse",_),t1,p1),
+      | tr_exp te ve se (A.EAPP(A.EID((r as "orelse",_),t1,p1),
          A.ETUPLE (v,t2,p2),t3,p3)) =
        let
           val (_,_,_,a,ins1) = tr_exp te ve se (Vector.sub (v,0))

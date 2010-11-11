@@ -121,8 +121,10 @@ struct
                          resolveLongId' te' ve' se' r))
        | resolveLongId' te ve se (Ident (s,pk)) = 
             (case (S.look (se,S.symbol s)) of
-                NONE => Error.fail ("Unknown structure identifier '" ^ s ^ "'" ^ 
-                                       reportPath s,pk)
+                NONE => (resolveLongId' te ve 
+                         (resolveParent se
+                           ("Unknown structure '" ^ s ^ "'" ^ 
+                                       reportPath s,pk)) l)
               | SOME _ => [Symbol.symbol s])
        | resolveLongId' te ve se _ = raise Fail "Not implemented resolveLongId'"
    in
@@ -169,24 +171,41 @@ struct
                                     ParseTree.prettyPrint n,(0,""))
 
       and cpat te ve se (AsPat (a,b,p)) = raise Fail "aspat not implemented"
-        | cpat te ve se (InfixPat (a,Ident (n,p),c,pos)) =  
-        		 (te,ve,A.PINFIX ((fn (_,_,e) => e) (cpat te ve se a), 
-				 						S.symbol n, 
-										(fn (_,_,e) => e) (cpat te ve se c), 
-										T.UNKNOWN, 
-										p))
+        | cpat te ve se (InfixPat (a,Ident (n,p),c,pos)) = 
+          let
+             val (te',ve',a') = cpat te ve se a
+             val (te'',ve'',c') = cpat te ve' se c
+          in
+        		 (te,ve'',A.PINFIX (a', 
+				 						  S.symbol n,
+                                c',
+									 	  T.UNKNOWN, 
+										  p))
+          end
 		  | cpat te ve se (TuplePat (l,p)) =
-             (te,ve,A.PTUPLE (Vector.fromList (
-                                List.map 
-                                 (fn le => 
-                                    (fn (_,_,e) => e) (cpat te ve se le)) l),
-                             T.UNKNOWN, p))
+          let
+             val (te',ve',l') = 
+                List.foldl (fn (e,(te,ve,l)) =>
+                               let
+                                  val (te',ve',e') = cpat te ve se e
+                               in
+                                  (te',ve',l@[e'])
+                               end) (te,ve,[]) l
+          in
+             (te,ve',A.PTUPLE (Vector.fromList l',T.UNKNOWN, p))
+          end
         | cpat te ve se (ListPat (l,p)) =
-             (te,ve,A.PLIST (Vector.fromList (
-                                List.map 
-                                 (fn le => 
-                                    (fn (_,_,e) => e) (cpat te ve se le)) l),
-                             T.UNKNOWN, p))
+          let
+             val (te',ve',l') = 
+                List.foldl (fn (e,(te,ve,l)) =>
+                               let
+                                  val (te',ve',e') = cpat te ve se e
+                               in
+                                  (te',ve',l@[e'])
+                               end) (te,ve,[]) l
+          in
+             (te,ve',A.PLIST (Vector.fromList l',T.UNKNOWN, p))
+          end
         | cpat te ve se (ConPat (a,p)) =
             (te,ve,A.PCONST (s te ve se a, T.UNKNOWN, p))
         | cpat te ve se (ConstrPat (Ident (n,_),NONE,p)) =
@@ -568,7 +587,7 @@ struct
           let
              val a' = S.symbol a
 
-             val separent = S.enter(S.empty,S.symbol "__parent",
+             val separent = S.enter(Env.senv_base,S.symbol "__parent",
                                        Env.ParentEntry se)
 
              val (te',ve',se',l') = convert te ve separent l
@@ -593,22 +612,18 @@ struct
           let
              val a' = S.symbol a
 
+             val _ = Debug.print Debug.debug 
+               ("Binding structure " ^ prettyPrint b ^ " to " ^ a ^ "\n")
+
              val b' = resolveStructId te ve se b
              val b'' = symListToStruct p se b'
 
              val b''' = case b' of [h] => A.EID (h,T.UNKNOWN,p)
                                  | l => A.ELID (l,T.UNKNOWN,p)
 
-             val se' = case S.look (se,S.symbol "__parent") of
-                           NONE => Error.bug ("AstParseTree",
-                                              "Cannot find __parent in struct",p)
-                         | SOME (Env.ParentEntry se) => se
-                         | _ => Error.bug ("AstParseTree",
-                                           "Non-ParentEntry in __parent",p)
-
-             val se'' = S.enter (se',a',b'')
+             val se' = S.enter (se,a',b'')
           in
-             (te,ve,se'',[A.DSTRUCTASSIGN (a',b''',p)])
+             (te,ve,se',[A.DSTRUCTASSIGN (a',b''',p)])
           end
         | d te ve se (SigDec ([s],p)) = 
             d te ve se s
@@ -639,19 +654,11 @@ struct
              (te,ve,se,[])
         | d te ve se (OpenDec (a,p)) =
           let
-             fun sb se [] = Error.fail ("Empty long-id in 'open'",p)
-               | sb se [h] = (case (S.look (se,h)) of 
-                                 (SOME e) => e
-                               | NONE => 
-                               Error.fail("Invalid id in 'open'",p)) 
-               | sb se (h::t) = (case (S.look (se,h)) of
-                                  (SOME (Env.StructEntry (_,_,e))) => sb e t
-                                 | NONE => 
-                               Error.fail("Invalid id in 'open'",p)) 
+             val a' = resolveStructId te ve se a
+             val a'' = symListToStruct p se a'
 
-             val a' = s te ve se a
-             val a'' = case a' of A.EID (n,t,p') => sb se [n]
-                                | A.ELID (nl,t,p') => sb se nl
+             val b' = case a' of [h] => A.EID (h,T.UNKNOWN,p)
+                                 | l => A.ELID (l,T.UNKNOWN,p)
 
              val (ste,sve,sse) = 
                case a'' of
@@ -699,7 +706,7 @@ struct
                                   S.enter (se,k,t)
                             | ((NONE,_),_) => se) se skeys
           in
-             (te',ve',se',[A.DOPEN(a',p)])
+             (te',ve',se',[A.DOPEN(b',p)])
           end
         | d te ve se (Import (Ident(i1,p1),tt,Ident(i2,p2),p)) =
           let

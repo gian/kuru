@@ -28,10 +28,10 @@ struct
    fun apply tenv venv pt = 
    let
       fun s (AndAlso (a,b,pos)) = 
-            App(Ident("_andalso",pos),
+            App(Ident("andalso",pos),
                 TupleExp ([s a, s b],pos),pos)
         | s (OrElse (a,b,pos)) = 
-            App(Ident("_orelse",pos),
+            App(Ident("orelse",pos),
                TupleExp ([s a, s b],pos),pos)
         | s (Infix (a,opr,b,pos)) =
             App(opr,
