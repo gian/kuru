@@ -147,7 +147,10 @@ struct
        end
      | constr_exp te ve se (A.EID (s,t,p)) =
        let
-          val t' = case (S.look (ve,s)) of NONE => raise IdUnknown (S.name s,p) 
+          val t' = case (S.look (ve,s)) of NONE => raise IdUnknown (S.name s,p)
+                                         | SOME (E.VarEntry T.UNKNOWN) =>
+                                             Error.bug ("constr_exp",
+                                                "Var entry of type T.UNKNOWN",p)
                                          | SOME (E.VarEntry k) => k
        in
           (te,ve,se,[],t',A.EID (s,t',p))
@@ -309,7 +312,7 @@ struct
        end
      | constr_exp te ve se (A.ELET (v,e,t,p)) =
        let
-          val (te',ve',se',cs,v') = generateConstraints' te ve se (vtol v) 
+          val (te',ve',se',cs,v') = generateConstraints' te ve se [] (vtol v) 
           val (_,_,_,cs',t',e') = constr_exp te' ve' se' e
        in  
           (te,ve,se,cs@cs',t',A.ELET(Vector.fromList v',e',t',p))
@@ -380,7 +383,7 @@ struct
        end
      | constr_dec te ve se b (A.DSTRUCTURE (s,NONE,v,p)) =
        let
-          val (te',ve',se',cn,v') = generateConstraints' te ve se (vtol v)
+          val (te',ve',se',cn,v') = generateConstraints' te ve se [] (vtol v)
           val se'' = S.enter (se,s,E.StructEntry (te',ve',S.empty))
        in
           (te,ve,se'',cn,T.UNKNOWN,A.DSTRUCTURE (s,NONE,Vector.fromList v',p))
@@ -390,7 +393,8 @@ struct
           val separent = S.enter(S.empty,S.symbol "__parent",
                                        Env.ParentEntry se)
 
-          val (te',ve',se',cn,v') = generateConstraints' te ve separent (vtol v)
+          val (te',ve',se',cn,v') = 
+            generateConstraints' te ve separent [] (vtol v)
           
           val se'' = S.enter (se,s,E.StructEntry (te',ve',se'))
           
@@ -546,10 +550,10 @@ struct
 		   (updVal ve, updStr se)
       end
 
-	and generateConstraints' te ve se c =
+	and generateConstraints' te ve se cs c =
       List.foldl (fn (d,(te',ve',se',cs',d')) =>
                       let
-                         val _ = Debug.print Debug.debug ("Constraining: " ^
+                         val _ = Debug.print Debug.internal ("Constraining: " ^
                                     A.prettyPrint [d] ^ "\n")
                          val (te'',ve'',se'',cs'',_,d'') = 
 								 			constr_dec te' ve' se' false d
@@ -558,9 +562,9 @@ struct
                                     (fn (E.VarEntry t) => T.prettyPrint t) ve'')
                          val _ = Debug.print Debug.debug "\n"
 
-                         val cs'''' = Unify.unify (cs' @ cs'')
+                         val cs''' = Unify.unify (cs'@cs'')
 
-                         val d''' = Unify.apply cs'''' [d'']
+                         val d''' = Unify.apply cs''' [d'']
 
 						      val _ = Debug.print Debug.debugmore 
                                  "Constraint Set ununified:\n================\n"
@@ -569,6 +573,7 @@ struct
                          val _ = Debug.print Debug.debugmore 
                                  "\n================\n"
 
+                         val cs'''' = Unify.unify (cs''')
 
                          val _ = Debug.print Debug.debugmore 
                                  "Constraint Set unified:\n================\n"
@@ -583,7 +588,7 @@ struct
                                           (fn (l,(d,cs)) => 
                                              let
                                                 val (d',cs') = 
-                                                   Unify.generalise cs
+                                                   Unify.generalise ve'' cs
                                                       (A.getType l)
 
                                                 val _ = 
@@ -620,11 +625,11 @@ struct
                       in
                          (te'',ve''',se''',csg,gty)
                       end handle CompileError => (te',ve',se',cs',d'))
-                        (te,ve,se,[],[]) c
+                        (te,ve,se,cs,[]) c
 
-   fun generateConstraints tenv venv senv c =
+   fun generateConstraints tenv venv senv cs c =
       let
-         val (te,ve,se,cn,k) = generateConstraints' tenv venv senv c
+         val (te,ve,se,cn,k) = generateConstraints' tenv venv senv cs c
 
          val _ = Debug.print Debug.debugmore (A.prettyPrint k)
       in

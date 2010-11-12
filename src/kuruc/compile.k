@@ -93,6 +93,9 @@ struct
    fun compile [] = raise Fail "No input files given"
      | compile fl = 
       let
+         (* Stage 0 - Configure library paths *)
+         val _ = Config.configureLibraryPaths ()
+
          (* Stage 1 - Parse/Deserialise files *)
          fun genInputs fl = 
               map (fn f => if (String.isSuffix ".k" f) orelse
@@ -118,7 +121,13 @@ struct
                            end
                            else raise Fail ("Unknown file type: " ^ f)) fl
 
-         val fl' = genInputs fl
+         val bs = if Config.getBasis () andalso (not (Config.getSafe ()))
+                     then genInputs [(Config.resolveLibrary "kuru.kb")]
+                     else if Config.getSafe () 
+                        then genInputs [(Config.resolveLibrary "safe.kb")]
+                     else []
+
+         val fl' = bs @ genInputs fl
 
          (* Stage 2 - Parse tree passes *)
          val (te',ve',se',fl'') = 
@@ -131,21 +140,29 @@ struct
                                        TypedAST.prettyPrint r'
                                     )
                        in
-                          (te',ve',se',r @ r')
+                          (te',ve',se',r @ [r'])
                        end) (Env.tenv_base, Env.venv_base, Env.senv_base, []) fl'
          
          (* Stage 3 - Type inference/checking *)
-         val (te'',ve'',se'',cs,fl''') = 
-                   Constrain.generateConstraints te' ve' se' fl''
+         val (te'',ve'',se'',cs,fl''') =
+            List.foldl (fn (l,(te,ve,se,cs,r)) => 
+               let
+                  val (te',ve',se',cs',r') = 
+                     Constrain.generateConstraints te ve se cs l
 
-         val cs' = Unify.unify cs
-         val _ = Debug.print Debug.internal ("Unified Constraints:\n")
-         val _ = Debug.print Debug.internal (Unify.ppc cs' ^ "\n")
+                  val cs'' = Unify.unify cs'
+                  val _ = Debug.print Debug.debug ("Unified Constraints:\n")
+                  val _ = Debug.print Debug.debug (Unify.ppc cs'' ^ "\n")
 
-         val d = Unify.apply cs' fl'''
+                  val r'' = Unify.apply cs'' (r') 
+               in
+                  (te',ve',se',[],r@r'')
+               end) (te',ve',se',[],[]) fl''
 
+                  
          val _ = Debug.print Debug.internal ("Typed program:\n")
-         val _ = Debug.print Debug.internal ("\n" ^ TypedAST.prettyPrint d ^ "\n")
+         val _ = Debug.print Debug.internal 
+            ("\n" ^ TypedAST.prettyPrint fl''' ^ "\n")
 
          (* Stage 4 - Optimisation *)
 
@@ -156,7 +173,7 @@ struct
 
          (* Stage 5 - Typed Intermediate Representation *)
 
-         val (te''',ve''',se''',d',fragments) = Translate.translate te'' d
+         val (te''',ve''',se''',d',fragments) = Translate.translate te'' fl''' 
 
          val _ = Debug.print Debug.internal ("Translated Program:\n")
          val _ = Debug.print Debug.internal ("\n" ^ 

@@ -25,7 +25,10 @@ struct
    val optimiserLevel = ref 2
    val machineWord = ref 32
    val keepLLVM = ref false
-   val libPath = ref
+   val libPath = ref [] : string list ref
+
+   fun configureLibraryPaths () =
+      libPath :=
       let
          val homeDir = (case OS.Process.getEnv "HOME" of
                            NONE => 
@@ -48,6 +51,8 @@ struct
          p'
       end
    val maxErrors = ref 30
+   val safe = ref false
+   val basis = ref true
 
    (* Setters and getters *)
    fun setOutputFile s = outputFile := s
@@ -63,6 +68,8 @@ struct
       case (Int.fromString m) of NONE => 
             raise Fail "Invalid argument to -max-errors option"
          | SOME i => maxErrors := i
+   fun setSafe t = safe := t
+   fun setBasis t = basis := t
 
    fun getOutputFile () = !outputFile
    fun getOptimiser () = !optimiserLevel
@@ -70,6 +77,8 @@ struct
    fun getKeepLLVM () = !keepLLVM
    fun getLibPath () = !libPath
    fun getMaxErrors () = !maxErrors
+   fun getSafe () = !safe
+   fun getBasis () = !basis
 
    (* Resolve a full path to a library, based on the library path *)
 

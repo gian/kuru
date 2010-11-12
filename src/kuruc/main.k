@@ -25,26 +25,33 @@ struct
 
 	fun printUsage () =
 		print ("Usage: kuruc [options] [-o outputFile] file1.k ... fileN.k\n" ^
-		       "   Options:\n" ^
+		       "   Global Options:\n" ^
              "\t-o file\t\tSpecify the output file.\n" ^
+				 "\t-h\t\tDisplay this help information and exit.\n" ^
+				 "\t-V\t\tOutput version information and exit.\n" ^
+             "\n   Optimisation:\n"^
              "\t-O0\t\tDisable all optimisations.\n" ^ 
              "\t-O1\t\tEnable basic optimisations.\n" ^ 
              "\t-O2\t\t(Default) Enable most optimisations.\n" ^ 
-             "\t-O3\t\tEnable all optimisations.\n" ^ 
-				 "\t-h\t\tDisplay this help information and exit.\n" ^
+             "\t-O3\t\tEnable all optimisations.\n" ^
+             "\n   Verbosity:\n" ^ 
 				 "\t-q\t\tQuiet mode - show only fatal errors.\n" ^
 				 "\t-qq\t\tSilent mode - don't even show errors.\n" ^
 				 "\t-v\t\tVerbose mode.\n" ^
 				 "\t-vv\t\tBe more verbose.\n" ^
 				 "\t-d\t\tEnable debugging output.\n" ^
 				 "\t-dd\t\tEnable noisy debugging mode.\n" ^
+             "\n   Compilation:\n" ^ 
+             "\t-keep-llvm\tKeep intermediate LLVM bitcode files.\n" ^
 				 "\t-m16\t\tSet machine word size to 16 bits.\n" ^
 				 "\t-m32\t\t(Default) Set machine word size to 32 bits.\n" ^
 				 "\t-m64\t\tSet machine word size to 64 bits.\n" ^
-             "\t-L [path]\t\tSet the library search path (colon-separated)\n" ^
-             "\t-keep-llvm\tKeep intermediate LLVM bitcode files.\n" ^
-             "\t-max-errors <n>\tReport no more than n errors.\n" ^
-				 "\t-V\t\tOutput version information and exit.\n")
+             "\n   Libraries:\n" ^
+             "\t-L [path]\tSet the library search path (colon-separated)\n" ^
+             "\t-max-errors n\tReport no more than n errors.\n" ^
+             "\t-safe\t\tImport only the Safe module, for sandbox environments\n"^
+             "\t-no-basis\tDo not import the basis library.\n")
+             
 
 	fun printVersion () =
 		print ("kuruc version " ^ Version.major ^ "." ^ Version.minor ^
@@ -80,6 +87,8 @@ struct
      | parseArgs ("-m64"::t) = (Config.setMachineWord 64; parseArgs t)
      | parseArgs ("-keep-llvm"::t) = (Config.setKeepLLVM true; parseArgs t)
      | parseArgs ("-max-errors"::m::t) = (Config.setMaxErrors m; parseArgs t)
+     | parseArgs ("-safe"::t) = (Config.setSafe true; parseArgs t)
+     | parseArgs ("-no-basis"::t) = (Config.setBasis false; parseArgs t)
      | parseArgs ("-o"::f::t) = (Config.setOutputFile f; parseArgs t)
      | parseArgs ("-L"::f::t) = (Config.setLibPath f; parseArgs t)
      | parseArgs (h::t) = h :: parseArgs t

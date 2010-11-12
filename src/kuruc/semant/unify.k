@@ -30,9 +30,6 @@ struct
                                           T.prettyPrint l ^ " : " ^
                                           T.prettyPrint r) c)
 
-          val _ = Debug.print Debug.debug "generalise constraint set:\n"
-          val _ = Debug.print Debug.debug "\n"
-
    fun substinconstr tn th l = 
       let
          val _ = Debug.print Debug.debug ("substinconstr: " ^ 
@@ -105,13 +102,21 @@ struct
    fun apply [] d = d
      | apply ((l,r,p)::t) d = apply t (A.subst_ty l r d)
 
-   fun generalise cs t =
+   fun generalise ve cs t =
       let
          val pv = ref 0
          val st = ref S.empty : T.ty S.table ref
          val csr = ref cs
 
-         fun g (T.META i) = 
+         (* val keys = map (fn (k,Env.VarEntry t) => t) (S.keys ve) *)
+         val keys = map (fn (l,r,p) => r) (!csr)
+
+         fun free [] = Set.empty
+           | free (h::t) = Set.union (T.freevars h,free t)
+
+         val kfr = [] 
+
+         fun g (T.META i) =
                (case S.look (!st,S.symbol (Int.toString i)) of 
                   SOME t' => t'
                 | NONE => 
@@ -121,7 +126,8 @@ struct
                      val _ = st := S.enter (!st,S.symbol (Int.toString i),
                                             p)
                      val _ = csr := (substinconstr_rhs (T.META i) p (!csr)) @
-                                       [(T.META i, p, (0,"_GENERALISE_"))]
+                                  [(T.META i, p, (0,"_GENERALISE_ ?X" ^ 
+                                       Int.toString i))]
                   in
                      p
                   end)

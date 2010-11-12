@@ -268,6 +268,9 @@ struct
 	  										   ", " ^ ppty t1 ^ 
 	  											" of " ^
 	  											ppe e ^ ")"
+     | ppe (ESEQ (l,t,p)) = "(" ^ String.concatWith "; " 
+                                 (map ppe (vtol l)) ^ ") : " ^
+                                 ppty t
      | ppe _ = "???texp???"
 
 
