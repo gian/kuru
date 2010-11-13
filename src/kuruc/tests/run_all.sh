@@ -6,7 +6,8 @@ echo "Kuruc tests:"
 for i in *.k
 do
 	printf "%35s: " "$i"
-	../../../bin/kuruc -qq  ../../lib/kuru.kb $i -o $i.out 2> /dev/null
+	../../../bin/kuruc -qq $i -o $i.out 2> /dev/null
+#	../../../bin/kuruc $i -o $i.out -d
 	if [ $? -eq 0 ] ; then
 		OUT=`md5sum $i.out`
 		EXP=`grep "$i.out" expected.dat`

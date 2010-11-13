@@ -24,7 +24,7 @@ struct
    structure S = Symbol
 
 	datatype enventry = 
-					  VarEntry of T.ty
+					  VarEntry of S.symbol * T.ty
 
    datatype structentry =
                  StructEntry of T.ty Symbol.table * 
@@ -35,7 +35,7 @@ struct
                          structentry Symbol.table
                | ParentEntry of structentry Symbol.table
 
-	fun pp (VarEntry t) = T.prettyPrint t
+	fun pp (VarEntry (v,t)) = T.prettyPrint t
 
 	val prettyPrint = pp
 
@@ -95,7 +95,7 @@ struct
           ]
          val b = 
             List.foldl (fn ((s,t),st) => 
-               S.enter (st,  S.symbol s, VarEntry t))
+               S.enter (st,  S.symbol s, VarEntry (S.symbol s,t)))
                   Symbol.empty benv
 
          val b' = S.enter (Symbol.empty, S.symbol "Internal",

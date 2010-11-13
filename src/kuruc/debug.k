@@ -29,9 +29,7 @@ struct
      | lName _ = "?"
 
    fun print l m = if l <= !debugLevel then 
-         TextIO.print (lName l ^ m) else ()
-
-
+         TextIO.print (lName l ^ m) else () 
 
 end
 

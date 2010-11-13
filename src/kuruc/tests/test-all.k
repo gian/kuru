@@ -1,3 +1,7 @@
+fun ref x = x
+
+fun ! x = x
+
 structure Error =
 struct
    fun resolveErrorPos (filename,linePositions,pos,buf) =

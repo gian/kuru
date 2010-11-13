@@ -16,29 +16,29 @@
 *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *******************************************************************************
 *  This file:
-*    Symbol table definition. 
-*
-*  Partially derived from http://www.cs.princeton.edu/~appel/modern/ml/chap4/
+*    Global type constraint store.
 ******************************************************************************)
-
-structure Symbol =
+structure TyConstraints =
 struct
-  type symbol = string * int
+   structure T = Type
 
-  fun name(s,n) = s
-  fun hash(s,n) = n
+   type pos = ParseTree.pos
+   type constr = T.ty * T.ty * pos
 
-  val toString = name
+   val constraints = ref [] : constr list ref
 
-  fun symbol s = (s,0)
-  val fromString = symbol
+   fun add c = 
+      constraints := c :: (!constraints)
 
-  fun enter (t,_,_) = t
-  fun look _ = NONE
-  fun keys _ = []
+   fun getConstraints () = List.rev (!constraints)
 
-  val empty = []
+	fun clearConstraints () = constraints := []
 
+   fun prettyPrint () = 
+      List.foldl (fn ((l,r,p),s) => 
+           s ^ Error.resolveErrorPos p ^ ": " ^ 
+           T.prettyPrint l ^ "\t\t:\t" ^ T.prettyPrint r ^ "\n")
+           "" (getConstraints ())
 
 end
 

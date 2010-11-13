@@ -147,14 +147,16 @@ struct
          val (te'',ve'',se'',cs,fl''') =
             List.foldl (fn (l,(te,ve,se,cs,r)) => 
                let
-                  val (te',ve',se',cs',r') = 
-                     Constrain.generateConstraints te ve se cs l
+                  val (te',ve',se',r') = 
+                     Constrain.generateConstraints te ve se l
 
-                  val cs'' = Unify.unify cs'
+                  val cs'' = Unify.unify (TyConstraints.getConstraints ()) 
                   val _ = Debug.print Debug.debug ("Unified Constraints:\n")
                   val _ = Debug.print Debug.debug (Unify.ppc cs'' ^ "\n")
 
-                  val r'' = Unify.apply cs'' (r') 
+                  val r'' = Unify.apply cs'' (r')
+
+						val _ = TyConstraints.clearConstraints ()
                in
                   (te',ve',se',[],r@r'')
                end) (te',ve',se',[],[]) fl''

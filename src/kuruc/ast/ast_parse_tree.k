@@ -33,6 +33,12 @@ struct
    fun freshstrid () = (strfresh := 1 + !strfresh;
                         "_struct" ^ Int.toString (!strfresh))
 
+
+   val nfresh = ref 0
+
+   fun freshid () = (nfresh := 1 + !nfresh;
+                        "_vv" ^ Int.toString (!nfresh))
+
    fun resolveParent se errorReport =
       let
          val _ = Debug.print Debug.debugmore
@@ -60,13 +66,12 @@ struct
                                        reportPath s,pk)) l)
               | SOME (Env.StructEntry (te',ve',se')) => 
                       (path := !path @ [s];
-                        (Symbol.symbol s) :: 
                          resolveLongId' te' ve' se' r))
        | resolveLongId' te ve se (Ident (s,pk)) = 
             (case (S.look (ve,S.symbol s)) of
                 NONE => Error.fail ("Unknown identifier '" ^ s ^ "'" ^ 
                                        reportPath s,pk)
-              | SOME _ => [Symbol.symbol s])
+              | SOME (Env.VarEntry (sy,t)) => sy)
        | resolveLongId' te ve se _ = raise Fail "Not implemented resolveLongId'"
    in
       resolveLongId' te ve se l
@@ -212,7 +217,7 @@ struct
           let
              val s' = S.symbol n
              val t = case (S.look (ve,s')) of
-                        SOME (Env.VarEntry t') => t'
+                        SOME (Env.VarEntry (sy,t')) => t'
                       | NONE => raise IllegalParseTree ("Constr " ^ n, p)
 
              val (i,t')
@@ -228,7 +233,7 @@ struct
           let
              val s' = S.symbol n 
              val t = case (S.look (ve,s')) of
-                        SOME (Env.VarEntry t') => t'
+                        SOME (Env.VarEntry (_,t')) => t'
                       | NONE => Error.fail ("Unrecognised constructor: " ^ n,p)
              val (te',ve',b') = cpat te ve se b
 
@@ -245,14 +250,15 @@ struct
         | cpat te ve se (TyAnnPat (a,b,p)) = raise Fail "TyAnnPat not impl"
         | cpat te ve se (IdPat (Ident (n,_),p)) =
           (case S.look (ve,S.symbol n) of
-            SOME (Env.VarEntry (T.CON (i,NONE,t))) =>
+            SOME (Env.VarEntry (_,T.CON (i,NONE,t))) =>
             cpat te ve se (ConstrPat (Ident (n,p),NONE,p))
-          | SOME (Env.VarEntry (T.CON (i,SOME _,t))) =>
+          | SOME (Env.VarEntry (_,T.CON (i,SOME _,t))) =>
             Error.fail ("Using constructor pattern '" ^ n ^ "' without arguments", 
                         p)
           | _ => let
                val s' = S.symbol n
-               val ve' = S.enter (ve,s',Env.VarEntry T.UNKNOWN) 
+					val s'' = freshid ()
+               val ve' = S.enter (ve,s',Env.VarEntry (S.symbol s'',T.UNKNOWN)) 
             in
                (te,ve',A.PID (s',T.UNKNOWN,p))
             end)
@@ -268,9 +274,9 @@ struct
             A.ETUPLE (Vector.fromList (map (s te ve se) l),T.UNKNOWN,p) : A.texp
         | s te ve se (AndAlso (a,b,p)) = raise IllegalParseTree ("andalso",p)
         | s te ve se (OrElse (a,b,p)) = raise IllegalParseTree ("orelse",p)
-        | s te ve se (Infix (a,opr,b,p)) = raise IllegalParseTree ("orelse",p)
+        | s te ve se (Infix (a,opr,b,p)) = raise IllegalParseTree ("infix",p)
         | s te ve se (LongId (a,b,p)) = 
-            A.ELID (resolveLongId te ve se (LongId (a,b,p)),T.UNKNOWN,p)
+            A.EID (resolveLongId te ve se (LongId (a,b,p)),T.UNKNOWN,p)
         | s te ve se (Var (a,p)) = raise IllegalParseTree ("var",p) 
         | s te ve se (Raise (a : pt,p)) = A.ERAISE (s te ve se a,p) : A.texp
         | s te ve se (Seq (a,b,p)) = raise IllegalParseTree ("Seq",p) 
@@ -307,9 +313,10 @@ struct
           end
         | s te ve se (FnExp ([Match (IdPat (Ident (n,_),_),e,_)],p)) = 
           let
-             val ve' = Symbol.enter (ve,S.symbol n,Env.VarEntry (T.UNKNOWN))
+			 	 val n' = S.symbol (freshid ())
+             val ve' = Symbol.enter (ve,S.symbol n,Env.VarEntry (n',T.UNKNOWN))
           in
-            A.EFN ([S.symbol n], s te ve' se e, T.UNKNOWN, p)
+            A.EFN ([n'], s te ve' se e, T.UNKNOWN, p)
           end
         | s te ve se (FnExp (_,p)) = raise IllegalParseTree ("FnExp",p)
         | s te ve se (HandleExp (e,l,p)) = raise Fail "handle not implemented" 
@@ -326,7 +333,7 @@ struct
         | s te ve se (Ident (x,p)) = 
           (case S.look (ve,Symbol.symbol x) of 
              NONE => Error.fail ("Unknown identifier '" ^ x ^ "'",p)
-           | SOME (Env.VarEntry t) => A.EID (Symbol.symbol x,t,p))
+           | SOME (Env.VarEntry (sym,t)) => A.EID (sym,t,p))
         | s te ve se pt = raise Fail ("expression match failed in: " ^ pp pt)
 
       fun d te ve se (ValDec (l,p)) =
@@ -448,9 +455,10 @@ struct
                                     | _ => raise IllegalParseTree ("ValBind",p)
              val e = t te ve se b
 
-             val ve' = S.enter (ve,s',Env.VarEntry e)
+			    val n' = S.symbol (freshid())
+             val ve' = S.enter (ve,s',Env.VarEntry (n',e))
           in
-             (te',ve',se,[A.DVAL (s',A.ENIL p,e,p)])
+             (te',ve',se,[A.DVAL (n',A.ENIL p,e,p)])
           end
         | d te ve se (TypeBind ([],TyName (Ident(a,_),_),b,p)) =  
           let
@@ -506,15 +514,17 @@ struct
                         (case cb of
                            ConBind (Ident (id,pos),NONE,_) =>
                               let
+											val n' = S.symbol (freshid ())
                                  val ve' = S.enter (ve,S.symbol id,
-                                                      Env.VarEntry (T.CON (
+                                                      Env.VarEntry (n',
+																		               T.CON (
                                                                      !cbi,
                                                                      NONE,
                                                                      T.NAME a')))
-                                 val _ = cons := !cons @ [T.NAME (S.symbol id)]
+                                 val _ = cons := !cons @ [T.NAME (n')]
                                  
                                  val ins' =
-                                             [A.DVAL (S.symbol id,
+                                             [A.DVAL (n',
                                                       A.ECON (!cbi,NONE,
                                                               T.NAME a',
                                                               pos),
@@ -526,17 +536,18 @@ struct
                          | ConBind (Ident (id,pos),SOME f,_) =>
                            let
                               val f' = t te ve se f
+										val n' = S.symbol (freshid ())
 
                               val ve' = S.enter (ve,S.symbol id,
-                                           Env.VarEntry (T.CON (!cbi,
+                                           Env.VarEntry (n',T.CON (!cbi,
                                                                 SOME f',
                                                                 T.NAME a')))
 
                               val _ = cons := !cons @ 
-                                    [T.FN ([f'],T.NAME (S.symbol id))]
+                                    [T.FN ([f'],T.NAME n')]
 
                               val p = S.symbol ("_p" ^ Int.toString (!cbi)) 
-                              val ins' = [A.DVAL (S.symbol id,
+                              val ins' = [A.DVAL (n',
                                              A.EFN ([p],
                                                A.ECON (!cbi,
                                                 SOME (A.EID (p,f',pos),
@@ -680,7 +691,7 @@ struct
                             | _ => "Unknown structure element\n") tkeys)
 
              val _ = List.app (Debug.print Debug.debug)
-                     (map (fn (SOME k,Env.VarEntry v) => 
+                     (map (fn (SOME k,Env.VarEntry (sy,v)) => 
                               "opening structure: " ^ prettyPrint a ^ ": val "
                               ^ S.name k ^ 
                               " : " ^ T.prettyPrint v ^ "\n"
@@ -716,7 +727,7 @@ struct
 
              val i2' = S.symbol i2
 
-             val ve' = S.enter(ve,i2',Env.VarEntry t')
+             val ve' = S.enter(ve,i2',Env.VarEntry (i2',t'))
           in
              (te,ve',se,[A.DIMPORT (i1',t',i2',p)])
           end
