@@ -18,5 +18,5 @@ struct
 	  | g 1 = 1
 	  | g x = x
 
-	val h = int
+	val h = 72 
 end

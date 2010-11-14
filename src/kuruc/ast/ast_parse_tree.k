@@ -617,7 +617,7 @@ struct
                             (ss,SOME (S.symbol sid),si)
                          end
           in
-             (te,ve,se''',si @ [A.DSTRUCTURE (a',c',Vector.fromList l',p1)])
+             (te,ve,se''',si @ l')
           end
         | d te ve se (StructBind (Ident (a,p1),c,b,p)) =
           let
@@ -629,12 +629,9 @@ struct
              val b' = resolveStructId te ve se b
              val b'' = symListToStruct p se b'
 
-             val b''' = case b' of [h] => A.EID (h,T.UNKNOWN,p)
-                                 | l => A.ELID (l,T.UNKNOWN,p)
-
              val se' = S.enter (se,a',b'')
           in
-             (te,ve,se',[A.DSTRUCTASSIGN (a',b''',p)])
+             (te,ve,se',[])
           end
         | d te ve se (SigDec ([s],p)) = 
             d te ve se s
@@ -650,10 +647,9 @@ struct
           in
              (te,ve,se',[A.DMUTUAL (Vector.fromList s',p)])
           end
-        | d te ve se (SigBind (a,Signature (l,_),p)) = 
+        | d te ve se (SigBind (Ident(a,p1),Signature (l,_),p)) = 
           let
-             val a' = case (s te ve se a) of A.EID (n,t,p) => n
-                                        | _ => Error.fail("non-id SigBind",p)
+             val a' = S.symbol a
              val (te',ve',se',l') = convert te S.empty se l
 
              val se'' = S.enter (se,a',Env.SigEntry (te',ve',se'))
@@ -717,7 +713,7 @@ struct
                                   S.enter (se,k,t)
                             | ((NONE,_),_) => se) se skeys
           in
-             (te',ve',se',[A.DOPEN(b',p)])
+             (te',ve',se',[])
           end
         | d te ve se (Import (Ident(i1,p1),tt,Ident(i2,p2),p)) =
           let

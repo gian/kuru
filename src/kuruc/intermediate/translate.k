@@ -144,7 +144,7 @@ struct
      | tr_val (A.LUNIT p) = (I.NULL (Temp.ptr Temp.i8),[]) 
      | tr_val _ = raise Fail "tr_val: Not implemented"
 
-   fun tr_pat te ve se (A.PCONST (A.ELIT (v,t,_),_,_)) =
+   fun tr_pat te ve se (A.PCONST (A.ELIT (v,t,p),_,_)) =
       (fn (c,_,f) =>
        let
           val (v',ins) = tr_val v
@@ -160,7 +160,7 @@ struct
                let
                   val k = Temp.newtemp (Temp.i1)
                in
-                  [I.MOVE (I.TEMP k,I.kstreq c v'),
+                  [I.MOVE (I.TEMP k,I.kstreq c v' p),
                    I.CJUMP2 (I.NEQ,
                             I.NAME k,
                             I.CONST 1,
@@ -374,7 +374,8 @@ struct
                end) ([],ve) (ListPair.zip (s,it))
           
           val (te',ve'',se',e',instr) = tr_exp te ve' se e
-          val _ = if Polymorphism.is_polymorphic f then
+          val _ = if Polymorphism.is_polymorphic f then 
+          (*val _ = if false then*)
                                     (Debug.print Debug.debug "is_poly EFN\n";
                                     add_fragment (FPOLYFN (fid, s, f, 
                                                            tr_ty te 
@@ -575,8 +576,6 @@ struct
        end
        | tr_exp te ve se (A.EAPP (a,b,t,p)) = 
        let
-
-
           val _ = Debug.print Debug.debug ("tr_exp: is_polymorphic: " ^
                      A.ppe a ^ " : " ^ 
                      T.prettyPrint (A.getTypeExp a) ^ "\n") 
@@ -585,16 +584,16 @@ struct
           val (_,_,_,a',instr2) = tr_exp te ve se a
 
           val (a'',instr2')
-         (*   = if Polymorphism.is_polymorphic a *)
-              = if false
+            = if Polymorphism.is_polymorphic a 
+       (*       = if false *)
                      then 
                         let
                            val lbl = case a' of 
                                          I.NAME l => l
                                        | I.TEMP t => t
-                                       | _ => raise Fail 
-                                 ("tr_exp: BUG: Monomorphisation: " ^ 
-                                  I.ppe a')
+                                       | _ => Error.bug 
+                                 ("tr_exp", "Monomorphisation: " ^ 
+                                  I.ppe a',p)
 
 
                            val _ = Debug.print Debug.debug
@@ -606,8 +605,12 @@ struct
 
                            val fr = case frag of 
                               SOME (FPOLYFN (l,s,exp,_)) => exp
-                            | SOME _ => raise Fail "tr_exp: BUG: Monomorphisation2"
-                            | NONE => raise Fail "tr_exp: BUG: Monomorphisation3"
+                            | SOME _ => 
+                              Error.bug
+                                 ("tr_exp","Monomorphisation2: "^I.ppe a',p)
+                            | NONE => 
+                              Error.bug
+                                 ("tr_exp","Monomorphisation3: "^I.ppe a',p)
                                        
                            val mon = 
                               Polymorphism.monomorphise (A.getTypeExp a) 
@@ -810,12 +813,7 @@ struct
 
    fun translate te ast =
       let
-         val tr_venv_base = S.empty 
-
-         val senv1 = StructEntry (te,Builtins.builtins,S.empty)
-         val senv2 = S.enter(S.empty,S.symbol "Internal",senv1)
-         val senv3 = S.enter(S.empty,S.symbol "Compiler",
-                        StructEntry (te,S.empty,senv2))
+         val tr_venv_base = Builtins.builtins 
 
          val (te,ve,se,ast') =
             List.foldl (fn (a,(te,ve,se,b)) =>
@@ -823,7 +821,7 @@ struct
                        val (te',ve',se',a') = tr_ast te ve se a
                     in
                        (te',ve',se',b@a')
-                    end) (te,tr_venv_base,senv3,[]) ast
+                    end) (te,tr_venv_base,S.empty,[]) ast
          val fr = !fragments
          val _ = fragments := []
       in

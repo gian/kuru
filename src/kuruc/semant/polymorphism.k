@@ -39,8 +39,11 @@ struct
 
          val p = oc t
 
-         val _ = if p then Debug.print Debug.debugmore "is polymorphic!\n" else
-                     Debug.print Debug.debugmore "is not polymorphic!\n"
+         val _ = if p then Debug.print 
+               Debug.debugmore ("is polymorphic: " ^ A.ppe e ^ "\n") 
+            else
+               Debug.print Debug.debugmore 
+                  ("is not polymorphic: " ^ A.ppe e ^ "\n")
       in
          p
       end

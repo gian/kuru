@@ -1,5 +1,5 @@
 structure Int =
 struct
-	fun toString s = Compiler.Internal.toString s
+	_import k_int_to_string : int -> string as toString
 	fun fromString s = NONE
 end

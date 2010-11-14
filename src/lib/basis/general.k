@@ -1,3 +1,5 @@
+open Compiler.Internal
+
 infix 7 *
 infix 7 /
 infix 7 mod
@@ -22,7 +24,6 @@ datatype option =
    SOME of 'a
  | NONE
 
-open Compiler.Internal
 
 structure CommandLine =
 struct

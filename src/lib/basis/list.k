@@ -11,4 +11,7 @@ struct
 
 	fun length [] = 0
      | length (h::t) = 1 + length t
+
+	fun find f [] = NONE
+	  | find f (h::t) = if f h then SOME h else find f t
 end

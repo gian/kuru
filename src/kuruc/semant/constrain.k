@@ -523,23 +523,8 @@ struct
 				upd ve' (S.unhash s) 
 					(Env.VarEntry (c,T.substinty tn tr t)))
 				) ve vkeys
-
-         fun updStr se =
-            List.foldl (
-            fn ((k,Env.StructEntry (te,ve,se')),se) =>
-               let
-                  val n = case S.unhash k of NONE => "???" | SOME n => S.name n
-
-                  val _ = 
-                     Debug.print Debug.debug ("substinenv.updStr: " ^n ^ "\n")
-                  val (ve',se'') = substinenv (tn,tr,p) ve se'
-               in
-                  upd se (S.unhash k) (Env.StructEntry (te,ve',se''))
-               end
-             | ((k,v),se) => upd se (S.unhash k) v) se skeys
-
 		in
-		   (updVal ve, updStr se)
+		   (updVal ve, se)
       end
 
 	and generateConstraints' te ve se c =

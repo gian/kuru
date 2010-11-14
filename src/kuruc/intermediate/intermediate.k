@@ -63,7 +63,7 @@ struct
                 | REQ | RNEQ
 
    (* Some built-in calls *)
-   fun kstreq l1 l2 = raise Fail ("kstreq not implemented") 
+   fun kstreq l1 l2 p = Error.bug("Intermediate","kstreq not implemented",p) 
 
    val ppt = Temp.prettyPrint
 
