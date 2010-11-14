@@ -47,6 +47,7 @@ struct
          case S.look (se,S.symbol "__parent") of
             NONE => Error.fail errorReport
           | SOME (Env.ParentEntry se') => se'
+          | SOME _ => Error.fail errorReport
       end
 
    fun resolveLongId te ve se l =
@@ -66,7 +67,8 @@ struct
                                        reportPath s,pk)) l)
               | SOME (Env.StructEntry (te',ve',se')) => 
                       (path := !path @ [s];
-                         resolveLongId' te' ve' se' r))
+                         resolveLongId' te' ve' se' r)
+              | SOME _ => Error.bug("AstParseTree","resolveLongId'",pk))
        | resolveLongId' te ve se (Ident (s,pk)) = 
             (case (S.look (ve,S.symbol s)) of
                 NONE => Error.fail ("Unknown identifier '" ^ s ^ "'" ^ 
@@ -94,7 +96,8 @@ struct
                                        reportPath s,pk)) l)
               | SOME (Env.StructEntry (te',ve',se')) => 
                       (path := !path @ [S.symbol s];
-                         resolveLongId' te' ve' se' r))
+                         resolveLongId' te' ve' se' r)
+              | SOME _ => Error.bug("AstParseTree","resolveLongId'",pk))
        | resolveLongId' te ve se (Ident (s,pk)) = 
             (case (S.look (te,S.symbol s)) of
                 NONE => Error.fail ("Unknown type identifier '" ^ s ^ "'" ^ 
@@ -123,7 +126,8 @@ struct
               | SOME (Env.StructEntry (te',ve',se')) => 
                       (path := !path @ [s];
                         (Symbol.symbol s) :: 
-                         resolveLongId' te' ve' se' r))
+                         resolveLongId' te' ve' se' r)
+              | SOME _ => Error.bug("AstParseTree","resolveLongId'",pk))
        | resolveLongId' te ve se (Ident (s,pk)) = 
             (case (S.look (se,S.symbol s)) of
                 NONE => (resolveLongId' te ve 
@@ -145,7 +149,7 @@ struct
      | symListToStruct p se (h::t) = 
        (case (S.look (se,h)) of
           SOME (Env.StructEntry (_,_,e)) => symListToStruct p e t
-        | NONE => symListToStruct p (resolveParent se 
+        | _ => symListToStruct p (resolveParent se 
                       ("Unknown id " ^ S.name h ^ " in path.",p)) (h::t))
 
    fun convert tenv venv senv pt = 
@@ -167,7 +171,8 @@ struct
                | tr p (T.FN (a,b)) = T.FN (map (tr p) a, tr p b)
                | tr p (T.TUPLE a) = T.TUPLE (map (tr p) a)
                | tr p (T.CONSTR (a,b)) = T.CONSTR (map (tr p) a, tr p b)
-               | tr p (T.NAME a) = T.LNAME (p @ [a]) 
+               | tr p (T.NAME a) = T.LNAME (p @ [a])
+               | tr p x = x
           in 
              tr path a'
           end
@@ -257,10 +262,10 @@ struct
                         p)
           | _ => let
                val s' = S.symbol n
-					val s'' = freshid ()
-               val ve' = S.enter (ve,s',Env.VarEntry (S.symbol s'',T.UNKNOWN)) 
+					val s'' = S.symbol (freshid ())
+               val ve' = S.enter (ve,s',Env.VarEntry (s'',T.UNKNOWN)) 
             in
-               (te,ve',A.PID (s',T.UNKNOWN,p))
+               (te,ve',A.PID (s'',T.UNKNOWN,p))
             end)
         | cpat te ve se (IdPat (_,p)) = raise IllegalParseTree ("IdPat",p)
         | cpat te ve se (WildcardPat p) = 
@@ -616,6 +621,7 @@ struct
                          in
                             (ss,SOME (S.symbol sid),si)
                          end
+                       | _ => Error.bug ("AstParseTree","Invalid ascription",p)
           in
              (te,ve,se''',si @ l')
           end
@@ -647,12 +653,35 @@ struct
           in
              (te,ve,se',[A.DMUTUAL (Vector.fromList s',p)])
           end
+        | d te ve se (ClassDec ([s],p)) = 
+            d te ve se s
+        | d te ve se (ClassDec (s,p)) =
+          let
+             val (te',ve',se',s') =
+               List.foldl (fn (s,(te,ve,se,r)) => 
+                     let
+                        val (te',ve',se',r') = d te ve se s
+                     in
+                        (te,ve,se',r@r')
+                     end) (te,ve,se,[]) s
+          in
+             (te,ve,se',[A.DMUTUAL (Vector.fromList s',p)])
+          end
         | d te ve se (SigBind (Ident(a,p1),Signature (l,_),p)) = 
           let
              val a' = S.symbol a
              val (te',ve',se',l') = convert te S.empty se l
 
              val se'' = S.enter (se,a',Env.SigEntry (te',ve',se'))
+          in
+             (te,ve,se'',[A.DSIGNATURE (a',Vector.fromList l',p)])
+          end
+        | d te ve se (ClassBind (Ident(a,p1),topt,Signature (l,_),p)) = 
+          let
+             val a' = S.symbol a
+             val (te',ve',se',l') = convert te S.empty se l
+
+             val se'' = S.enter (se,a',Env.ClassEntry (te',ve',se',ref []))
           in
              (te,ve,se'',[A.DSIGNATURE (a',Vector.fromList l',p)])
           end

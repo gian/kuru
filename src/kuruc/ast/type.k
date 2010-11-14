@@ -103,6 +103,10 @@ struct
 	  | pp (VAR s) = Symbol.name s
 	  | pp (META i) = "?X" ^ Int.toString i 
 	  | pp (POLY i) = "'" ^ (String.str (Char.chr (i + (Char.ord #"a"))))
+     | pp (UNION (s,l)) = 
+         Symbol.name s ^ " {" ^ String.concatWith "," (map pp l) ^ "}"
+     | pp (CON (i,NONE,t2)) = " CON : " ^ pp t2 
+     | pp (CON (i,SOME t1,t2)) = " CON of " ^ pp t1 ^ " : " ^ pp t2 
      | pp _ = "???"
 
 	val prettyPrint = pp

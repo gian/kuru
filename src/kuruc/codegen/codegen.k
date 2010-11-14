@@ -82,6 +82,7 @@ struct
             "      unwind",
             "\n}\n"
          ]
+     | cg_frag' _ = Error.bug ("cg_frag","Invalid POLYFN fragment",(0,""))
         
    and cg_frag l = (cg_frag' l)
 
@@ -152,9 +153,9 @@ struct
              | ">" => "icmp sgt"
              | "<=" => "icmp sle"
              | ">=" => "icmp sge"
-             | "_andalso" => "and"
-             | "_orelse" => "or"
-             | _ => raise Fail "Invalid BINOP in cg_exp")
+             | "andalso" => "and"
+             | "orelse" => "or"
+             | _ => raise Fail ("Invalid BINOP "^ opr ^" in cg_exp"))
         in
            j [opr', " ", cg_exp_t a, ", ", cg_exp b]
         end
@@ -221,7 +222,6 @@ struct
           j [ind i, "unwind"]
      | cg_stm i (I.STORE (e1,e2)) =
           j [ind i, "store ", cg_exp_t e1, ", ", cg_exp_t e2]
-     | cg_stm i _ = raise Fail "cg_stm: Not implemented"
 
    fun codegen (stms, frags) =
       jnl [

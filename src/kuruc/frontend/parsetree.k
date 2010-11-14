@@ -75,6 +75,7 @@ struct
     | TyPair of pt list * pos
     | TyCon of pt * pt * pos
     | TyName of pt * pos
+    | TyClass of pt * pt * pt * pos
     | ValDec of pt list * pos
     | TypeDec of pt list * pos
     | InfixrDec of string * pt * pos 
@@ -100,6 +101,9 @@ struct
     | SigBind of pt * pt * pos
     | Signature of pt list * pos
     | SigDec of pt list * pos
+    | ClassDec of pt list * pos
+    | ClassBind of pt * pt option * pt * pos
+    | ClassImpl of pt * pt * pt * pos
     | Import of pt * pt * pt * pos
 
    fun pp (Int (b,s,_)) = "Int [" ^ (if b then "~" else "") ^ s ^ "]" 
@@ -158,6 +162,8 @@ struct
      | pp (TyPair (t1,_)) = "TyPair [" ^ String.concatWith " * " (map pp t1) ^ "]"
      | pp (TyCon (t1,t2,_)) = "TyCon [" ^ pp t1 ^ " " ^ pp t2 ^ "]"
      | pp (TyName (t1,_)) = pp t1
+     | pp (TyClass (i1,t1,t2,p)) =
+         "TyClass ["^ pp i1 ^ " " ^ pp t1 ^ " => " ^ pp t2 ^ "]"
      | pp (Match (p,e,_)) = "Match [" ^ pp p ^ " => " ^ pp e ^ "]\n"
      | pp (ValDec (b,_)) = 
          "ValDec [" ^ (String.concatWith "\nand " (map pp b)) ^ "]\n"
@@ -203,6 +209,12 @@ struct
          "SigDec [" ^ String.concatWith "\n  " (map pp s) ^ "]\n"
      | pp (SigBind (i,s,_)) = 
          "SigBind " ^ pp i ^ " = " ^ pp s ^ "\n"
+     | pp (ClassDec (s,_)) = 
+         "ClassDec [" ^ String.concatWith "\n  " (map pp s) ^ "]\n"
+     | pp (ClassBind (i,NONE,s,_)) = 
+         "ClassBind " ^ pp i ^ " = " ^ pp s ^ "\n"
+     | pp (ClassBind (i,SOME t,s,_)) = 
+         "ClassBind " ^ pp i ^ " of " ^ pp t ^ " = " ^ pp s ^ "\n"
      | pp (Signature (d,_)) = "sig\n" ^ 
                         (String.concatWith "\n    " (map pp d)) ^ 
                         "\nend\n"
@@ -217,6 +229,8 @@ struct
      | pp (ExnDec (i,NONE,_)) = "exception " ^ pp i ^ "\n"
      | pp (ExnDec (i,SOME t,_)) = "exception " ^ pp i ^ " of " ^ pp t ^ "\n"
      | pp (OpenDec (i,_)) = "open " ^ pp i ^ "\n"
+     | pp (ClassImpl (i1,i2,i3,p)) = 
+         "type " ^ pp i1 ^ " implements " ^ pp i2 ^ " in " ^ pp i3 ^ "\n"
      | pp (Import (i1,t,i2,_)) = "_import " ^ pp i1 ^ " : " ^ pp t ^ " as " 
                                  ^ pp i2 ^ "\n"
      

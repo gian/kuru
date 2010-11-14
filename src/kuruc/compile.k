@@ -143,25 +143,10 @@ struct
                           (te',ve',se',r @ [r'])
                        end) (Env.tenv_base, Env.venv_base, Env.senv_base, []) fl'
          
-         (* Stage 3 - Type inference/checking *)
-         val (te'',ve'',se'',cs,fl''') =
-            List.foldl (fn (l,(te,ve,se,cs,r)) => 
-               let
-                  val (te',ve',se',r') = 
-                     Constrain.generateConstraints te ve se l
+			(* Stage 3 - Type inference/checking *)
 
-                  val cs'' = Unify.unify (TyConstraints.getConstraints ()) 
-                  val _ = Debug.print Debug.debug ("Unified Constraints:\n")
-                  val _ = Debug.print Debug.debug (Unify.ppc cs'' ^ "\n")
+         val fl''' = List.concat (map TypeCheck.check fl'')        
 
-                  val r'' = Unify.apply cs'' (r')
-
-						val _ = TyConstraints.clearConstraints ()
-               in
-                  (te',ve',se',[],r@r'')
-               end) (te',ve',se',[],[]) fl''
-
-                  
          val _ = Debug.print Debug.internal ("Typed program:\n")
          val _ = Debug.print Debug.internal 
             ("\n" ^ TypedAST.prettyPrint fl''' ^ "\n")
@@ -173,9 +158,9 @@ struct
                   raise Fail ("Errors: " ^ Int.toString (Error.getErrorCount()))
                   else ()
 
-         (* Stage 5 - Typed Intermediate Representation *)
+         (* Stage 5 - Translation to Intermediate Representation *)
 
-         val (te''',ve''',se''',d',fragments) = Translate.translate te'' fl''' 
+         val (te''',ve''',se''',d',fragments) = Translate.translate te' fl''' 
 
          val _ = Debug.print Debug.internal ("Translated Program:\n")
          val _ = Debug.print Debug.internal ("\n" ^ 

@@ -16,7 +16,7 @@
 *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *******************************************************************************
 *  This file:
-*    Generate type constraints from pre-scrubbed ASTs. 
+*    Type constraint generation and solving.
 ******************************************************************************)
 structure Constrain =
 struct
@@ -25,12 +25,16 @@ struct
 	structure E = Env
 	structure A = TypedAST
 
-   type pos = A.pos
+   val venv = ref S.empty : T.ty S.table ref
 
-   (* Exceptions *)
-   exception IdUnknown of string * pos
+   fun setType s t = venv := S.enter (!venv,s,t)
 
-   fun vtol f = Vector.foldr (fn (a,b) => a::b) [] f
+   fun getType s = S.look (!venv,s)
+
+   fun addOptConstraint (_,T.UNKNOWN,p) = ()
+     | addOptConstraint _ = ()
+   (*  | addOptConstraint (t1,t2,p) = TyConstraints.add (t1,t2,p) *)
+
 
    fun inst l =
       let
@@ -55,558 +59,253 @@ struct
          inst' l
       end
 
-   fun tval_ty (A.LINT _) = T.t_int
-     | tval_ty (A.LSTRING _) = T.t_string
-     | tval_ty (A.LREAL _) = T.t_real
-     | tval_ty (A.LCHAR _) = T.t_char
-     | tval_ty (A.LUNIT _) = T.t_unit
+   fun constrain de =
+   let
+      fun cval (A.LINT _) = T.t_int
+        | cval (A.LREAL _) = T.t_real
+        | cval (A.LCHAR _) = T.t_char
+        | cval (A.LSTRING _) = T.t_string
+        | cval (A.LUNIT _) = T.t_unit
 
-   fun constr_pat te ve se (A.PCONST (e,_,p)) =
+      fun cpat (A.PCONST (e,t,p)) = 
       let
-         val (te',ve',se',t,e') = constr_exp te ve se e
+         val (te,e') = cexp e
+         val _ = addOptConstraint (te,t,p)
       in
-         (te,ve,se,t,A.PCONST(e',t,p))
+         (te,A.PCONST (e',te,p))
       end
-     | constr_pat te ve se (A.PID (s,t,p)) =
+        | cpat (A.PTUPLE (v,t,p)) =
       let
-         val t = T.fresh ()
-         val ve' = S.enter (ve,s,E.VarEntry (s,t))
+         val (t',v') = 
+            Vector.foldl (
+               fn (a,(t,v)) =>
+               let
+                  val (t',v') = cpat a
+               in
+                  (t@[t'],v@[v'])
+               end) ([],[]) v
+
+         val t'' = T.TUPLE t'
+         val _ = addOptConstraint (t'',t,p)
       in
-         (te,ve',se,t,A.PID(s,t,p))
+         (t'',A.PTUPLE (Vector.fromList v',t'',p))
       end
-     | constr_pat te ve se (A.PLIST (v,t,p)) =
-       let
-          val tx = T.fresh ()
-          val (te',ve',se',t',v') = List.foldl 
-             (fn (e,(te,ve,se,ts,es)) => 
-               let
-                  val (te',ve',se',t',e') = constr_pat te ve se e
-                  val _ = TyConstraints.add (t',ts,p)
-               in
-                  (te',ve',se',t',es@[e'])
-               end) (te,ve,se,tx,[]) (vtol v)
+        | cpat (A.PCONSTR (i,NONE,t,p)) = (t,A.PCONSTR (i,NONE,t,p))
+        | cpat (A.PCONSTR (i,SOME (e,t1),t2,p)) =
+      let
+         val (te,e') = cpat e
+         val _ = TyConstraints.add (te,t1,p)
+      in
+         (t2,A.PCONSTR (i,SOME (e',te),t2,p))
+      end
+        | cpat (A.PID (s,t,p)) =
+      let
+         val tx = T.fresh ()
+         val _ = setType s tx
+         (* val _ = addOptConstraint (tx,t,p) *)
+      in
+         (tx,A.PID (s,tx,p))
+      end
+        | cpat (A.PINFIX (a,b,c,t,p)) =
+      let
+         (** @todo Add custom inverses *)
+         val _ = 
+            case S.name b of 
+               "::" => ()
+             | s => Error.fail ("Invalid infix operator '"^s^"' in pattern",p)
 
-          val v'' = Vector.fromList v'
-          val t'' = T.CONSTR ([t'],T.t_list)
-       in
-          (te',ve',se',t'',A.PLIST(v'',t'',p))
-       end
-     | constr_pat te ve se (A.PTUPLE (v,t,p)) =
-       let
-          val (te',ve',se',t',v') = List.foldl 
-             (fn (e,(te,ve,se,ts,es)) => 
-               let
-                  val (te',ve',se',t',e') = constr_pat te ve se e
-               in
-                  (te',ve',se',ts@[t'],es@[e'])
-               end) (te,ve,se,[],[]) (vtol v)
+         (* Proceed under the assumption that operator is :: *)
+         val (ta,a') = cpat a
+         val (tc,c') = cpat c
+         val tx = T.fresh ()
+         val tt = T.CONSTR ([tx],T.t_list)
+         val _ = TyConstraints.add (tx,ta,p)
+         val _ = TyConstraints.add (tc,tt,p)
+      in
+         (tt, A.PINFIX (a',b,c',tt,p))
+      end
+        | cpat (A.PWILD p) = (T.fresh (), A.PWILD p)
+        | cpat (A.PNIL p) = (T.CONSTR ([T.fresh()],T.t_list), A.PNIL p)
+        | cpat (A.PUNIT p) = (T.t_unit, A.PUNIT p)
+        | cpat x = Error.bug ("Constrain","Unhandled pattern: "^A.ppp x,(0,""))
 
-          val v'' = Vector.fromList v'
-          val t'' = T.TUPLE t'
-       in
-          (te',ve',se',t'',A.PTUPLE(v'',t'',p))
-       end
-     | constr_pat te ve se (A.PCONSTR(i,NONE,t,p)) =
-          (te,ve,se,t,A.PCONSTR(i,NONE,t,p))
-     | constr_pat te ve se (A.PCONSTR(i,SOME (e,t1), t2, p)) =
-       let
-          val (te',ve',se',t1',e') = constr_pat te ve se e
-          val _ = TyConstraints.add (t1',t1,p)
-       in
-          (te',ve',se',t2,A.PCONSTR(i,SOME (e',t1'),t2,p))
-       end
-     | constr_pat te ve se (A.PINFIX (l,s,r,t,p)) =
-       let
-          val _ = if s = Symbol.symbol "::" then () else
-                     raise Fail ("Unknown infix pattern: " ^ S.name s)
-          val (te',ve',se',lt,l') = constr_pat te ve se l
-          val (te'',ve'',se'',rt,r') = constr_pat te ve' se r
-          val tx = T.fresh ()
-          val t' = T.CONSTR ([tx],T.t_list)
-          val _ = TyConstraints.add (tx,lt,p)
-			 val _ = TyConstraints.add (rt,t',p)
-       in
-          (te,ve'',se,t',A.PINFIX (l',s,r',t',p))
-       end
-     | constr_pat te ve se (A.PWILD p) =
-         (te,ve,se,T.fresh (),A.PWILD p)
-     | constr_pat te ve se (A.PNIL p) =
-         (te,ve,se,T.CONSTR ([T.fresh ()],T.t_list),A.PNIL p)
-     | constr_pat _ _ _ _ = raise Fail "constr_pat not implemented"
-
-   and constr_exp te ve se (A.ELIT(tv,_,p)) = 
-       let
-          val t = tval_ty tv
-       in
-          (te,ve,se,t,A.ELIT(tv,t,p))
-       end
-     | constr_exp te ve se (A.EID (s,t,p)) =
-       let
-          val t' = case (S.look (ve,s)) of NONE => raise IdUnknown (S.name s,p)
-                                         | SOME (E.VarEntry (_,T.UNKNOWN)) =>
-                                             Error.bug ("constr_exp",
-                                                "Var entry of type T.UNKNOWN",p)
-                                         | SOME (E.VarEntry (_,k)) => k
-       in
-          (te,ve,se,t',A.EID (s,t',p))
-       end
-     | constr_exp te ve se (A.ELID (sl,t,p)) =
-       let
-          fun res stbl vtbl [] = raise Fail "constr_exp: BUG: empty long id?"
-            | res stbl vtbl [id] = (case S.look (vtbl,id) of
-                               NONE => raise IdUnknown (S.name id,p)
-                             | SOME (E.VarEntry (_,k)) => k)
-            | res stbl vtbl (h::rest) = 
-                                   (case S.look (stbl,h) of
-                               NONE => raise IdUnknown (S.name h,p)
-                             | SOME (E.StructEntry (te',ve',se')) =>
-                                       res se' ve' rest)
-          val t' = res se ve sl
-       in
-          (te,ve,se,t',A.ELID (sl,t',p))
-       end
-     | constr_exp te ve se (A.ELIST (v,t,p)) =
-       let
-          val v' = map (constr_exp te ve se) (vtol v)
-
-          val v'' = Vector.fromList (map (fn (_,_,_,_,e) => e) v')
-          val tt = if length v' > 0 then (fn (_,_,_,t,_) => t) (hd v')
-                     else T.fresh () 
-          val t = T.CONSTR ([tt], T.t_list)
-
-          val tc = List.all (fn (_,_,_,t',_) => T.equal tt t') v'
-
-          val _ = if not tc then 
-               Error.fail ("List elements disagree on type: [\n   " ^
-                        (String.concatWith "\n   " (map (fn (_,_,_,t,_) =>
-                                                      T.prettyPrint t) v'))
-                           ^ "\n]",p)
-                     else ()
-       in
-          (te,ve,se,t,A.ELIST(v'',t,p))
-       end
-     | constr_exp te ve se (A.ENIL p) = 
-       let
-          val t1 = T.fresh ()
-          val t2 = T.CONSTR ([t1],T.t_list)
-       in
-          (te,ve,se,t2,A.ENIL p)
-       end
-     | constr_exp te ve se (A.ETUPLE (v,t,p)) =
-       let
-          val v' = map (constr_exp te ve se) (vtol v)
-
-          val v'' = Vector.fromList (map (fn (_,_,_,_,e) => e) v')
-          val t = T.TUPLE (map (fn (_,_,_,t,_) => t) v')
-       in
-          (te,ve,se,t,A.ETUPLE(v'',t,p))
-       end
-     | constr_exp te ve se (A.EIF (e1,e2,e3,t,p)) =
-       let
-          val t' = T.fresh ()
-          val (_,_,_,t1,e1') = constr_exp te ve se e1
-          val (_,_,_,t2,e2') = constr_exp te ve se e2
-          val (_,_,_,t3,e3') = constr_exp te ve se e3
-          val _ = TyConstraints.add (t1,T.t_bool,p)
-			 val _ = TyConstraints.add (t',t2,p)
-			 val _ = TyConstraints.add (t',t3,p)
-       in
-          (te,ve,se,t',A.EIF (e1',e2',e3',t',p))
-       end
-     | constr_exp te ve se (A.EFN (s,e,t,p)) =
-       let
-          val (t',ve') = 
-            List.foldl (fn (s,(ts,ve)) =>
+      and cexp (A.ELIT (v,t,p)) = 
+      let
+         val t' = cval v
+         val _ = addOptConstraint (t',t,p)
+      in
+         (t',A.ELIT (v,t',p))
+      end
+        | cexp (A.EID (s,t,p)) =
+      let
+         val t' = 
+            case getType s of
+               NONE =>
                let
                   val t' = T.fresh ()
-                  val v' = S.enter (ve,s,E.VarEntry (s,t'))
+                  val _ = setType s t'
                in
-                  (ts@[t'],v')
-               end) ([],ve) s
-          
-          val (te',ve'',se',t2,e') = constr_exp te ve' se e
+                  t'
+               end
+             | SOME t => t
 
-          val tx = T.FN (t',t2) 
-       in
-          (te,ve,se,tx,A.EFN (s,e',tx,p))
-       end
-     | constr_exp te ve se (A.EAPP (e1,e2,t,p)) =
-       let
-          val (te',ve',se',te1,e1') = constr_exp te ve se e1
-          val (te',ve',se',te2,e2') = constr_exp te ve se e2
-          
-          val te1' = inst te1 
-          
-          val tx = T.fresh ()
-          
-          val _ = TyConstraints.add (te1',T.FN([te2],tx),p)
-       in
-          (te,ve,se, tx, A.EAPP(e1',e2',tx,p))
-       end
-     | constr_exp te ve se (A.EAPPMULT (e1,e2,t,p)) =
-       let
-          val (te',ve',se',te1,e1') = constr_exp te ve se e1
-          val e2' = map (constr_exp te ve se) e2
-
-          val e2'' = (map (fn (_,_,_,_,e) => e) e2')
-          val te2 = (map (fn (_,_,_,t,_) => t) e2')
-          
-          val te1' = inst te1 
-          
-          val tx = T.fresh ()
-          
-          val _ = TyConstraints.add (te1',T.FN(te2,tx),p)
-       in
-          (te,ve,se, tx, A.EAPPMULT(e1',e2'',tx,p))
-       end
-     | constr_exp te ve se (A.ECASE (e1,v,t,po)) =
-       let
-          val (te',ve',se', t1,e1') = constr_exp te ve se e1
-
-          val rt = T.fresh ()
-
-          val v' = Vector.fromList (
-                      map (fn (p,e) =>
-                        let
-                           val (te',ve',se',pt,p') = constr_pat te ve se p
-                           val (_,_,_,et,e') = constr_exp te' ve' se' e
-                 				val _ = TyConstraints.add (rt,et,po)
-									val _ = TyConstraints.add (pt,t1,po)
-
-									val _ = Debug.print Debug.debug (
-                              "case constraint: " ^ T.prettyPrint t1 ^ " = " ^
-                              T.prettyPrint pt ^ "\n"
-                              )
-					  			in
-                           (p',e')
-                        end) (vtol v)
-                   )
-       in
-          (te,ve,se,rt,A.ECASE (e1',v',rt,po))
-       end
-     | constr_exp te ve se (A.ESEQ (v,t,p)) =
-       let
-          val rt = T.fresh ()
-
-          val (rty,v') = 
-            Vector.foldl (fn (el,(ty,v')) => 
-                           let
-                              val (te',ve',se',t',el') = 
-												constr_exp te ve se el
-                           in
-                              (t',v'@[el'])
-                           end) (rt,[]) v
-
-          val _ = TyConstraints.add (rt,rty,p)
-       in
-          (te,ve,se,rt,A.ESEQ (Vector.fromList v',rt,p))
-       end
-     | constr_exp te ve se (A.ELET (v,e,t,p)) =
-       let
-          val (te',ve',se',v') = generateConstraints' te ve se (vtol v) 
-          val (_,_,_,t',e') = constr_exp te' ve' se' e
-       in  
-          (te,ve,se,t',A.ELET(Vector.fromList v',e',t',p))
-       end
-     | constr_exp te ve se (A.EANN (e,t,p)) =
-       let
-          val (te',ve',se',t',e') = constr_exp te ve se e
-          val _ = TyConstraints.add (t',t,p)
-       in
-          (te,ve,se,t',e)
-       end
-     | constr_exp te ve se (A.ERAISE (e,p)) = 
-       let
-          val (te',ve',se',t',e') = constr_exp te ve se e
-          val _ = TyConstraints.add (t',T.t_exn,p)
-       in
-          (te,ve,se,T.fresh (),A.ERAISE (e',p))
-       end
-     | constr_exp te ve se (A.ECON (i,NONE,t,p)) =
-          (te,ve,se,t,A.ECON (i,NONE,t,p))
-     | constr_exp te ve se (A.ECON (i,SOME (e',t1),t2,p)) =
-       let
-          val (te',ve',se',t',e'') = constr_exp te ve se e'
-          val _ = TyConstraints.add (t',t1,p)
-       in
-          (te,ve,se,t2,A.ECON (i,SOME (e'',t'),t2,p))
-       end
-     | constr_exp _ _ _ e = raise Fail ("Unhandled constr_exp:" ^ A.ppe e)
-
-   (* The flag in the 4th argument indicates whether to bind the name
-      first or not - true = val rec, false = val *)
-   and constr_dec te ve se false (A.DVAL (s,e,t,p)) =
-       let
-          val (te',ve',se',t',e') = constr_exp te ve se e
-          val ve'' = S.enter (ve,s,E.VarEntry (s,t'))
-       in
-          (te,ve'',se,t',A.DVAL (s,e',t',p))
-       end
-     | constr_dec te ve se true (A.DVAL (s,e,t,p)) =
-       let
-          val tx = T.fresh()
-          val ve'' = S.enter (ve,s,E.VarEntry (s,tx))
-          
-          val (te',ve',se',t',e') = constr_exp te ve'' se e
-
-			 val _ = TyConstraints.add (tx,t',p)
-       in
-          (te,ve',se,t',A.DVAL (s,e',t',p))
-       end
-     | constr_dec te ve se b (A.DVALREC (a,t,p)) =
-       let
-          val (te',ve',se',t',a') = constr_dec te ve se true a
-       in
-          (te',ve',se',t',A.DVALREC (a',t',p))
-       end
-     | constr_dec te ve se _ (A.DNULL p) = (te,ve,se,T.UNKNOWN,A.DNULL p)
-     | constr_dec te ve se b (A.DMUTUAL (v,p)) =
-       let
-          val (te',ve',se',t',v') = 
-            Vector.foldl (fn (v,(te',ve',se',t',v')) =>
-                           let
-                              val (te,ve,se,t,v'') = constr_dec te' ve' se' b v
-                           in
-                              (te,ve,se,t,v' @ [v''])
-                           end) (te,ve,se,T.UNKNOWN,[]) v
-       in
-          (te',ve',se',t',A.DMUTUAL (Vector.fromList v',p))
-       end
-     | constr_dec te ve se b (A.DSTRUCTURE (s,NONE,v,p)) =
-       let
-          val (te',ve',se',v') = generateConstraints' te ve se (vtol v)
-          val se'' = S.enter (se,s,E.StructEntry (te',ve',S.empty))
-       in
-          (te,ve,se'',T.UNKNOWN,A.DSTRUCTURE (s,NONE,Vector.fromList v',p))
-       end
-     | constr_dec te ve se b (A.DSTRUCTURE (s,SOME sign,v,p)) =
-       let
-          val separent = S.enter(S.empty,S.symbol "__parent",
-                                       Env.ParentEntry se)
-
-          val (te',ve',se',v') = 
-            generateConstraints' te ve separent (vtol v)
-          
-          val se'' = S.enter (se,s,E.StructEntry (te',ve',se'))
-          
-          val sigse = 
-           (case S.look (se,sign) of
-               NONE => []
-             | (SOME (Env.StructEntry _)) => 
-                  Error.fail ("Structure ascribes to structure",p)
-             | (SOME (Env.SigEntry (ste,sve,sse))) =>
-               let
-                  val keys = 
-                     map (fn (k,v) => (S.unhash k, v)) (S.keys sve)
-
-                  val _ = List.app (Debug.print Debug.debug)
-                     (map (fn (SOME k,Env.VarEntry (_,v)) => 
-                              "Signature spec: " ^ S.name k ^ 
-                              " : " ^ T.prettyPrint v ^ "\n"
-                            | _ => "Unknown signature spec element\n") keys)
-                     
-               in
-                  keys
-               end)
-
-          val _ = 
-            (map (fn (SOME k,Env.VarEntry (_,v)) => 
-                    let
-                       val structTy =
-                        case (S.look (ve',k)) of
-                           NONE =>
-                              Error.fail ("Structure '" ^ S.name s ^ 
-                                          "' is missing element '" ^ 
-                                          S.name k ^ "' required by signature",p)
-                         | SOME (Env.VarEntry (_,t)) => t
-                    in
-                       TyConstraints.add (inst v,inst structTy,p)
-                    end
-                   | _ => raise Fail ("constr_dec: BUG 415?")) sigse)
-       in
-          (te,ve,se'',T.UNKNOWN,A.DSTRUCTURE (s,SOME sign,
-                                                     Vector.fromList v',p))
-       end
-     | constr_dec te ve se b (A.DSTRUCTASSIGN (s,e,p)) =
-       let
-          val _ = Debug.print Debug.debug
-            ("Assigning structure: " ^ S.name s ^ " = " ^ A.ppe e ^ "\n")
-
-          fun res se [] = raise Fail "constr_dec encountered empty long id"
-            | res se [h] = (case (S.look (se,h)) of
-                               SOME e => e
-                             | NONE => raise Fail "constr_dec unknown struct id")
-            | res se (h::t) = (case (S.look (se,h)) of
-                                 SOME (E.StructEntry (_,_,e)) => res e t
-                               | NONE => raise Fail "constr_dec: struct id")
-   
-          val rhs = (case e of 
-                        (A.EID (rhs,_,p)) =>
-                           (case (S.look (se,rhs)) of 
-                              NONE => raise Fail "DSTRUCTASSIGN"
-                            | SOME e' => e')
-                      | (A.ELID (l,t,p)) => res se l)
-          val se' = S.enter (se,s,rhs)
-       in
-          (te,ve,se',T.UNKNOWN,A.DSTRUCTASSIGN (s,e,p))
-       end
-     | constr_dec te ve se b (A.DSIGNATURE (s,l,p)) =
-       let
-          (* The signature should already be in se. *)
-          val _ = ()
-       in
-          (te,ve,se,T.UNKNOWN,A.DNULL p)
-       end
-     | constr_dec te ve se b (A.DOPEN (e,p)) = 
-       let
-          fun sb se [] = Error.fail ("Empty long-id in 'open'",p)
-               | sb se [h] = (case (S.look (se,h)) of 
-                                 (SOME e) => e
-                               | NONE => Error.fail ("Invalid id in 'open'",p))
-               | sb se (h::t) = (case (S.look (se,h)) of
-                                  (SOME (Env.StructEntry (_,_,e))) => sb e t
-                                | NONE => Error.fail ("Invalid id in 'open'",p))
-
-             val a'' = case e of A.EID (n,t,p') => sb se [n]
-                                | A.ELID (nl,t,p') => sb se nl
-
-             val (ste,sve,sse) = 
-               case a'' of
-                  Env.StructEntry s => s
-                | _ => raise 
-                  Fail "constrain.k: Attempted to open non-struct!"
-
-             val tkeys = 
-                     map (fn (k,v) => (S.unhash k, v)) (S.keys ste)
-             val vkeys = 
-                     map (fn (k,v) => (S.unhash k, v)) (S.keys sve)
-             val skeys = 
-                     map (fn (k,v) => (S.unhash k, v)) (S.keys sse)
-
-             val te' =
-               List.foldl (fn ((SOME k,t),te) =>
-                                  S.enter (te,k,t)
-                            | ((NONE,_),_) => te) te tkeys
-             val ve' =
-               List.foldl (fn ((SOME k,t),ve) =>
-                                  S.enter (ve,k,t)
-                            | ((NONE,_),_) => ve) ve vkeys
-             
-             val se' =
-               List.foldl (fn ((SOME k,t),se) =>
-                                  S.enter (se,k,t)
-                            | ((NONE,_),_) => se) se skeys
-       in
-          (te',ve',se',T.UNKNOWN,A.DOPEN (e,p))
-       end
-     | constr_dec te ve se b (A.DIMPORT (i1,t,i2,p)) = 
-       let
-          val ve' = S.enter(ve,i2,Env.VarEntry (i2,t))
-       in
-         (te,ve',se,t,A.DIMPORT (i1,t,i2,p))
-       end
-     | constr_dec _ _ _ _ k = raise 
-               Fail ("Unhandled constr_dec: " ^ A.prettyPrint [k])
-
-   and substinenv (tn,tr,p) ve se =
-      let
-			val vkeys = S.keys ve 
-         val skeys = S.keys se
-		
-			fun upd ve NONE _ = 
-				 Error.bug ("Constrain","substinenv updates unknown venv symbol",p)
-			  | upd ve (SOME s) t = 
-			  		S.enter (ve,s,t)
-
-         fun updVal ve =
-            (List.foldl (fn ((s,Env.VarEntry (c,t)),ve') =>
-				upd ve' (S.unhash s) 
-					(Env.VarEntry (c,T.substinty tn tr t)))
-				) ve vkeys
-		in
-		   (updVal ve, se)
-      end
-
-	and generateConstraints' te ve se c =
-      List.foldl (fn (d,(te',ve',se',d')) =>
-                      let
-                         val _ = Debug.print Debug.internal ("Constraining: " ^
-                                    A.prettyPrint [d] ^ "\n")
-                         val (te'',ve'',se'',_,d'') = 
-								 			constr_dec te' ve' se' false d
-                         val _ = Debug.print Debug.debug "Value Environment:\n"
-                         val _ = Debug.print Debug.debug (S.prettyPrint 
-                                    (fn (E.VarEntry (_,t)) => T.prettyPrint t) ve'')
-                         val _ = Debug.print Debug.debug "\n"
-
-                         val cs''' = Unify.unify 
-                                       (TyConstraints.getConstraints ())
-
-                         val d''' = Unify.apply cs''' [d'']
-
-                         val cs'''' = Unify.unify (cs''')
-
-                         val _ = Debug.print Debug.debugmore 
-                                 "Constraint Set unified:\n================\n"
-                         val _ = Debug.print Debug.debugmore
-                                 ("\n" ^TyConstraints.prettyPrint () ^"\n")
-                         val _ = Debug.print Debug.debugmore
-                                 "\n================\n"
-
-                         val d'''' = Unify.apply cs'''' (d'@d''')
-
-                         val (gty,csg) = List.foldl 
-                                          (fn (l,(d,cs)) => 
-                                             let
-                                                val (d',cs') = 
-                                                   Unify.generalise ve'' cs
-                                                      (A.getType l)
-
-                                                val _ = 
-                                                   Debug.print Debug.debug
-                                                ("Generalised: " ^ T.prettyPrint
-                                                   d' ^ "\n")
-
-                                                val d'' = 
-                                                   A.setType l d'
-
-                                                val d''' = Unify.apply cs' [l]
-
-                                                val _ = Debug.print Debug.debug
-                                                ("Generalised exp: " ^ 
-                                                 A.prettyPrint d''' ^ "\n")
-                                             in
-                                                (d@d''',cs')
-                                             end) ([],cs'''') d''''
-
-                         val _ = Debug.print 
-                                    Debug.debug ("csg: " ^ Unify.ppc csg ^ "\n")
-                         val _ = Debug.print
-                                    Debug.debug ("gty: " ^ A.prettyPrint gty ^ 
-                                                   "\n")
-
-                         val (ve''',se''') 
-                           = List.foldl (fn (cstr,(ve,se)) => 
-                                         substinenv cstr ve se) (ve'',se'') csg 
-
-                         val gty' = Unify.apply cs'''' gty
-                         val _ = Debug.print
-                                    Debug.debug ("gty': " ^ A.prettyPrint gty ^ 
-                                                   "\n")
-                      in
-                         (te'',ve''',se''',gty)
-                      end handle CompileError => (te',ve',se',d'))
-                        (te,ve,se,[]) c
-
-   fun generateConstraints tenv venv senv c =
-      let
-         val (te,ve,se,k) = generateConstraints' tenv venv senv c
-
-         val _ = Debug.print Debug.debugmore (A.prettyPrint k)
+         val _ = addOptConstraint (t',t,p)
       in
-         (te,ve,se,k)
-      end handle IdUnknown (s,p) => Error.fail ("Unknown symbol '" ^ s ^ "'",p) 
+         (t',A.EID (s,t',p))
+      end
+        | cexp (A.ENIL p) = 
+            (T.CONSTR ([T.fresh ()],T.t_list),A.ENIL p)
+        | cexp (A.ETUPLE (v,t,p)) =
+      let
+         val (t',v') = ListPair.unzip 
+            (Vector.foldl (fn (a,b) => b @ [(cexp a)]) [] v)
+
+         val _ = addOptConstraint (T.TUPLE t',t,p)
+      in
+         (T.TUPLE t', A.ETUPLE (Vector.fromList v', T.TUPLE t', p))
+      end
+        | cexp (A.EIF (a,b,c,t,p)) =
+      let
+         val (ta,a') = cexp a
+         val (tb,b') = cexp b
+         val (tc,c') = cexp c
+         val tx = T.fresh ()
+         val _ = TyConstraints.add (tx,tb,p)
+         val _ = TyConstraints.add (tx,tc,p)
+         val _ = TyConstraints.add (ta,T.t_bool,p)
+         val _ = addOptConstraint (tx,t,p)
+      in
+         (tx,A.EIF (a',b',c',tx,p))
+      end
+        | cexp (A.EWHILE (a,b,t,p)) =
+      let
+         val (ta,a') = cexp a
+         val (tb,b') = cexp b
+         val _ = TyConstraints.add (ta,T.t_bool,p)
+         val tx = T.CONSTR ([tb],T.t_list)
+         val _ = addOptConstraint (tx,t,p)
+      in
+         (tx,A.EWHILE (a',b',tx,p))
+      end
+        | cexp (A.EFN ([s],e,t,p)) =
+      let
+         val ts = T.fresh ()
+         val _ = setType s ts
+         val (te,e') = cexp e
+         val tx = T.FN ([ts],te)
+         val _ = addOptConstraint (tx,t,p)
+      in
+         (tx,A.EFN ([s],e',tx,p))
+      end
+        | cexp (A.ECASE (e,v,t,p)) = 
+      let
+         val ti = T.fresh ()
+         val tx = T.fresh ()
+
+         val (te,e') = cexp e
+
+         val _ = TyConstraints.add (ti,te,p)
+
+         val v' = Vector.map (
+            fn (pat,exp) => 
+               let
+                  val (tp,p') = cpat pat
+                  val (te,e') = cexp exp
+                  val _ = TyConstraints.add (ti,tp,p)
+                  val _ = TyConstraints.add (tx,te,p)
+               in
+                  (p',e')
+               end) v
+
+         val _ = addOptConstraint (tx,t,p)
+      in
+         (tx,A.ECASE (e',v',tx,p))
+      end
+        | cexp (A.EAPP (a,b,t,p)) =
+      let
+         val (ta,a') = cexp a
+         val (tb,b') = cexp b
+
+         val ta' = inst ta
+         val tx = T.fresh ()
+
+         val _ = TyConstraints.add (ta',T.FN([tb],tx),p)
+
+         val _ = addOptConstraint (tx,t,p)
+      in
+         (tx,A.EAPP (a',b',tx,p))
+      end
+        | cexp (A.ERAISE (e,p)) =
+      let
+         val (te,e') = cexp e
+         val _ = TyConstraints.add(te,T.t_exn,p)
+      in
+         (T.fresh (),A.ERAISE (e',p))
+      end
+        | cexp (A.EHANDLE (pat,e,t,p)) =
+      let
+         val (tp,p') = cpat pat
+         val (te,e') = cexp e
+         val _ = TyConstraints.add (tp,T.t_exn,p)
+      in
+         (te,A.EHANDLE (p',e',te,p))
+      end
+        | cexp (A.ESEQ (v,t,p)) =
+      let
+         val (t',v') =
+            Vector.foldl (fn (e,(lt,lv)) =>
+               let
+                  val (t,v) = cexp e
+               in
+                  (t,lv @ [v])
+               end) (T.UNKNOWN,[]) v
+
+         val _ = addOptConstraint (t',t,p)
+      in
+         (t',A.ESEQ (Vector.fromList v',t',p))
+      end
+        | cexp (A.EANN (e,t,p)) =
+      let
+         val (te,e') = cexp e
+         val _ = addOptConstraint (te,t,p)
+      in
+         (te,e')
+      end
+        | cexp (A.ECON (i,NONE,t,p)) = (t,A.ECON (i,NONE,t,p))
+        | cexp (A.ECON (i,SOME (e,t1),t2,p)) =
+      let
+         val (t',e') = cexp e
+         val _ = TyConstraints.add (t',t1,p)
+      in
+         (t2,A.ECON (i,SOME (e',t'),t2,p))
+      end
+        | cexp e =
+      Error.bug ("Constrain","Encountered unexpected expression",(0,""))
+
+      and cstm (A.DVAL (s,e,t,p)) =
+      let
+         (** Because we have made all symbols unique, there is no
+             risk of accidental variable capture associated with
+             recursive uses of definitions.  Therefore we can
+             safely just bind the variable first *)
+         val tx = T.fresh ()
+         val _ = setType s tx
+         val (te,e') = cexp e
+         val _ = TyConstraints.add (tx,te,p)
+         val _ = addOptConstraint (tx,t,p)
+      in
+         A.DVAL (s,e',tx,p)
+      end
+        | cstm (A.DVALREC (a,t,p)) = A.DVALREC (cstm a,t,p)
+        | cstm (A.DMUTUAL (v,p)) = A.DMUTUAL (Vector.map cstm v, p)
+        | cstm (A.DIMPORT (a,t,b,p)) =
+      let
+         val _ = setType b t
+      in
+         A.DIMPORT (a,t,b,p)
+      end
+        | cstm x = x
+   in
+      cstm de
+   end
 end
-
-
-

@@ -100,8 +100,9 @@ struct
        end
 
    fun apply [] d = d
-     | apply ((l,r,p)::t) d = apply t (A.subst_ty l r d)
+     | apply ((l,r,p)::t) d = apply t (A.subst_ty_dec l r d)
 
+(*
    fun generalise ve cs t =
       let
          val pv = ref 0
@@ -138,5 +139,8 @@ struct
       in
          (g t, !csr)
       end
+      *)
+
+   fun generalise ve cs = cs
 
 end

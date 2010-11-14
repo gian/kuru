@@ -115,6 +115,7 @@ struct
             | _ => raise Fail "tr_ty: Invalid CONSTR type.")
      | tr_ty te (T.TUPLE l) = Temp.aggr (map (tr_ty te) l)
      | tr_ty te (T.UNION _) = Temp.ptr (Temp.aggr [Temp.i32, Temp.ptr Temp.i8])
+     | tr_ty te (T.CON _) = Temp.ptr (Temp.aggr [Temp.i32, Temp.ptr Temp.i8])
      | tr_ty te (T.VAR _) = Temp.ptr (Temp.i8)
      | tr_ty te (T.META _) = Temp.ptr (Temp.i8)
      | tr_ty te (T.POLY _) = Temp.ptr (Temp.i8)
@@ -142,7 +143,6 @@ struct
           (t3, m')
        end
      | tr_val (A.LUNIT p) = (I.NULL (Temp.ptr Temp.i8),[]) 
-     | tr_val _ = raise Fail "tr_val: Not implemented"
 
    fun tr_pat te ve se (A.PCONST (A.ELIT (v,t,p),_,_)) =
       (fn (c,_,f) =>
@@ -375,7 +375,7 @@ struct
           
           val (te',ve'',se',e',instr) = tr_exp te ve' se e
           val _ = if Polymorphism.is_polymorphic f then 
-          (*val _ = if false then*)
+     (*     val _ = if false then *)
                                     (Debug.print Debug.debug "is_poly EFN\n";
                                     add_fragment (FPOLYFN (fid, s, f, 
                                                            tr_ty te 
@@ -585,7 +585,7 @@ struct
 
           val (a'',instr2')
             = if Polymorphism.is_polymorphic a 
-       (*       = if false *)
+            (*  = if false *)
                      then 
                         let
                            val lbl = case a' of 
@@ -753,7 +753,9 @@ struct
                            (case (S.look (se,rhs)) of 
                               NONE => raise Fail "tr_ast: DSTRUCTASSIGN"
                             | SOME e' => e')
-                      | (A.ELID (l,t,p)) => res se l)
+                      | (A.ELID (l,t,p)) => res se l
+                      | _ => Error.bug("tr_ast","Invalid id",p))
+
           val se' = S.enter (se,s,rhs)
        in
           (te,ve,se',[])
@@ -769,13 +771,12 @@ struct
                                 | NONE => Error.fail("Invalid id in 'open'",p))
 
              val a'' = case e of A.EID (n,t,p') => sb se [n]
-                                | A.ELID (nl,t,p') => sb se nl
+                               | A.ELID (nl,t,p') => sb se nl
+                               | _ => Error.bug("tr_ast","Invalid id",p)
 
              val (ste,sve,sse) = 
                case a'' of
                   StructEntry s => s
-                | _ => raise 
-                  Fail "translate.k: Attempted to open non-struct!"
 
              val tkeys = 
                      map (fn (k,v) => (S.unhash k, v)) (S.keys ste)

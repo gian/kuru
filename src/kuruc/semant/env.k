@@ -33,6 +33,10 @@ struct
                | SigEntry of T.ty Symbol.table *
                             enventry Symbol.table *
                          structentry Symbol.table
+				   | ClassEntry of T.ty Symbol.table *
+									 enventry Symbol.table *
+								 structentry Symbol.table *
+								 (T.ty * structentry) list ref
                | ParentEntry of structentry Symbol.table
 
 	fun pp (VarEntry (v,t)) = T.prettyPrint t

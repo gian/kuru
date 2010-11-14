@@ -82,6 +82,7 @@ structure P = ParseTree
 %nonterm valdesc of P.pt list
 %nonterm typedesc of P.pt list
 %nonterm sigbind of P.pt list
+%nonterm classbind of P.pt list
 %nonterm strdesc of P.pt list
 %nonterm programel of P.pt
 %nonterm program of P.pt list
@@ -94,8 +95,8 @@ fun escape "n" = "\n"
   | escape "\\" = "\\"
   | escape "0" = String.str (Char.chr 0)
   | escape "t" = "\t"
-  | escape x = x
   | escape "\"" = "\\\""
+  | escape x = x
 
 %%
 
@@ -145,7 +146,7 @@ keyword        <- "val" / "let" / "if" / "then" / "else" / "datatype"
                   "structure" / "struct" / "of" / "case" /
                   "handle" / "raise" / "infixr" / "infix" /
                   "signature" / "sig" / "exception" / "open" / "local" /
-                  "_import" / "as"
+                  "_import" / "as" / "class" / "implements"
                   .
 
 id             <-  r1: reserved r2: (reserved*) -> 
@@ -259,6 +260,8 @@ typ            <- _ t1: typel _ "->" _ t2: typ ->
                 / _ t: typel -> ($t).
 
 typel          <- v: var -> ($v)
+                / i: longid _ t1: typel _ "=>" _ t2: typ ->
+                  (P.TyClass ($i,$t1,$t2,(!pos,!kuruFile)))
                 / !"*" i: longid -> (P.TyName ($i,(!pos,!kuruFile)))
                 / "(" _ t: typ _ ")" -> ($t).
 
@@ -277,6 +280,9 @@ declist        <- dec*.
 sdeclist        <- sdec*.
 
 dec            <- _ "val" _ v: valbind -> (P.ValDec($v,(!pos,!kuruFile)))
+                / _ "type" _ i1: longid _ "implements" _ i2: longid _"in"_
+                     i3: longid ->
+                        (P.ClassImpl($i1,$i2,$i3,(!pos,!kuruFile)))
                 / _ "type" _ v: typebind -> (P.TypeDec($v,(!pos,!kuruFile)))
                 / _ "datatype" _ i: id _"="_ "datatype"_ l: longid
                   -> (P.DatatypeAssign ($i,$l,(!pos,!kuruFile)))
@@ -385,6 +391,17 @@ sigbind        <- _ i: id _ "=" _ s: sign _ "and" _ st: sigbind ->
                 / _ i: id _ "=" _ s: sign ->
                   ([P.SigBind($i,$s,(!pos,!kuruFile))]).
 
+classbind      <- _ i: id _ "of" _ t:typ _"=" _ s: sign _ "and" _ st: sigbind ->
+                  (P.ClassBind($i,SOME ($t),$s,(!pos,!kuruFile)) :: $st)
+                / _ i: id _ "=" _ s: sign _ "and" _ st: sigbind ->
+                  (P.ClassBind($i,NONE,$s,(!pos,!kuruFile)) :: $st)
+                / _ i: id _ "of" _ t:typ _"=" _ s: sign ->
+                  ([P.ClassBind($i,SOME ($t),$s,(!pos,!kuruFile))])
+                / _ i: id _ "=" _ s: sign ->
+                  ([P.ClassBind($i,NONE,$s,(!pos,!kuruFile))]).
+
+
+
 str            <- _ "struct" _ d: declist _ "end"
                   -> (P.Structure($d,(!pos,!kuruFile)))
                 / longid.
@@ -395,7 +412,8 @@ sign           <- _ "sig" _ d: sdeclist _ "end"
                 .
 
 programel      <- _ dec
-                / _"signature" _ s: sigbind -> (P.SigDec ($s,(!pos,!kuruFile))).
+                / _"signature" _ s: sigbind -> (P.SigDec ($s,(!pos,!kuruFile)))
+                / _"class" _ s: classbind -> (P.ClassDec ($s,(!pos,!kuruFile))).
 
 program        <- p1: programel _ ";" _ p2: program -> ($p1 :: $p2)
                 / p1: programel _ p2: program -> ($p1 :: $p2)

@@ -204,6 +204,9 @@ struct
 	  | subst_ty_exp tn th (ECON (i,SOME (e,t1),t2,p)) =
 	  			ECON (i,SOME (subst_ty_exp tn th e,T.substinty tn th t1),
 						T.substinty tn th t2, p)
+     | subst_ty_exp tn th (ENIL p) = ENIL p
+     | subst_ty_exp tn th x = 
+      Error.bug ("TypedAST.subst_ty_exp","Unexpected exp",(0,""))
    and subst_ty_dec tn th (DVAL (s,e,t,p)) =
             DVAL (s,
                   subst_ty_exp tn th e,
@@ -229,7 +232,6 @@ struct
      | ppv (LCHAR(c,p)) = "#\"" ^ String.str (c) ^ "\""
      | ppv (LSTRING(s,p)) = "\"" ^ s ^ "\""
      | ppv (LUNIT _) = "()"
-	  | ppv _ = "???ppv"
 
    fun ppp (PCONST(e,t,p)) = ppe e
      | ppp (PLIST(v,ty,p)) = "[" ^ (String.concatWith "," (map ppp (vtol v))) ^ "]"
@@ -240,7 +242,7 @@ struct
      | ppp (PINFIX (a,b,c,t,p)) = "(" ^ ppp a ^ S.name b ^ ppp c ^ ")"
 	  | ppp (PWILD p) = "_"
 	  | ppp (PNIL _) = "nil"
-	  | ppp _ = "???ppp"
+     | ppp (PUNIT _) = "()"
 
    and ppe (ELIT(tv,ty,p)) =  
                              ppv tv 
@@ -305,7 +307,6 @@ struct
      | prettyPrint ((DIMPORT (i1,t,i2,p))::r) = 
             "DIMPORT [" ^ S.name i1 ^ " : " ^ ppty t ^ " as " ^ S.name i2 ^ "]\n" ^ 
              prettyPrint r
-     | prettyPrint (_::t) = "???\n" ^ prettyPrint t
 end
 
 
