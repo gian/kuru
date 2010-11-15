@@ -84,8 +84,17 @@ struct
      | unify' ((T.CONSTR (l1,lt),T.CONSTR (r1,rt),p) :: rest) =
 	  		unify ((conzip (l1,r1,p)) @ [(lt,rt,p)] @ rest)
      | unify' ((T.POLY i, T.POLY j,p) :: rest) =
-         if i = j then unify rest else 
+         if i = j then unify rest else
             Error.fail ("Type error: Polymorphic unification",p)
+     | unify' ((T.CLASS (s1,t1), T.CLASS (s2,t2), p) :: rest) =
+         (* TODO: check for sub classes *)
+         if s1 = s2 then unify ((t1,t2,p) :: rest) else
+            Error.fail ("Type class unification failed", p)
+     | unify' ((T.CLASS (s1,t1), t2, p) :: rest) = 
+         if List.exists (fn (t,_) => T.equal t2 t) (AstParseTree.getClass s1) then
+            unify rest
+         else Error.fail ("Type '"^T.prettyPrint t2^ "' is not a member of " ^
+                           "type class '"^S.name s1^"'",p)
      | unify' ((t1,t2,p) :: rest) = 
          Error.fail ("Type error: " ^ T.prettyPrint t1 ^ " != " ^ 
                                       T.prettyPrint t2,p)

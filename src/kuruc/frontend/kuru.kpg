@@ -280,7 +280,7 @@ declist        <- dec*.
 sdeclist        <- sdec*.
 
 dec            <- _ "val" _ v: valbind -> (P.ValDec($v,(!pos,!kuruFile)))
-                / _ "type" _ i1: longid _ "implements" _ i2: longid _"in"_
+                / _ "type" _ i1: typ _ "implements" _ i2: longid _"in"_
                      i3: longid ->
                         (P.ClassImpl($i1,$i2,$i3,(!pos,!kuruFile)))
                 / _ "type" _ v: typebind -> (P.TypeDec($v,(!pos,!kuruFile)))
@@ -391,16 +391,10 @@ sigbind        <- _ i: id _ "=" _ s: sign _ "and" _ st: sigbind ->
                 / _ i: id _ "=" _ s: sign ->
                   ([P.SigBind($i,$s,(!pos,!kuruFile))]).
 
-classbind      <- _ i: id _ "of" _ t:typ _"=" _ s: sign _ "and" _ st: sigbind ->
-                  (P.ClassBind($i,SOME ($t),$s,(!pos,!kuruFile)) :: $st)
-                / _ i: id _ "=" _ s: sign _ "and" _ st: sigbind ->
-                  (P.ClassBind($i,NONE,$s,(!pos,!kuruFile)) :: $st)
-                / _ i: id _ "of" _ t:typ _"=" _ s: sign ->
-                  ([P.ClassBind($i,SOME ($t),$s,(!pos,!kuruFile))])
-                / _ i: id _ "=" _ s: sign ->
-                  ([P.ClassBind($i,NONE,$s,(!pos,!kuruFile))]).
-
-
+classbind      <- _ i: id _ "of" _ t:id _"=" _ s: sign _ "and" _ st: sigbind ->
+                  (P.ClassBind($i,$t,$s,(!pos,!kuruFile)) :: $st)
+                / _ i: id _ "of" _ t:id _"=" _ s: sign ->
+                  ([P.ClassBind($i,$t,$s,(!pos,!kuruFile))]).
 
 str            <- _ "struct" _ d: declist _ "end"
                   -> (P.Structure($d,(!pos,!kuruFile)))

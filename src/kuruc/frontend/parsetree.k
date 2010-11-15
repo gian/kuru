@@ -102,7 +102,7 @@ struct
     | Signature of pt list * pos
     | SigDec of pt list * pos
     | ClassDec of pt list * pos
-    | ClassBind of pt * pt option * pt * pos
+    | ClassBind of pt * pt * pt * pos
     | ClassImpl of pt * pt * pt * pos
     | Import of pt * pt * pt * pos
 
@@ -211,10 +211,9 @@ struct
          "SigBind " ^ pp i ^ " = " ^ pp s ^ "\n"
      | pp (ClassDec (s,_)) = 
          "ClassDec [" ^ String.concatWith "\n  " (map pp s) ^ "]\n"
-     | pp (ClassBind (i,NONE,s,_)) = 
-         "ClassBind " ^ pp i ^ " = " ^ pp s ^ "\n"
-     | pp (ClassBind (i,SOME t,s,_)) = 
-         "ClassBind " ^ pp i ^ " of " ^ pp t ^ " = " ^ pp s ^ "\n"
+     | pp (ClassBind (i,t,s,_)) = 
+         "ClassBind " ^ pp i ^ " of " ^ pp t ^ 
+            " = " ^ pp s ^ "\n"
      | pp (Signature (d,_)) = "sig\n" ^ 
                         (String.concatWith "\n    " (map pp d)) ^ 
                         "\nend\n"

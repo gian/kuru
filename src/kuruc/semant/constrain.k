@@ -331,6 +331,7 @@ struct
       in
          (t2,A.ECON (i,SOME (e',t'),t2,p))
       end
+        | cexp (A.ESTUB (t,p)) = (t, A.ESTUB (t,p))
         | cexp e =
       Error.bug ("Constrain","Encountered unexpected expression",(0,""))
 

@@ -39,6 +39,17 @@ struct
    fun freshid () = (nfresh := 1 + !nfresh;
                         "_vv" ^ Int.toString (!nfresh))
 
+   val classes = ref S.empty : (T.ty * Env.structentry) list S.table ref
+   fun getClass s = 
+     (case S.look (!classes,s) of
+         NONE => Error.fail ("Unknown type class '"^S.name s^"'",(0,""))
+       | SOME l => l)
+
+   fun addInstance s t e =
+      case S.look (!classes,s) of
+         NONE => classes := S.enter (!classes,s,[(t,e)])
+       | SOME l => classes := S.enter (!classes,s,l@[(t,e)])
+
    fun resolveParent se errorReport =
       let
          val _ = Debug.print Debug.debugmore
@@ -66,6 +77,9 @@ struct
                            ("Unknown structure '" ^ s ^ "'" ^ 
                                        reportPath s,pk)) l)
               | SOME (Env.StructEntry (te',ve',se')) => 
+                      (path := !path @ [s];
+                         resolveLongId' te' ve' se' r)
+              | SOME (Env.ClassEntry (te',ve',se',l')) =>
                       (path := !path @ [s];
                          resolveLongId' te' ve' se' r)
               | SOME _ => Error.bug("AstParseTree","resolveLongId'",pk))
@@ -453,17 +467,19 @@ struct
           in
              (te',ve',se,[A.DVAL (s',e,T.UNKNOWN,p)])
           end
-        | d te ve se (ValDescBind (a,b,p)) =
+        | d te ve se (ValDescBind (IdPat (Ident(a,p'),_),b,p)) =
           let
-             val (te',ve',(s',_,_)) = 
-               case (cpat te ve se a) of (t,v,A.PID x) => (t,v,x)
-                                    | _ => raise IllegalParseTree ("ValBind",p)
+             val a' = S.symbol a
              val e = t te ve se b
 
 			    val n' = S.symbol (freshid())
-             val ve' = S.enter (ve,s',Env.VarEntry (n',e))
+
+             val _ = Debug.print Debug.internal
+               ("ValDescBind: " ^ a ^ " : " ^ T.prettyPrint e ^ "\n")
+
+             val ve' = S.enter (ve,a',Env.VarEntry (n',e))
           in
-             (te',ve',se,[A.DVAL (n',A.ENIL p,e,p)])
+             (te,ve',se,[A.DVAL (n',A.ESTUB (e,p),e,p)])
           end
         | d te ve se (TypeBind ([],TyName (Ident(a,_),_),b,p)) =  
           let
@@ -676,14 +692,18 @@ struct
           in
              (te,ve,se'',[A.DSIGNATURE (a',Vector.fromList l',p)])
           end
-        | d te ve se (ClassBind (Ident(a,p1),topt,Signature (l,_),p)) = 
+        | d te ve se (ClassBind (Ident(a,p1),Ident (b,p2),Signature (l,_),p)) = 
           let
              val a' = S.symbol a
-             val (te',ve',se',l') = convert te S.empty se l
+             val t' = T.CLASS (a',T.NAME (S.symbol b))
+             val te' = S.enter (te,S.symbol b,t')
+             val (te'',ve',se',l') = convert te' ve se l
 
              val se'' = S.enter (se,a',Env.ClassEntry (te',ve',se',ref []))
+
+             val te''' = S.enter (te,a',t')
           in
-             (te,ve,se'',[A.DSIGNATURE (a',Vector.fromList l',p)])
+             (te''',ve',se'',l')
           end
         | d te ve se (ExnDec (a,x,p)) =
             (* We've already translated this to a datatype in ast-promote-exns *)
@@ -756,17 +776,49 @@ struct
           in
              (te,ve',se,[A.DIMPORT (i1',t',i2',p)])
           end
-        | d te ve se t = raise Fail "ast-parse-tree.k: decl match"
+        | d te ve se (ClassImpl(i1,Ident (i2,p2),i3,p)) =
+          let
+             val t = t te ve se i1
+
+             val class = S.symbol i2 
+             val class' = symListToStruct p se [class]
+
+             val imp = resolveStructId te ve se i3
+             val imp' = symListToStruct p se imp
+
+             (* FIXME: output ascription check *)
+
+             val _ = case imp' of 
+                        Env.StructEntry _ => ()
+                      | _ => 
+                      Error.fail ("Type class implementation '"^
+                                    prettyPrint i3 ^ "' is not a structure",p)
+
+             val spec = case class' of
+                         Env.ClassEntry (_,ve,_,_) => ve 
+                       | _ => 
+                       Error.fail ("'"^ i2 ^ "' is not a " ^
+                                    "valid type class for implementation",p)
+
+             (* FIXME: this should be adding function names (from the class)
+                mapped to function names (from the implementation)
+                indexed by type. *)
+             val _ = addInstance class t imp' 
+          in
+             (te,ve,se,[])
+          end
+        | d te ve se t = Error.fail ("AstParseTree.d: " ^
+                           "ast-parse-tree.k: decl match",(0,""))
    in
         List.foldl (fn (a,(te',ve',se',k)) =>
                      let
                         val (te'',ve'',se'',k') = 
-                           d te' ve' se' a handle CompileError => (te',ve',se',[])
+                           d te' ve' se' a handle 
+                               CompileError => (te',ve',se',[])
                      in
                         (te'',ve'',se'',k@k')
                      end) (tenv,venv,senv,[]) pt
    end handle IllegalParseTree (m,p) => 
-         Error.fail ("IllegalParseTree: " ^ m ^ 
-                     ".  This is likely a compiler bug.",p) 
+         Error.bug ("AstParseTree","IllegalParseTree: " ^ m,p) 
 end
 

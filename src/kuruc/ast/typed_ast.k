@@ -60,6 +60,7 @@ struct
                  | EANN of texp * T.ty * pos
 					  | ECON of int * (texp * T.ty) option * T.ty * pos
                  | EINST of texp * T.ty * T.ty
+                 | ESTUB of T.ty * pos
                  
    and      tast = DVAL of S.symbol * texp * T.ty * pos
                  | DVALREC of tast * T.ty * pos
@@ -93,6 +94,7 @@ struct
      | getTypeExp (EANN (_,t,_)) = t
      | getTypeExp (ECON (_,_,t,_)) = t
      | getTypeExp (EINST (_,_,t)) = t
+     | getTypeExp (ESTUB (t,_)) = t
 
 	fun getType (DVAL (_,_,t,_)) = t
 	  | getType (DVALREC (_,t,_)) = t
@@ -207,6 +209,7 @@ struct
 	  			ECON (i,SOME (subst_ty_exp tn th e,T.substinty tn th t1),
 						T.substinty tn th t2, p)
      | subst_ty_exp tn th (ENIL p) = ENIL p
+     | subst_ty_exp tn th (ESTUB (t,p)) = ESTUB (T.substinty tn th t,p)
      | subst_ty_exp tn th x = 
       Error.bug ("TypedAST.subst_ty_exp","Unexpected exp",(0,""))
    and subst_ty_dec tn th (DVAL (s,e,t,p)) =
@@ -277,6 +280,7 @@ struct
                                  ppty t
      | ppe (EINST (e,t1,t2)) = "Instantiate (" ^ ppe e ^ " from " ^ ppty  t1 ^ 
                                  " to " ^ ppty t2 ^ ")"
+     | ppe (ESTUB (t,p)) = "(__dummy : " ^ ppty t ^ ")"
      | ppe _ = "???texp???"
 
 

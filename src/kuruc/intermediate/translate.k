@@ -697,7 +697,8 @@ struct
           (te,ve,se,I.UNDEF Temp.void,[])
      | tr_exp te ve se k = raise Fail ("tr_exp: Not implemented")
                  
-   and tr_ast te ve se (A.DVAL (s,e,t,p)) =
+   and tr_ast te ve se (A.DVAL (s,A.ESTUB _,t,p)) = (te,ve,se,[])
+     | tr_ast te ve se (A.DVAL (s,e,t,p)) =
        let
           val _ = Debug.print Debug.debug ("tr_ast: DVAL\n")
           val (_,_,_,e',in1) = tr_exp te ve se e

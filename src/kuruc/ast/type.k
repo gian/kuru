@@ -26,7 +26,7 @@ struct
 	            | FN of ty list * ty
 					| TUPLE of ty list
 					| CONSTR of ty list * ty
-					| CLASS of ty Set.set
+					| CLASS of Symbol.symbol * ty
 					| QUANT of ty * ty * ty
 					| META of int
 					| VAR of Symbol.symbol
@@ -98,7 +98,7 @@ struct
 	  | pp (CONSTR ([t1],t2)) = pp t1 ^ " " ^ pp t2
 	  | pp (CONSTR (t1,t2)) = 
 	  			"(" ^ (String.concatWith "," (map pp t1)) ^ ") " ^ pp t2
-	  | pp (CLASS l) = "{" ^ (String.concatWith "," (map pp l)) ^ "}"
+	  | pp (CLASS (a,b)) = Symbol.name a ^ " of " ^ pp b
 	  | pp (QUANT (t1,t2,t3)) = pp t1 ^ " " ^ pp t2 ^ " => " ^ pp t3
 	  | pp (VAR s) = Symbol.name s
 	  | pp (META i) = "?X" ^ Int.toString i 
