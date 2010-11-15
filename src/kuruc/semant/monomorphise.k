@@ -34,7 +34,7 @@ struct
          A.ETUPLE (v,t,p)
       end
         | mexp (A.EIF (a,b,c,t,p)) = A.EIF (mexp a,mexp b,mexp c,t,p)
-        | mexp (A.WHILE (a,b,t,p)) = A.EWHILE (mexp a, mexp b, t, p)
+        | mexp (A.EWHILE (a,b,t,p)) = A.EWHILE (mexp a, mexp b, t, p)
         | mexp (A.EFN (s,e,t,p)) = A.EFN (s,mexp e,t,p)
         | mexp (A.ECASE (e,v,t,p)) =
             A.ECASE (mexp e, Vector.map (fn (p,e) => (p,mexp e)) v, t, p)
@@ -44,7 +44,7 @@ struct
          val te1 = A.getTypeExp e1
          val te1' = Constrain.inst te1
          val tx = T.fresh ()
-         val tf = T.FN (A.getTypeExp e2, T.fresh ())
+         val tf = T.FN ([A.getTypeExp e2], T.fresh ())
          val cs = [(te1',tf,p)]
          val cs' = Unify.unify cs
          
@@ -59,7 +59,7 @@ struct
          val _ = Debug.print Debug.debug 
             ("Monomorphise: " ^ A.ppe e1' ^ "\n")
       in
-         A.EAPP (e1',e2,rt,p)
+         A.EAPP (A.EINST(e1',te1,tf),e2,rt,p)
       end
       else A.EAPP (e1,e2,t,p)
         | mexp (A.ERAISE (e,p)) = A.ERAISE (mexp e,p)

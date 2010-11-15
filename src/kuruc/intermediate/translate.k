@@ -374,7 +374,7 @@ struct
                end) ([],ve) (ListPair.zip (s,it))
           
           val (te',ve'',se',e',instr) = tr_exp te ve' se e
-          val _ = if Polymorphism.is_polymorphic f then 
+          val _ = if Polymorphism.isPolymorphic f then 
      (*     val _ = if false then *)
                                     (Debug.print Debug.debug "is_poly EFN\n";
                                     add_fragment (FPOLYFN (fid, s, f, 
@@ -584,7 +584,7 @@ struct
           val (_,_,_,a',instr2) = tr_exp te ve se a
 
           val (a'',instr2')
-            = if Polymorphism.is_polymorphic a 
+            = if Polymorphism.isPolymorphic a 
             (*  = if false *)
                      then 
                         let

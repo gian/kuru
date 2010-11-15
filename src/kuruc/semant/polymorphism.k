@@ -24,7 +24,7 @@ struct
    structure S = Symbol
    structure A = TypedAST
    
-   fun is_polymorphic e =
+   fun isPolymorphic e =
       let
          val t = A.getTypeExp e
 

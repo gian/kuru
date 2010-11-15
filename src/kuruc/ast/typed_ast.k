@@ -59,6 +59,7 @@ struct
                  | ELET of tast vector * texp * T.ty * pos
                  | EANN of texp * T.ty * pos
 					  | ECON of int * (texp * T.ty) option * T.ty * pos
+                 | EINST of texp * T.ty * T.ty
                  
    and      tast = DVAL of S.symbol * texp * T.ty * pos
                  | DVALREC of tast * T.ty * pos
@@ -91,6 +92,7 @@ struct
      | getTypeExp (ELET (_,_,t,_)) = t
      | getTypeExp (EANN (_,t,_)) = t
      | getTypeExp (ECON (_,_,t,_)) = t
+     | getTypeExp (EINST (_,_,t)) = t
 
 	fun getType (DVAL (_,_,t,_)) = t
 	  | getType (DVALREC (_,t,_)) = t
@@ -273,6 +275,8 @@ struct
      | ppe (ESEQ (l,t,p)) = "(" ^ String.concatWith "; " 
                                  (map ppe (vtol l)) ^ ") : " ^
                                  ppty t
+     | ppe (EINST (e,t1,t2)) = "Instantiate (" ^ ppe e ^ " from " ^ ppty  t1 ^ 
+                                 " to " ^ ppty t2 ^ ")"
      | ppe _ = "???texp???"
 
 
