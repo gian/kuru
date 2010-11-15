@@ -36,6 +36,35 @@ struct
    (*  | addOptConstraint (t1,t2,p) = TyConstraints.add (t1,t2,p) *)
 
 
+   val consty = T.POLY 0
+   val listty = T.CONSTR ([consty],T.t_list)
+
+    val benv =
+          [
+            ("true",        T.t_bool),
+            ("false",       T.t_bool),
+            ("Match",       T.t_exn),
+            ("+",           T.FN([T.TUPLE [T.t_int,T.t_int]],T.t_int)),
+            ("-",           T.FN([T.TUPLE [T.t_int,T.t_int]],T.t_int)),
+            ("*",           T.FN([T.TUPLE [T.t_int,T.t_int]],T.t_int)),
+            ("/",           T.FN([T.TUPLE [T.t_int,T.t_int]],T.t_int)),
+            ("=",           T.FN([T.TUPLE [T.fresh(),T.fresh()]],T.t_bool)),
+            ("<>",          T.FN([T.TUPLE [T.fresh(),T.fresh()]],T.t_bool)),
+            ("<",           T.FN([T.TUPLE [T.t_int,T.t_int]],T.t_bool)),
+            (">",           T.FN([T.TUPLE [T.t_int,T.t_int]],T.t_bool)),
+            ("<=",          T.FN([T.TUPLE [T.t_int,T.t_int]],T.t_bool)),
+            (">=",          T.FN([T.TUPLE [T.t_int,T.t_int]],T.t_bool)),
+            ("andalso",     T.FN([T.TUPLE [T.t_bool,T.t_bool]],T.t_bool)),
+            ("orelse",      T.FN([T.TUPLE [T.t_bool,T.t_bool]],T.t_bool)),
+            ("print",       T.FN ([T.t_string], T.t_void)),
+            ("toString",    T.FN ([T.t_int],T.t_string)),
+            ("::",          T.FN([T.TUPLE [consty,listty]],listty)),
+            ("@",           T.FN([T.TUPLE [listty,listty]],listty))
+          ]
+
+   val _ = List.app (fn (a,b) => setType (S.symbol a) b) benv
+
+
    fun inst l =
       let
          val instMap = ref S.empty : T.ty S.table ref

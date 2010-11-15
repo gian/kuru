@@ -102,8 +102,7 @@ struct
    fun apply [] d = d
      | apply ((l,r,p)::t) d = apply t (A.subst_ty_dec l r d)
 
-(*
-   fun generalise ve cs t =
+   fun generalise ve cs =
       let
          val pv = ref 0
          val st = ref S.empty : T.ty S.table ref
@@ -112,12 +111,13 @@ struct
          (* val keys = map (fn (k,Env.VarEntry t) => t) (S.keys ve) *)
          val keys = map (fn (l,r,p) => r) (!csr)
 
-         fun free [] = Set.empty
-           | free (h::t) = Set.union (T.freevars h,free t)
+         fun bound [] = Set.empty
+           | bound ((l,r,p)::t) = Set.union (T.freevars l,bound t)
 
-         val kfr = [] 
+         val kfr = bound cs
 
-         fun g (T.META i) =
+         fun g pos (T.META i) =
+            if not (Set.member (T.META i,kfr)) then
                (case S.look (!st,S.symbol (Int.toString i)) of 
                   SOME t' => t'
                 | NONE => 
@@ -127,20 +127,19 @@ struct
                      val _ = st := S.enter (!st,S.symbol (Int.toString i),
                                             p)
                      val _ = csr := (substinconstr_rhs (T.META i) p (!csr)) @
-                                  [(T.META i, p, (0,"_GENERALISE_ ?X" ^ 
-                                       Int.toString i))]
+                                  [(T.META i, p, pos)] 
                   in
                      p
                   end)
-           | g (T.FN (t1,t2)) = T.FN (map  g t1, g t2)
-           | g (T.TUPLE l1) = T.TUPLE (map g l1)
-           | g (T.CONSTR (l1,t1)) = T.CONSTR (map g l1, g t1)
-           | g x = x
-      in
-         (g t, !csr)
-      end
-      *)
+              else T.META i
+           | g pos (T.FN (t1,t2)) = T.FN (map (g pos) t1, g pos t2)
+           | g pos (T.TUPLE l1) = T.TUPLE (map (g pos) l1)
+           | g pos (T.CONSTR (l1,t1)) = T.CONSTR (map (g pos) l1, g pos t1)
+           | g pos x = x
 
-   fun generalise ve cs = cs
+         val _ = map (fn (l,r,p) => (pv := 0; (l,g p r,p))) cs
+      in
+         !csr
+      end
 
 end

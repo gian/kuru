@@ -39,6 +39,14 @@ struct
                      (!Constrain.venv) 
                         (TyConstraints.getConstraints ())
 
+         val _ = Debug.print Debug.internal ("Generalised Constraints:\n" ^ 
+                                             TyConstraints.prettyPrint ()^"\n")
+
+         val _ = TyConstraints.constraints := 
+                     Unify.unify (!TyConstraints.constraints)
+
+         val _ = Debug.print Debug.internal ("Solved Constraints:\n" ^ 
+                                             TyConstraints.prettyPrint ()^"\n")
          val p'' = Unify.apply (TyConstraints.getConstraints ()) p'
 
          val _ = TyConstraints.clearConstraints ()
