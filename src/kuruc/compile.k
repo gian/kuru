@@ -151,6 +151,12 @@ struct
          val _ = Debug.print Debug.internal 
             ("\n" ^ TypedAST.prettyPrint fl''' ^ "\n")
 
+			val flmono = Monomorphise.monomorphise fl'''
+
+	      val _ = Debug.print Debug.internal ("Monomorphic program:\n")
+         val _ = Debug.print Debug.internal 
+            ("\n" ^ TypedAST.prettyPrint flmono ^ "\n")
+
          (* Stage 4 - Optimisation *)
 
          (* Error Checking State: We proceed no further if errors occurred. *)
