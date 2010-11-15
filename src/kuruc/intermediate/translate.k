@@ -584,7 +584,8 @@ struct
           val (_,_,_,a',instr2) = tr_exp te ve se a
 
           val (a'',instr2')
-            = if Polymorphism.isPolymorphic a 
+            = if Polymorphism.isPolymorphic a andalso 
+               (not (Polymorphism.isPolymorphic b))
             (*  = if false *)
                      then 
                         let
@@ -809,6 +810,7 @@ struct
           (te,ve',se,[])
        end
      | tr_ast te ve se (A.DNULL p) = (te,ve,se,[])
+     | tr_ast te ve se (A.DSIGNATURE _) = (te,ve,se,[])
      | tr_ast te ve se _ = raise Fail "tr_ast: Not implemented"
 
 

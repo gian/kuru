@@ -31,6 +31,27 @@ struct
 
    fun getType s = S.look (!venv,s)
 
+   fun substinenv (tn,tr,p) =
+      let
+			val vkeys = S.keys (!venv) 
+		
+			fun upd NONE _ = 
+				 Error.bug ("Constrain","substinenv updates unknown venv symbol",p)
+			  | upd (SOME s) t = 
+			  		venv := S.enter (!venv,s,t)
+
+         fun updVal () =
+            List.app (fn (s,t) =>
+				   upd (S.unhash s) 
+					   (T.substinty tn tr t)) vkeys
+		in
+		   updVal ()
+      end
+
+   fun apply [] = ()
+     | apply ((l,r,p)::t) = 
+         (substinenv (l,r,p); apply t)
+
    fun addOptConstraint (_,T.UNKNOWN,p) = ()
      | addOptConstraint _ = ()
    (*  | addOptConstraint (t1,t2,p) = TyConstraints.add (t1,t2,p) *)
@@ -68,6 +89,10 @@ struct
    fun inst l =
       let
          val instMap = ref S.empty : T.ty S.table ref
+
+         val _ = Debug.print Debug.debug (
+                     "Instantiating: " ^ A.ppty l
+                  )
 
          fun inst' (T.POLY i) = 
                (case S.look (!instMap,S.symbol (Int.toString i)) of
@@ -259,8 +284,6 @@ struct
          val tx = T.fresh ()
 
          val _ = TyConstraints.add (ta',T.FN([tb],tx),p)
-
-         val _ = addOptConstraint (tx,t,p)
       in
          (tx,A.EAPP (a',b',tx,p))
       end

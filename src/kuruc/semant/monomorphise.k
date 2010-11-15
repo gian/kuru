@@ -43,6 +43,7 @@ struct
       let
          val te1 = A.getTypeExp e1
          val te1' = Constrain.inst te1
+         val te2 = A.getTypeExp e2
          val tx = T.fresh ()
          val tf = T.FN ([A.getTypeExp e2], T.fresh ())
          val cs = [(te1',tf,p)]
@@ -57,7 +58,10 @@ struct
                    | _ => Error.fail ("Invalid non-function for monomorphisation",p)
 
          val _ = Debug.print Debug.debug 
-            ("Monomorphise: " ^ A.ppe e1' ^ "\n")
+            ("Monomorphise: " ^ A.ppe e1' ^ "\n" ^ 
+             "e2: " ^ A.ppe e2 ^ "\n" ^ 
+             "te1: " ^ A.ppty te1 ^ "\n" ^ 
+             "te2: " ^ A.ppty te2 ^ "\n")
       in
          A.EAPP (A.EINST(e1',te1,tf),e2,rt,p)
       end
@@ -71,7 +75,7 @@ struct
         | mstm (A.DMUTUAL (v,p)) = A.DMUTUAL (Vector.map mstm v, p)
         | mstm x = x
    in
-      map mstm prog
+      prog 
    end
 end
 

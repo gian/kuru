@@ -48,6 +48,7 @@ struct
          val _ = Debug.print Debug.internal ("Solved Constraints:\n" ^ 
                                              TyConstraints.prettyPrint ()^"\n")
          val p'' = Unify.apply (TyConstraints.getConstraints ()) p'
+         val _ = Constrain.apply (TyConstraints.getConstraints ())
 
          val _ = TyConstraints.clearConstraints ()
       in
