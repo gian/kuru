@@ -133,11 +133,13 @@ struct
           val t0 = I.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
           val t1 = I.TEMP (Temp.newtemp (strty))
           val t2 = I.TEMP (Temp.newtemp (strty))
+          val t3' = I.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
           val t3 = I.TEMP (Temp.newtemp (Temp.ptr strty))
           val m' = [I.MOVE (t0,m),
                     I.MOVE (t1,I.TUPLE_INS(I.UNDEF strty, I.CONST (size v + 1),0)),
                     I.MOVE (t2,I.TUPLE_INS (t1, t0, 1)),
-                    I.MOVE (t3,I.ALLOCA (strty)),
+                    I.MOVE (t3',I.MALLOC (strty,1)),
+                    I.MOVE (t3,I.BITCAST (t3',Temp.ptr strty)),
                     I.STORE (t2,t3)]
        in
           (t3, m')
