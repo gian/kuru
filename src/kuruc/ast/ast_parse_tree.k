@@ -463,7 +463,7 @@ struct
              val (te',ve',(s',_,_)) = 
                case (cpat te ve se a) of (t,v,A.PID x) => (t,v,x)
                                     | _ => raise IllegalParseTree ("ValBind",p)
-             val e = s te' ve' se b
+             val e = s te' ve' se b handle CompileError => A.ESTUB (T.fresh(),p)
           in
              (te',ve',se,[A.DVAL (s',e,T.UNKNOWN,p)])
           end

@@ -332,6 +332,13 @@ struct
          (t2,A.ECON (i,SOME (e',t'),t2,p))
       end
         | cexp (A.ESTUB (t,p)) = (t, A.ESTUB (t,p))
+        | cexp (A.ELET (v,e,t,p)) = 
+      let
+         val v' = Vector.map cstm v
+         val (t',e') = cexp e
+      in
+         (t',A.ELET (v',e',t',p))
+      end
         | cexp e =
       Error.bug ("Constrain","Encountered unexpected expression",(0,""))
 
