@@ -39,7 +39,7 @@ struct
    fun freshid () = (nfresh := 1 + !nfresh;
                         "_vv" ^ Int.toString (!nfresh))
 
-   val classes = ref S.empty : (T.ty * Env.structentry) list S.table ref
+   val classes = ref S.empty : (T.ty * Env.enventry S.table) list S.table ref
    fun getClass s = 
      (case S.look (!classes,s) of
          NONE => Error.fail ("Unknown type class '"^S.name s^"'",(0,""))
@@ -788,8 +788,8 @@ struct
 
              (* FIXME: output ascription check *)
 
-             val _ = case imp' of 
-                        Env.StructEntry _ => ()
+             val imp'' = case imp' of 
+                        Env.StructEntry (_,ve,_) => ve
                       | _ => 
                       Error.fail ("Type class implementation '"^
                                     prettyPrint i3 ^ "' is not a structure",p)
@@ -803,7 +803,33 @@ struct
              (* FIXME: this should be adding function names (from the class)
                 mapped to function names (from the implementation)
                 indexed by type. *)
-             val _ = addInstance class t imp' 
+
+             (* spec is a ve:
+                   real symbol -> (spec symbol, type)
+                   
+                imp'' is a ve: 
+                   real symbol -> (imp symbol, type)
+
+                We want imp''' to be a ve:
+                   spec symbol -> (imp symbol, type)
+              *)
+            
+             val keys = map (fn (k,v) =>
+                              case S.unhash k of 
+                                 NONE => Error.fail 
+                                    ("Invalid spec entry in type class",p)
+                               | SOME s => (s,v)) (S.keys spec)
+
+             val imp''' = 
+               List.foldl (fn ((k,Env.VarEntry (i,t1)),im) =>
+                  case S.look (imp'',k) of 
+                     NONE => Error.fail ("Invalid name in type class spec: " ^
+                                          S.name k,p)
+                   | SOME (Env.VarEntry (k',t)) =>
+                        S.enter (im,i,Env.VarEntry (k',t)))
+                  S.empty keys
+
+             val _ = addInstance class t imp'''
           in
              (te,ve,se,[])
           end

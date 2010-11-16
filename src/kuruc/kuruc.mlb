@@ -32,6 +32,7 @@ semant/constrain.sml
 semant/typecheck.sml
 semant/polymorphism.sml
 semant/monomorphise.sml
+semant/typeclass.sml
 intermediate/temp.sml
 intermediate/intermediate.sml
 intermediate/builtins.sml

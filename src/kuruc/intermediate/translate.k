@@ -145,10 +145,10 @@ struct
      | tr_val (A.LUNIT p) = (I.NULL (Temp.ptr Temp.i8),[]) 
 
    fun tr_pat te ve se (A.PCONST (A.ELIT (v,t,p),_,_)) =
-      (fn (c,_,f) =>
+      (fn (c,t,f) =>
        let
           val (v',ins) = tr_val v
-          val t = Temp.newlabel ()
+        (*  val t = Temp.newlabel () *)
           val v'' =
           case v of 
             A.LINT _ => ( 
@@ -169,7 +169,7 @@ struct
                end)
           | A.LUNIT _ => ([I.JUMP (I.NAME t,[t])])
        in
-          (te,ve,se,ins@v''@[I.LABEL t])
+          (te,ve,se,ins@v'')
        end)
      | tr_pat te ve se (A.PCONST (_,_,p)) = 
             raise Fail ("tr_pat: Invalid constant pattern!")
@@ -581,7 +581,6 @@ struct
                      T.prettyPrint (A.getTypeExp a) ^ "\n") 
 
           val (_,_,_,b',instr1) = tr_exp te ve se b
-          val (_,_,_,a',instr2) = tr_exp te ve se a
 
           val (a'',instr2')
             = if Polymorphism.isPolymorphic a andalso 
@@ -589,6 +588,7 @@ struct
             (*  = if false *)
                      then 
                         let
+                           val (_,_,_,a',instr2) = tr_exp te ve se a
                            val lbl = case a' of 
                                          I.NAME l => l
                                        | I.TEMP t => t
@@ -621,16 +621,55 @@ struct
                         in
                            (m',ins')
                         end
-                     else (a',instr2)
+                     else if TypeClass.isClass a then
+                        let
+                           val s' = case a of 
+                              A.EID (s,t,p) => s
+                            | _ => Error.fail 
+                              ("Cannot instantiate type class for non-EID",p)
+
+                           val impty = A.getTypeExp b
+
+                           val cl = case A.getTypeExp a of
+                              T.FN ([T.CLASS (c,t)],r) => 
+                                 AstParseTree.getClass c
+                            | _ => Error.fail
+                              ("Cannot instantiate non-function type class",(0,""))
+
+                           val (a',t') = 
+                             (case List.find (fn (ty,ta) => T.equal ty impty)
+                                    cl of NONE => 
+                                       Error.fail ("Type '"^T.prettyPrint impty^
+                                                   "is not a member of class '" ^
+                                                   S.name s' ^ "'",(0,""))
+                                     | SOME (_,ve) =>
+                                       (case S.look (ve,s') of
+                                          NONE => 
+                                             Error.fail
+                                                ("No implementation of '" ^
+                                                   S.name s' ^ "' found in class",
+                                                   (0,""))
+                                        | SOME (Env.VarEntry (s'',t)) => (s'',t)))
+
+                           val (_,_,_,m',ins') = tr_exp te ve se (A.EID(a',t',p))
+                        in
+                           (m',ins')
+                        end
+                     else 
+                        let
+                           val (_,_,_,a',instr2) = tr_exp te ve se a
+                        in
+                           (a',instr2)
+                        end
 
           val rt = Temp.newtemp (tr_ty te t)
           
           val c = I.CALL (tr_ty te t,a'',b')
        in
           if tr_ty te t = Temp.void then 
-             (te,ve,se,I.VOID,instr1 @ instr2 @ [I.EXP c])
+             (te,ve,se,I.VOID,instr1 @ instr2' @ [I.EXP c])
           else
-             (te,ve,se,I.TEMP rt,instr1 @ instr2 @ [I.MOVE (I.TEMP rt,c)])
+             (te,ve,se,I.TEMP rt,instr1 @ instr2' @ [I.MOVE (I.TEMP rt,c)])
        end
      | tr_exp te ve se (A.EHANDLE (pa,e,t,p)) = raise Fail "tr_exp: EHANDLE"
      | tr_exp te ve se (A.ESEQ (v,t,p)) =
