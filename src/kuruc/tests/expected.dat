@@ -43,5 +43,6 @@ df97271397605b28c11fb2a8fe4ae2cc  test-semant-unify-fn.k.out
 543cf0d1d0ae44fa5bf3836723e04a8a  test-semant-unify-generalise.k.out
 c18da9238deb56ae7e685465d5b47d4d  test-semant-unify-list.k.out
 2e37e5c4570d0f799e54b96031317b0f  test-type-class.k.out
+6b7e9e96014ee2bcbbf8d0c5fa5d26d7  test-type-class2.k.out
 23a6b70068df3ce2c01c1e00d8d081f4  test-type-id.k.out
 ef3b3055c90b698b2853660c12724854  test-type-opaque.k.out
