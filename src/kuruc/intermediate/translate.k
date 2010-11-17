@@ -732,10 +732,72 @@ struct
        in
           (te,ve,se,rt,einstr @ instr)
        end
-     | tr_exp te ve se (A.ELET _) = raise Fail "tr_exp: ELET remains!" 
+     | tr_exp te ve se (A.ELET (v,e,t,p)) = 
+       let
+          (* Having helpfully already made everything SSA, we
+             can simply move the declarations out of the let exp. *)
+          val (te',ve',se',instr) = 
+            Vector.foldl (fn (v,(te,ve,se,instr)) =>
+               let
+                  val (te',ve',se',ins) = tr_ast te ve se v
+               in
+                  (te',ve',se',instr@ins)
+               end) (te,ve,se,[]) v
+
+          val (te'',ve'',se'',rt,instr') = tr_exp te' ve' se' e
+       in
+          (te,ve,se,rt,instr@instr')
+       end
      | tr_exp te ve se (A.EANN (e,t,p)) = tr_exp te ve se e
      | tr_exp te ve se (A.ERAISE (e,p)) =
           (te,ve,se,I.UNDEF Temp.void,[])
+     | tr_exp te ve se (A.ECLOSURE (f,l,t,p)) =
+       let
+          val f' = case S.look (ve,f) of
+            NONE => Error.bug ("tr_exp","Closure function not found",p)
+          | SOME tm => tm
+
+          val clty = 
+            Temp.aggr 
+               ([Temp.fn_ptr ([Temp.ptr Temp.i8], Temp.ptr (Temp.self_ref 2))] @
+                  (map (fn (_,t) => tr_ty te t) l)) 
+
+          val cl = Temp.newtemp (Temp.ptr Temp.i8)
+          val cl' = Temp.newtemp (Temp.ptr clty)
+          
+          val t1 = Temp.newtemp (clty)
+
+          val ins = 
+            [I.MOVE (I.TEMP cl,I.MALLOC (clty,1)),
+             I.MOVE (I.TEMP cl', I.BITCAST (I.TEMP cl, Temp.ptr clty)),
+             I.MOVE (I.TEMP t1,I.TUPLE_INS (I.UNDEF clty, f',0))]
+
+          val c = ref 1
+
+          val (re,ins') = 
+            List.foldl (fn ((e,t),(r,i)) =>
+               let
+                  val r' = case S.look (ve,e) of
+                     NONE => 
+                        Error.bug ("tr_exp", "Closure member '"^S.name e^
+                                             "' missing",p)
+                   | SOME tm => tm
+
+                  val nt = Temp.newtemp (clty)
+
+                  val i'' =
+                     [I.MOVE (I.TEMP nt,I.TUPLE_INS (r, r',!c))]
+
+                  val _ = c := !c + 1
+               in
+                  (I.TEMP nt,i @ i'')
+               end) (I.TEMP t1,[]) l
+
+          val ins'' = 
+            [I.STORE (re,I.TEMP cl')]
+       in
+          (te,ve,se,re,ins @ ins' @ ins'')
+       end
      | tr_exp te ve se k = raise Fail ("tr_exp: Not implemented")
                  
    and tr_ast te ve se (A.DVAL (s,A.ESTUB _,t,p)) = (te,ve,se,[])

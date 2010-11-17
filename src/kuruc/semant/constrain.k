@@ -241,15 +241,20 @@ struct
       in
          (tx,A.EWHILE (a',b',tx,p))
       end
-        | cexp (A.EFN ([s],e,t,p)) =
+        | cexp (A.EFN (s,e,t,p)) =
       let
-         val ts = T.fresh ()
-         val _ = setType s ts
+         val ts = List.foldl (fn (s,ts) =>
+            let
+               val t' = T.fresh ()
+               val _ = setType s t'
+            in
+               ts @ [t']
+            end) [] s
+
          val (te,e') = cexp e
-         val tx = T.FN ([ts],te)
-         val _ = addOptConstraint (tx,t,p)
+         val tx = T.FN (ts,te)
       in
-         (tx,A.EFN ([s],e',tx,p))
+         (tx,A.EFN (s,e',tx,p))
       end
         | cexp (A.ECASE (e,v,t,p)) = 
       let
@@ -339,8 +344,25 @@ struct
       in
          (t',A.ELET (v',e',t',p))
       end
+        | cexp (A.ECLOSURE (f,l,t,p)) =
+      let
+         val l' =
+            map (fn (s,t) =>
+                   case getType s of
+                     NONE => Error.fail 
+                              ("Invalid closure member '"^S.name s^"'",p)
+                   | SOME t => (s,t)) l
+
+         val t' = 
+            case getType f of
+               NONE => Error.fail ("Invalid function '"^S.name f^"' in closure",p)
+             | SOME t => t
+      in
+         (t',A.ECLOSURE (f,l',t',p))
+      end
         | cexp e =
-      Error.bug ("Constrain","Encountered unexpected expression",(0,""))
+      Error.bug ("Constrain","Encountered unexpected expression: " ^
+                             A.ppe e,(0,""))
 
       and cstm (A.DVAL (s,e,t,p)) =
       let

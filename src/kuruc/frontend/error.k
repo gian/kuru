@@ -69,11 +69,14 @@ struct
       end
 
    fun bug (module,msg,p) =
-      raise Fail (resolveErrorPos p ^ 
+      (TextIO.output (TextIO.stdErr,
+                  resolveErrorPos p ^ 
                   ": Code near this location triggered a compiler bug in " ^ 
                   "module " ^ module ^ ":\n   " ^ 
                   msg ^ "\nPlease consider reporting this at " ^
-                  "http://www.kuru-lang.org/bugs")
+                  "http://www.kuru-lang.org/bugs\n");
+       OS.Process.exit OS.Process.failure;
+       raise Fail "Bug")
 
    fun getErrorCount () = !errorCount
 end
