@@ -142,7 +142,7 @@ struct
                        in
                           (te',ve',se',r @ [r'])
                        end) (Env.tenv_base, Env.venv_base, Env.senv_base, []) fl'
-         
+        
 			(* Stage 3 - Type inference/checking *)
 
          val fl''' = List.concat (map TypeCheck.check fl'')        
@@ -150,6 +150,8 @@ struct
          val _ = Debug.print Debug.internal ("Typed program:\n")
          val _ = Debug.print Debug.internal 
             ("\n" ^ TypedAST.prettyPrint fl''' ^ "\n")
+
+			val _ = ClosureConvert.convert fl'''
 
 			val flmono = Monomorphise.monomorphise fl'''
 
