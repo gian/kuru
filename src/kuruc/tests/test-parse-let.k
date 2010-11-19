@@ -1,10 +1,11 @@
 fun f x y = 
  let
- 	 val q = x
-	 val z = y
+ 	 val q = x + y
  in
- 	 (q,y)
+ 	 (q,q)
  end
 
 
 val q = f 10
+val r = q 11
+

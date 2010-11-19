@@ -108,11 +108,11 @@ struct
      	   A.EANN (liftExp e, t, p)
      | liftExp (A.ECON (i,SOME (e,t1),t2,p)) =
          A.ECON (i,SOME (liftExp e,t1),t2,p)
-     | liftExp (f as A.EFN (s,e,t,p)) = 
+     | liftExp (f as A.EFN ([s],e,t,p)) = 
        let
           val (it,ot) = 
-            case t of T.FN x => x
-                    | _ => ([T.UNKNOWN],T.UNKNOWN)
+            case t of T.FN ([x],t) => (x,t)
+                    | _ => (T.UNKNOWN,T.UNKNOWN)
 
           val fr = free [] f
           (* fr is the set of things that need to be passed as parameters
@@ -124,10 +124,26 @@ struct
              one named nid *)
           val nid = fresh ()
 
-          val nit = (map (fn (a,b) => b) fr) @ it
-          val ns = (map (fn (a,b) => a) fr) @ s
+          val nit = (map (fn (a,b) => b) fr)
+          val ns = (map (fn (a,b) => a) fr) 
 
-          val d = A.DVAL (nid,A.EFN (ns,e',T.FN(nit,ot),p), T.FN(nit,ot), p)
+          val nt = 
+            List.foldr 
+               (fn (it,ot) =>
+                  T.FN ([it],ot)) ot nit
+
+          val _ = D.print D.debug ("ClosureConvert: lifted ty: " ^ A.ppty nt ^ "\n")
+
+          val fty = T.FN ([it],ot)
+          val ec = A.ECLOSURE (nid,fr,T.CLOSURE (fty :: nit),p)
+
+          val d = A.DVAL (nid,
+                          A.EFN ([S.symbol "env",s],
+                                 e',
+                                 T.FN([T.CLOSURE (fty :: nit), it],ot),
+                                 p), 
+                          T.FN([T.CLOSURE (fty :: nit), it],ot),
+                          p)
 
           val _ = addLiftedFn d
 
@@ -135,10 +151,13 @@ struct
           val _ = D.print D.debug ("ClosureConvert: Need to add params: " ^ 
                        String.concatWith ", " (map (fn (a,_) => S.name a) fr) ^"\n")
           val _ = D.print D.debug ("ClosureConvert: Lifted fn is: fn " ^ 
-                     S.name (hd s) ^ " => " ^  A.ppe e' ^ "\n")
+                     S.name s ^ " => " ^  A.ppe e' ^ "\n")
+
        in
-         if length fr = 0 then A.EID (nid,T.FN(it,ot),p)
-            else A.ECLOSURE (nid,fr,T.FN(it,ot),p)
+          A.EAPP (A.EID (nid,T.FN([T.CLOSURE (fty :: nit),it],ot),p),
+                  ec,
+                  T.FN ([it],ot),
+                  p)
        end
      | liftExp e = e
 

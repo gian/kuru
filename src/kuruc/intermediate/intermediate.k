@@ -58,6 +58,7 @@ struct
                 | RET of exp
                 | STORE of exp * exp
                 | UNWIND
+                | COMMENT of string
    
       and relop = EQ | NEQ | LT | GT | LE | GE | ULT | ULE | UGT | UGE
                 | REQ | RNEQ
@@ -122,6 +123,7 @@ struct
      | ppstm (RET e) = "RET " ^ ppe e
      | ppstm (UNWIND) = "UNWIND"
      | ppstm (STORE (e1,e2)) = "STORE " ^ ppe e2 ^ " <- " ^ ppe e1
+     | ppstm (COMMENT s) = "; " ^ s
 
    fun prettyPrint [] = ""
      | prettyPrint (h::t) = ppstm h ^ "\n" ^ prettyPrint t

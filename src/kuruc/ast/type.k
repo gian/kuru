@@ -33,6 +33,7 @@ struct
 					| POLY of int
                | UNION of Symbol.symbol * ty list
                | CON of int * ty option * ty
+               | CLOSURE of  ty list
 					| UNKNOWN
 
    fun freevars (NAME s) = Set.empty
@@ -106,7 +107,8 @@ struct
      | pp (UNION (s,l)) = 
          Symbol.name s ^ " {" ^ String.concatWith "," (map pp l) ^ "}"
      | pp (CON (i,NONE,t2)) = " CON : " ^ pp t2 
-     | pp (CON (i,SOME t1,t2)) = " CON of " ^ pp t1 ^ " : " ^ pp t2 
+     | pp (CON (i,SOME t1,t2)) = " CON of " ^ pp t1 ^ " : " ^ pp t2
+     | pp (CLOSURE l) = "CLOSURE {" ^ String.concatWith "," (map pp l) ^ "}"
      | pp _ = "???"
 
 	val prettyPrint = pp

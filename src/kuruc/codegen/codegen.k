@@ -222,6 +222,8 @@ struct
           j [ind i, "unwind"]
      | cg_stm i (I.STORE (e1,e2)) =
           j [ind i, "store ", cg_exp_t e1, ", ", cg_exp_t e2]
+     | cg_stm i (I.COMMENT s) = 
+          j [ind i, "; ", s]
 
    fun codegen (stms, frags) =
       jnl [

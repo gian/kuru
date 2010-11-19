@@ -144,18 +144,19 @@ struct
                        end) (Env.tenv_base, Env.venv_base, Env.senv_base, []) fl'
 
 
-			val fcc = map ClosureConvert.convert fl''
-         val _ = Debug.print Debug.internal ("Closure converted program:\n")
-         val _ = Debug.print Debug.internal 
-            ("\n" ^ TypedAST.prettyPrint (List.concat fcc) ^ "\n")
-
 			(* Stage 3 - Type inference/checking *)
          
-         val fl''' = List.concat (map TypeCheck.check fcc)        
+         val fl''' = List.concat (map TypeCheck.check fl'')        
 
          val _ = Debug.print Debug.internal ("Typed program:\n")
          val _ = Debug.print Debug.internal 
             ("\n" ^ TypedAST.prettyPrint fl''' ^ "\n")
+
+
+			val fcc = ClosureConvert.convert fl'''
+         val _ = Debug.print Debug.internal ("Closure converted program:\n")
+         val _ = Debug.print Debug.internal 
+            ("\n" ^ TypedAST.prettyPrint (fcc) ^ "\n")
 
 			val flmono = Monomorphise.monomorphise fl'''
 

@@ -353,10 +353,27 @@ struct
                               ("Invalid closure member '"^S.name s^"'",p)
                    | SOME t => (s,t)) l
 
-         val t' = 
+         val (it,ot) = 
             case getType f of
-               NONE => Error.fail ("Invalid function '"^S.name f^"' in closure",p)
-             | SOME t => t
+               NONE => Error.fail
+                  ("Invalid function in closure: '" ^ S.name f ^ "'",p)
+             | SOME (T.FN x) => x
+             | SOME _ =>
+               Error.bug ("Constrain","Invalid closure non-function?",p)
+
+         val nit = (map (fn (a,b) => b) l') @ it
+
+         val nt = 
+            List.foldr 
+               (fn (it,ot) =>
+                  T.FN ([it],ot)) ot nit
+
+         val nt' = 
+            case nt of T.FN (a,b) => b
+                     | _ => 
+                        Error.bug ("Constrain","Invalid n'",p)
+
+         val t' = nt
       in
          (t',A.ECLOSURE (f,l',t',p))
       end

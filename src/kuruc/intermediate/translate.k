@@ -97,7 +97,7 @@ struct
           | "unit" => Temp.ptr (Temp.i8)
           | "cvoid" => Temp.void
           | x => (case S.look (te,s) of
-                     NONE => raise Fail "tr_ty: unhandled NAME type"
+                     NONE => Error.bug ("tr_ty", "unhandled NAME type", (0,""))
                    | SOME t => tr_ty te t
                  )
           )
@@ -119,7 +119,7 @@ struct
      | tr_ty te (T.VAR _) = Temp.ptr (Temp.i8)
      | tr_ty te (T.META _) = Temp.ptr (Temp.i8)
      | tr_ty te (T.POLY _) = Temp.ptr (Temp.i8)
-     | tr_ty te t = raise Fail ("tr_ty: unhandled type: " ^ T.prettyPrint t)
+     | tr_ty te t = Error.bug("tr_ty", "unhandled type: " ^ T.prettyPrint t,(0,""))
 
    fun tr_val (A.LINT (v,p)) =   (I.CONST v,[]) (* FIXME: negative numbers? *) 
      | tr_val (A.LREAL (v,p)) =  (I.RCONST v,[])
@@ -162,7 +162,8 @@ struct
                let
                   val k = Temp.newtemp (Temp.i1)
                in
-                  [I.MOVE (I.TEMP k,I.kstreq c v' p),
+                  [I.COMMENT ("Constant pattern: " ^ A.ppv v),
+                   I.MOVE (I.TEMP k,I.kstreq c v' p),
                    I.CJUMP2 (I.NEQ,
                             I.NAME k,
                             I.CONST 1,
@@ -420,7 +421,8 @@ struct
 
           val ret = I.TEMP (Temp.newtemp (tr_ty te t))
 
-          val instr' = in1 @
+          val instr' = [I.COMMENT "Case expression"] @
+                       in1 @
                        [I.MOVE (rt, I.ALLOCA (tr_ty te t))] @
                        [I.JUMP (I.NAME fst,[fst])] @
                        [I.LABEL fst] @
@@ -759,7 +761,7 @@ struct
 
           val clty = 
             Temp.aggr 
-               ([Temp.fn_ptr ([Temp.ptr Temp.i8], Temp.ptr (Temp.self_ref 2))] @
+               ([Temp.fn_ptr ([tr_ty te t], tr_ty te t)] @
                   (map (fn (_,t) => tr_ty te t) l)) 
 
           val cl = Temp.newtemp (Temp.ptr Temp.i8)
@@ -768,7 +770,8 @@ struct
           val t1 = Temp.newtemp (clty)
 
           val ins = 
-            [I.MOVE (I.TEMP cl,I.MALLOC (clty,1)),
+            [I.COMMENT ("Closure: " ^ S.name f),
+             I.MOVE (I.TEMP cl,I.MALLOC (clty,1)),
              I.MOVE (I.TEMP cl', I.BITCAST (I.TEMP cl, Temp.ptr clty)),
              I.MOVE (I.TEMP t1,I.TUPLE_INS (I.UNDEF clty, f',0))]
 
@@ -798,7 +801,7 @@ struct
        in
           (te,ve,se,re,ins @ ins' @ ins'')
        end
-     | tr_exp te ve se k = raise Fail ("tr_exp: Not implemented")
+     | tr_exp te ve se k = Error.bug ("tr_exp","Not implemented",(0,""))
                  
    and tr_ast te ve se (A.DVAL (s,A.ESTUB _,t,p)) = (te,ve,se,[])
      | tr_ast te ve se (A.DVAL (s,e,t,p)) =
@@ -810,7 +813,8 @@ struct
           val ve' = S.enter (ve,s,rt)
           val mv = if is_simple e' then [] else [I.MOVE (rt,e')]
        in
-          (te,ve',se,in1 @ mv)
+          (te,ve',se,[I.COMMENT (Error.resolveErrorPos p ^ ": DVAL: " ^ S.name s)] 
+                     @ in1 @ mv)
        end
      | tr_ast te ve se (A.DVALREC (A.DVAL (s,e,t1,p1),t2,p2)) =
        let
@@ -915,7 +919,7 @@ struct
        end
      | tr_ast te ve se (A.DNULL p) = (te,ve,se,[])
      | tr_ast te ve se (A.DSIGNATURE _) = (te,ve,se,[])
-     | tr_ast te ve se _ = raise Fail "tr_ast: Not implemented"
+     | tr_ast te ve se _ = Error.bug ("tr_ast", "Not implemented", (0,""))
 
 
    fun translate te ast =
