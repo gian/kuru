@@ -103,7 +103,7 @@ struct
           )
       end
      | tr_ty te (T.FN (a,b)) =
-         Temp.fn_ptr (map (tr_ty te) a, tr_ty te b)
+         Temp.ptr (Temp.aggr [Temp.fn_ptr (map (tr_ty te) a, tr_ty te b)])
      | tr_ty te (T.CONSTR ([t1],t2)) = 
          (case t2 of (T.NAME n) => 
             (case S.name n of 
@@ -119,6 +119,7 @@ struct
      | tr_ty te (T.VAR _) = Temp.ptr (Temp.i8)
      | tr_ty te (T.META _) = Temp.ptr (Temp.i8)
      | tr_ty te (T.POLY _) = Temp.ptr (Temp.i8)
+     | tr_ty te (T.CLOSURE l) = Temp.aggr (map (tr_ty te) l)
      | tr_ty te t = Error.bug("tr_ty", "unhandled type: " ^ T.prettyPrint t,(0,""))
 
    fun tr_val (A.LINT (v,p)) =   (I.CONST v,[]) (* FIXME: negative numbers? *) 
@@ -377,8 +378,8 @@ struct
                end) ([],ve) (ListPair.zip (s,it))
           
           val (te',ve'',se',e',instr) = tr_exp te ve' se e
-          val _ = if Polymorphism.isPolymorphic f then 
-     (*     val _ = if false then *)
+      (*    val _ = if Polymorphism.isPolymorphic f then *)
+          val _ = if false then 
                                     (Debug.print Debug.debug "is_poly EFN\n";
                                     add_fragment (FPOLYFN (fid, s, f, 
                                                            tr_ty te 
@@ -587,9 +588,9 @@ struct
           val (_,_,_,b',instr1) = tr_exp te ve se b
 
           val (a'',instr2')
-            = if Polymorphism.isPolymorphic a andalso 
-               (not (Polymorphism.isPolymorphic b))
-            (*  = if false *)
+(*            = if Polymorphism.isPolymorphic a andalso 
+               (not (Polymorphism.isPolymorphic b)) *)
+              = if false 
                      then 
                         let
                            val (_,_,_,a',instr2) = tr_exp te ve se a

@@ -1,6 +1,6 @@
 fun f x y = 
  let
- 	 val q = x + y
+ 	 val q = y
  in
  	 (q,q)
  end

@@ -25,6 +25,7 @@ struct
    structure T = Type
 
    (** TODO: Apply the value restriction here *)
+   (** FIXME: Fix the type fields of all affected nodes. *)
    fun monomorphise prog =
    let
       fun mexp (A.ETUPLE (v,t,p)) =
