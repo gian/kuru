@@ -1,5 +1,5 @@
 all: 
 
 clean:
-	rm -f codegen.sml codegen_decs.sml llvm_operations.sml
+	rm -f asm.sml temp.sml translate.sml builtins.sml codegen.sml codegen_decs.sml llvm_operations.sml
 

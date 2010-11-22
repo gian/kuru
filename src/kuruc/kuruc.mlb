@@ -34,10 +34,11 @@ semant/typecheck.sml
 semant/polymorphism.sml
 semant/monomorphise.sml
 semant/typeclass.sml
-intermediate/temp.sml
 intermediate/intermediate.sml
-intermediate/builtins.sml
-intermediate/translate.sml
+codegen/temp.sml
+codegen/asm.sml
+codegen/builtins.sml
+codegen/translate.sml
 codegen/codegen_decs.sml
 codegen/codegen.sml
 codegen/llvm_operations.sml

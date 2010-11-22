@@ -147,7 +147,8 @@ struct
 
           val _ = addLiftedFn d
 
-          val _ = D.print D.debug ("ClosureConvert: Lifted fn: " ^ A.ppe f ^ "\n")
+          val _ = D.print D.debug ("ClosureConvert: Lifted fn: " ^ 
+                                    A.prettyPrint [d] ^ "\n")
           val _ = D.print D.debug ("ClosureConvert: Need to add params: " ^ 
                        String.concatWith ", " (map (fn (a,_) => S.name a) fr) ^"\n")
           val _ = D.print D.debug ("ClosureConvert: Lifted fn is: fn " ^ 

@@ -71,8 +71,20 @@ struct
         | mexp (A.ESEQ (v,t,p)) = A.ESEQ (Vector.map mexp v, t, p)
         | mexp x = x
 
-      fun mstm (A.DVAL (s,e,t,p)) = A.DVAL (s,mexp e,t,p)
-        | mstm (A.DVALREC (a,t,p)) = A.DVALREC (mstm a, t, p)
+      fun mstm (A.DVAL (s,e,t,p)) = 
+         let
+            val m = mexp e
+            val t' = A.getTypeExp m
+         in
+            A.DVAL (s,m,t',p)
+         end
+        | mstm (A.DVALREC (a,t,p)) = 
+          let
+             val m = mstm a
+             val t' = A.getType m
+          in
+             A.DVALREC (m, t', p)
+          end
         | mstm (A.DMUTUAL (v,p)) = A.DMUTUAL (Vector.map mstm v, p)
         | mstm x = x
    in

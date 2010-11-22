@@ -31,5 +31,40 @@ struct
    fun print l m = if l <= !debugLevel then 
          TextIO.print (lName l ^ m) else () 
 
+   (* For timing information *)
+
+   val st = ref [] : (string * int * Time.time) list ref
+
+   fun ind 0 = ""
+     | ind n = "   " ^ (ind (n-1))
+
+   fun startStage i s =
+      let
+         val t = Time.now ()
+         val _ = st := (s,i,t) :: (!st)
+         val _ = print 
+               verbose ((ind i) ^ "   Begin: " ^ s ^ "\n")
+      in
+         ()
+      end
+
+   fun endStage s = 
+      let
+         val t = Time.now ()
+
+         val (s',i,t') = 
+            case List.find 
+               (fn (sl,_,_) => sl = s) (!st) of
+               NONE => ("UNKNOWN STAGE?",0,t)
+             | SOME x => x
+
+         val elapsed = Time.- (t,t')
+         val es = Real.fmt (StringCvt.FIX (SOME 3)) (Time.toReal elapsed)
+         val _ = print
+                verbose ((ind i) ^ "   Finish: " ^ s ^ 
+               " (" ^ es ^ "s)\n")
+      in
+         ()
+      end
 end
 

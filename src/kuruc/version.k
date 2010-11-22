@@ -3,7 +3,7 @@ structure Version =
 struct
    val major = "0"
    val minor = "1"
-   val build = "v0.1-130-ga7071b2"
-   val date = "20101119"
+   val build = "v0.1-131-g68857c3"
+   val date = "20101123"
    val hostname = "Gian-Perrones-MacBook-Pro.local"
 end

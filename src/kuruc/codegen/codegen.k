@@ -20,7 +20,6 @@
 ******************************************************************************)
 structure CodeGen =
 struct
-   structure I = Intermediate
    structure T = Translate
 
    val j = String.concat
@@ -86,60 +85,60 @@ struct
         
    and cg_frag l = (cg_frag' l)
 
-   and cg_cmp t (I.REQ) _ _ = raise Fail "cg_cmp: REQ not implemented"
-     | cg_cmp t (I.RNEQ) _ _ = raise Fail "cg_cmp: RNEQ not implemented"
+   and cg_cmp t (Asm.REQ) _ _ = raise Fail "cg_cmp: REQ not implemented"
+     | cg_cmp t (Asm.RNEQ) _ _ = raise Fail "cg_cmp: RNEQ not implemented"
      | cg_cmp t opr e1 e2 =
        let
           val opr' = 
            (case opr of 
-               I.EQ => "eq"
-             | I.NEQ => "ne"
-             | I.LT => "slt"
-             | I.GT => "sgt"
-             | I.LE => "sle"
-             | I.GE => "sge"
-             | I.ULT => "ult"
-             | I.ULE => "ule"
-             | I.UGT => "ugt"
-             | I.UGE => "uge"
+               Asm.EQ => "eq"
+             | Asm.NEQ => "ne"
+             | Asm.LT => "slt"
+             | Asm.GT => "sgt"
+             | Asm.LE => "sle"
+             | Asm.GE => "sge"
+             | Asm.ULT => "ult"
+             | Asm.ULE => "ule"
+             | Asm.UGT => "ugt"
+             | Asm.UGE => "uge"
              | _ => "???")
        in
           j [ppt t, " = icmp ", opr', " ",
              cg_exp_t e1, ", ", cg_exp e2]
        end
 
-   and cg_exp' b (I.CONST i) = j [opt_t (b,
+   and cg_exp' b (Asm.CONST i) = j [opt_t (b,
                                          cg_ty (Temp.getMachineWord ())),
                                   Int.toString i]
-     | cg_exp' b (I.RCONST i) = j [opt_t (b,"r32"), Real.toString i]
-     | cg_exp' b (I.BCONST i) = j [opt_t (b, "i1"), if i then "true" else "false"]
-     | cg_exp' b (I.EXN _) = j [opt_t (b, "i32"), "123456"] (* FIXME *)
-     | cg_exp' b (I.NAME l) = j [opt_t (b, cg_ty (Temp.getType l)), ppt l]
-     | cg_exp' b (I.BUILTIN s) = "@" ^ s
-     | cg_exp' b (I.NULL t) = j [opt_t (b, cg_ty t), "null"]
-     | cg_exp' b (I.TEMP t) = j [opt_t (b,cg_ty (Temp.getType t)), ppt t]
-     | cg_exp' b (I.CALL (ty,e1,e2)) = 
+     | cg_exp' b (Asm.RCONST i) = j [opt_t (b,"r32"), Real.toString i]
+     | cg_exp' b (Asm.BCONST i) = j [opt_t (b, "i1"), if i then "true" else "false"]
+     | cg_exp' b (Asm.EXN _) = j [opt_t (b, "i32"), "123456"] (* FIXME *)
+     | cg_exp' b (Asm.NAME l) = j [opt_t (b, cg_ty (Temp.getType l)), ppt l]
+     | cg_exp' b (Asm.BUILTIN s) = "@" ^ s
+     | cg_exp' b (Asm.NULL t) = j [opt_t (b, cg_ty t), "null"]
+     | cg_exp' b (Asm.TEMP t) = j [opt_t (b,cg_ty (Temp.getType t)), ppt t]
+     | cg_exp' b (Asm.CALL (ty,e1,e2)) = 
          jsp ["call ",cg_ty ty,cg_exp e1,
                 j ["(", cg_exp_t e2, ")"]
              ]
-     | cg_exp' b (I.TUPLE_IND (e,i)) =
+     | cg_exp' b (Asm.TUPLE_IND (e,i)) =
          j [
             "extractvalue ", cg_exp_t e, ", ", Int.toString i 
          ]
-     | cg_exp' b (I.TUPLE_INS (e1,e2,i)) =
+     | cg_exp' b (Asm.TUPLE_INS (e1,e2,i)) =
          j [
             "insertvalue ", cg_exp_t e1, ", ", cg_exp_t e2, ", ", Int.toString i
          ]
-     | cg_exp' b (I.ELEM_PTR (ty,e1,i)) =
+     | cg_exp' b (Asm.ELEM_PTR (ty,e1,i)) =
          j [
             "getelementptr ", cg_ty ty, "* ", cg_exp e1, ", i32 0, i32 ",
             Int.toString i
          ]
-     | cg_exp' b (I.VOID) = 
+     | cg_exp' b (Asm.VOID) = 
          j [opt_t (b,"void"), "void"]
-     | cg_exp' b (I.UNDEF t) =
+     | cg_exp' b (Asm.UNDEF t) =
          j [opt_t (b,cg_ty t), "undef"]
-     | cg_exp' _ (I.BINOP (opr,a,b)) =
+     | cg_exp' _ (Asm.BINOP (opr,a,b)) =
         let
            val opr' = 
            (case opr of
@@ -159,9 +158,9 @@ struct
         in
            j [opr', " ", cg_exp_t a, ", ", cg_exp b]
         end
-     | cg_exp' b (I.ALLOCA t) = 
+     | cg_exp' b (Asm.ALLOCA t) = 
             j ["alloca ", cg_ty t]
-     | cg_exp' b (I.MALLOC (t,n)) =
+     | cg_exp' b (Asm.MALLOC (t,n)) =
             j ["tail call i8* @malloc(i32 ptrtoint (",
                cg_ty (Temp.ptr t),
                " getelementptr (",
@@ -169,13 +168,13 @@ struct
                " null, i32 ",
                Int.toString n,
                ") to i32))"]
-     | cg_exp' b (I.LOAD e) =
+     | cg_exp' b (Asm.LOAD e) =
              j ["load ", cg_exp_t e]
-     | cg_exp' b (I.BITCAST (t,ty)) =
+     | cg_exp' b (Asm.BITCAST (t,ty)) =
              j ["bitcast ",
                 cg_exp_t t,
                 " to ", cg_ty ty]
-     | cg_exp' b (I.ALIAS e) = 
+     | cg_exp' b (Asm.ALIAS e) = 
              j ["alias ", cg_exp e]
      | cg_exp' b _ = raise Fail "cg_exp' b: Not implemented"
 
@@ -183,15 +182,15 @@ struct
    
    and cg_exp e = (cg_exp' false e)
 
-   and cg_stm i (I.MOVE (e1,e2)) = 
+   and cg_stm i (Asm.MOVE (e1,e2)) = 
           j [ind i, cg_exp e1, " = ", cg_exp e2]
-     | cg_stm i (I.EXP e1) =
+     | cg_stm i (Asm.EXP e1) =
           j [ind i, cg_exp e1]
-     | cg_stm i (I.JUMP (e,l)) =
+     | cg_stm i (Asm.JUMP (e,l)) =
           j [ind i, "br label ", cg_exp e]
-     | cg_stm i (I.CJUMP (e,l1,l2)) =
+     | cg_stm i (Asm.CJUMP (e,l1,l2)) =
        j [ind i, "br ", cg_exp_t e, ", label ", ppt l1, ", label ", ppt l2]
-     | cg_stm i (I.CJUMP2 (r,e1,e2,l1,l2)) =
+     | cg_stm i (Asm.CJUMP2 (r,e1,e2,l1,l2)) =
        let
           val c = Temp.newtemp (Temp.i1)
        in
@@ -205,7 +204,7 @@ struct
              ]
           ]
        end
-     | cg_stm i (I.PHI (e, t, el)) =
+     | cg_stm i (Asm.PHI (e, t, el)) =
        let
           val el' = 
             map (fn (ex,la) => j [ "[", cg_exp ex, ", ", ppt la, "]" ]) el
@@ -214,15 +213,15 @@ struct
              cg_exp e, " = phi ", cg_ty t, " ", jc el' 
           ]
        end
-     | cg_stm i (I.LABEL l) =
+     | cg_stm i (Asm.LABEL l) =
           j [ind (i-1), ppt_np l, ":"]
-     | cg_stm i (I.RET e) =
+     | cg_stm i (Asm.RET e) =
           j [ind i, "ret ", cg_exp_t e]
-     | cg_stm i (I.UNWIND) =
+     | cg_stm i (Asm.UNWIND) =
           j [ind i, "unwind"]
-     | cg_stm i (I.STORE (e1,e2)) =
+     | cg_stm i (Asm.STORE (e1,e2)) =
           j [ind i, "store ", cg_exp_t e1, ", ", cg_exp_t e2]
-     | cg_stm i (I.COMMENT s) = 
+     | cg_stm i (Asm.COMMENT s) = 
           j [ind i, "; ", s]
 
    fun codegen (stms, frags) =

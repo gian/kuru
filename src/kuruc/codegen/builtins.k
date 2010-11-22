@@ -22,19 +22,18 @@
 structure Builtins =
 struct
    structure S = Symbol
-   structure I = Intermediate
 
    val builtins =
       List.foldl (fn ((s,t,i),st) =>
                     S.enter (st,S.symbol s,t)) 
       S.empty
       [
-         ("true",       I.BCONST true,          []),
-         ("false",      I.BCONST false,         []),
-         ("Match",      I.UNDEF (Temp.void),    []),
-         ("print",      I.BUILTIN "k_io_print", []),
-         ("toString",   I.BUILTIN "k_int_to_string", []),
-         ("@",          I.BUILTIN "k_list_append", [])
+         ("true",       Asm.BCONST true,          []),
+         ("false",      Asm.BCONST false,         []),
+         ("Match",      Asm.UNDEF (Temp.void),    []),
+         ("print",      Asm.BUILTIN "k_io_print", []),
+         ("toString",   Asm.BUILTIN "k_int_to_string", []),
+         ("@",          Asm.BUILTIN "k_list_append", [])
       ]
 
 end

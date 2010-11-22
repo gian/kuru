@@ -24,16 +24,15 @@ struct
 	structure T = Type
 	structure E = Env
 	structure A = TypedAST
-   structure I = Intermediate
 
    datatype structentry = StructEntry of T.ty S.table *  
-                                         I.exp S.table * 
+                                         Asm.exp S.table * 
                                          structentry S.table
 
    datatype fragment = 
       FSTRING of Temp.label * string
-    | FFN of Temp.label * I.exp list * I.stm list * Temp.ty
-    | FALIAS of I.exp * I.exp
+    | FFN of Temp.label * Asm.exp list * Asm.stm list * Temp.ty
+    | FALIAS of Asm.exp * Asm.exp
     | FPOLYFN of Temp.label * S.symbol list * A.texp * Temp.ty 
 
    val fragments = ref [] : fragment list ref
@@ -44,7 +43,7 @@ struct
    fun get_fragment l = 
       let
          fun fr ((f as FPOLYFN (s,_,_,_))::t) = if s = l then SOME f else fr t
-           | fr ((FALIAS (I.NAME a, I.NAME b))::t) = 
+           | fr ((FALIAS (Asm.NAME a, Asm.NAME b))::t) = 
                if a = l then get_fragment b else fr t
            | fr (x::t) = fr t
            | fr [] = NONE
@@ -58,9 +57,9 @@ struct
       Temp.prettyPrint l ^ ": \"" ^ s ^ "\""
      | printFragment (FFN (l,el,sl,t)) =
       "function " ^ Temp.prettyPrint l ^ " (" ^
-         String.concatWith "," (map I.ppe el) ^
+         String.concatWith "," (map Asm.ppe el) ^
        ") {\n   " ^
-         String.concatWith "\n   " (map I.ppstm sl) ^ "\n}\n"
+         String.concatWith "\n   " (map Asm.ppstm sl) ^ "\n}\n"
      | printFragment (FALIAS _) = "FALIAS\n"
      | printFragment (FPOLYFN (l,s,e,_)) = "FPOLYFN " ^ Temp.prettyPrint l ^
                                            " = " ^ A.ppe e ^ "\n"
@@ -69,13 +68,13 @@ struct
      | printFragments (h::t) = printFragment h ^ "\n" ^ 
                                  printFragments t
 
-   fun is_simple (I.NAME _) = true
-     | is_simple (I.TEMP _) = true
-     | is_simple (I.CONST _) = true
-     | is_simple (I.BCONST _) = true
-     | is_simple (I.UNDEF _) = true
-     | is_simple (I.VOID) = true
-     | is_simple (I.NULL _) = true
+   fun is_simple (Asm.NAME _) = true
+     | is_simple (Asm.TEMP _) = true
+     | is_simple (Asm.CONST _) = true
+     | is_simple (Asm.BCONST _) = true
+     | is_simple (Asm.UNDEF _) = true
+     | is_simple (Asm.VOID) = true
+     | is_simple (Asm.NULL _) = true
      | is_simple _ = false
 
    (* "Contingent label" - used to prevent adding of labels 
@@ -122,30 +121,30 @@ struct
      | tr_ty te (T.CLOSURE l) = Temp.aggr (map (tr_ty te) l)
      | tr_ty te t = Error.bug("tr_ty", "unhandled type: " ^ T.prettyPrint t,(0,""))
 
-   fun tr_val (A.LINT (v,p)) =   (I.CONST v,[]) (* FIXME: negative numbers? *) 
-     | tr_val (A.LREAL (v,p)) =  (I.RCONST v,[])
-     | tr_val (A.LCHAR (v,p)) =  (I.CONST (Char.ord v),[])
+   fun tr_val (A.LINT (v,p)) =   (Asm.CONST v,[]) (* FIXME: negative numbers? *) 
+     | tr_val (A.LREAL (v,p)) =  (Asm.RCONST v,[])
+     | tr_val (A.LCHAR (v,p)) =  (Asm.CONST (Char.ord v),[])
      | tr_val (A.LSTRING (v,p)) =
        let
           val strty = Temp.aggr [Temp.getMachineWord (),Temp.ptr Temp.i8]
           val n = Temp.newglobal (Temp.ptr strty)
           val _ = add_fragment (FSTRING (n, v))
-          val m = I.ELEM_PTR (Temp.array (size v + 1, Temp.i8),I.NAME n,0)
-          val t0 = I.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
-          val t1 = I.TEMP (Temp.newtemp (strty))
-          val t2 = I.TEMP (Temp.newtemp (strty))
-          val t3' = I.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
-          val t3 = I.TEMP (Temp.newtemp (Temp.ptr strty))
-          val m' = [I.MOVE (t0,m),
-                    I.MOVE (t1,I.TUPLE_INS(I.UNDEF strty, I.CONST (size v + 1),0)),
-                    I.MOVE (t2,I.TUPLE_INS (t1, t0, 1)),
-                    I.MOVE (t3',I.MALLOC (strty,1)),
-                    I.MOVE (t3,I.BITCAST (t3',Temp.ptr strty)),
-                    I.STORE (t2,t3)]
+          val m = Asm.ELEM_PTR (Temp.array (size v + 1, Temp.i8),Asm.NAME n,0)
+          val t0 = Asm.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
+          val t1 = Asm.TEMP (Temp.newtemp (strty))
+          val t2 = Asm.TEMP (Temp.newtemp (strty))
+          val t3' = Asm.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
+          val t3 = Asm.TEMP (Temp.newtemp (Temp.ptr strty))
+          val m' = [Asm.MOVE (t0,m),
+                    Asm.MOVE (t1,Asm.TUPLE_INS(Asm.UNDEF strty, Asm.CONST (size v + 1),0)),
+                    Asm.MOVE (t2,Asm.TUPLE_INS (t1, t0, 1)),
+                    Asm.MOVE (t3',Asm.MALLOC (strty,1)),
+                    Asm.MOVE (t3,Asm.BITCAST (t3',Temp.ptr strty)),
+                    Asm.STORE (t2,t3)]
        in
           (t3, m')
        end
-     | tr_val (A.LUNIT p) = (I.NULL (Temp.ptr Temp.i8),[]) 
+     | tr_val (A.LUNIT p) = (Asm.NULL (Temp.ptr Temp.i8),[]) 
 
    fun tr_pat te ve se (A.PCONST (A.ELIT (v,t,p),_,_)) =
       (fn (c,t,f) =>
@@ -155,23 +154,23 @@ struct
           val v'' =
           case v of 
             A.LINT _ => ( 
-               [I.CJUMP2 (I.EQ,c,v',t,f)])
+               [Asm.CJUMP2 (Asm.EQ,c,v',t,f)])
           | A.LREAL _ => raise Fail ("tr_pat: Invalid real pattern")
           | A.LCHAR _ => (
-               [I.CJUMP2 (I.EQ,c,v',t,f)])
+               [Asm.CJUMP2 (Asm.EQ,c,v',t,f)])
           | A.LSTRING _ => (
                let
                   val k = Temp.newtemp (Temp.i1)
                in
-                  [I.COMMENT ("Constant pattern: " ^ A.ppv v),
-                   I.MOVE (I.TEMP k,I.kstreq c v' p),
-                   I.CJUMP2 (I.NEQ,
-                            I.NAME k,
-                            I.CONST 1,
+                  [Asm.COMMENT ("Constant pattern: " ^ A.ppv v),
+                   Asm.MOVE (Asm.TEMP k,Asm.kstreq c v' p),
+                   Asm.CJUMP2 (Asm.NEQ,
+                            Asm.NAME k,
+                            Asm.CONST 1,
                             t,
                             f)]
                end)
-          | A.LUNIT _ => ([I.JUMP (I.NAME t,[t])])
+          | A.LUNIT _ => ([Asm.JUMP (Asm.NAME t,[t])])
        in
           (te,ve,se,ins@v'')
        end)
@@ -188,9 +187,9 @@ struct
                   val nlab = Temp.newlabel ()
                   val f' = tr_pat te ve se e
                   val rt = Temp.newtemp (tr_ty te (List.nth (types,i)))
-                  val l' = l @ [I.MOVE (I.TEMP rt,I.TUPLE_IND(c,i))]
-                  val (te',ve',se',l'') = (f' (I.TEMP rt,nlab,f))
-                  val nl = if length l'' = 0 then [] else [I.LABEL nlab]
+                  val l' = l @ [Asm.MOVE (Asm.TEMP rt,Asm.TUPLE_IND(c,i))]
+                  val (te',ve',se',l'') = (f' (Asm.TEMP rt,nlab,f))
+                  val nl = if length l'' = 0 then [] else [Asm.LABEL nlab]
                in
                   (te',ve',se',l'@l''@nl)
                end) (te,ve,se,[]) v
@@ -203,11 +202,11 @@ struct
        (fn (c,t,f) =>
        let
           val conty = Temp.aggr [Temp.i32, Temp.ptr Temp.i8]
-          val tmp = I.TEMP (Temp.newtemp conty)
-          val tmp2 = I.TEMP (Temp.newtemp Temp.i32)
-          val instr = [I.MOVE(tmp,I.LOAD c),
-                       I.MOVE(tmp2,I.TUPLE_IND (tmp,0)),
-                       I.CJUMP2(I.EQ,tmp2,I.CONST i,t,f)
+          val tmp = Asm.TEMP (Temp.newtemp conty)
+          val tmp2 = Asm.TEMP (Temp.newtemp Temp.i32)
+          val instr = [Asm.MOVE(tmp,Asm.LOAD c),
+                       Asm.MOVE(tmp2,Asm.TUPLE_IND (tmp,0)),
+                       Asm.CJUMP2(Asm.EQ,tmp2,Asm.CONST i,t,f)
                        ]
        in
           (te,ve,se,instr)
@@ -217,30 +216,30 @@ struct
        let
           val t = Temp.newlabel ()
           val conty = Temp.aggr [Temp.i32, Temp.ptr Temp.i8]
-          val tmp = I.TEMP (Temp.newtemp conty)
-          val tmp2 = I.TEMP (Temp.newtemp Temp.i32)
-          val tmp3 = I.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
-          val tmp3' = I.TEMP (Temp.newtemp (Temp.ptr (tr_ty te t1)))
-          val tmp3'' = I.TEMP (Temp.newtemp (tr_ty te t1))
-          val instr = [I.MOVE(tmp,I.LOAD c),
-                       I.MOVE(tmp2,I.TUPLE_IND (tmp,0)),
-                       I.CJUMP2(I.EQ,tmp2,I.CONST i,t,f),
-                       I.LABEL t,
-                       I.MOVE(tmp3,I.TUPLE_IND (tmp,1)),
-                       I.MOVE(tmp3',I.BITCAST (tmp3,Temp.ptr(tr_ty te t1))),
-                       I.MOVE(tmp3'',I.LOAD tmp3')]
+          val tmp = Asm.TEMP (Temp.newtemp conty)
+          val tmp2 = Asm.TEMP (Temp.newtemp Temp.i32)
+          val tmp3 = Asm.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
+          val tmp3' = Asm.TEMP (Temp.newtemp (Temp.ptr (tr_ty te t1)))
+          val tmp3'' = Asm.TEMP (Temp.newtemp (tr_ty te t1))
+          val instr = [Asm.MOVE(tmp,Asm.LOAD c),
+                       Asm.MOVE(tmp2,Asm.TUPLE_IND (tmp,0)),
+                       Asm.CJUMP2(Asm.EQ,tmp2,Asm.CONST i,t,f),
+                       Asm.LABEL t,
+                       Asm.MOVE(tmp3,Asm.TUPLE_IND (tmp,1)),
+                       Asm.MOVE(tmp3',Asm.BITCAST (tmp3,Temp.ptr(tr_ty te t1))),
+                       Asm.MOVE(tmp3'',Asm.LOAD tmp3')]
           val f' = tr_pat te ve se pat
           val t2 = Temp.newlabel ()
           val (te',ve',se',inst2) = f' (tmp3'',t2,f)
        in
-          (te,ve',se,instr @ inst2 @ [I.JUMP (I.NAME tr,[tr])])
+          (te,ve',se,instr @ inst2 @ [Asm.JUMP (Asm.NAME tr,[tr])])
        end)
      | tr_pat te ve se (A.PID (s,ty,p)) =
        (fn (c,t,f) =>
        let
-          val ts = if is_simple c then c else I.TEMP (Temp.newtemp (tr_ty te ty))
+          val ts = if is_simple c then c else Asm.TEMP (Temp.newtemp (tr_ty te ty))
           val ve' = S.enter (ve, s, ts)
-          val mv = if is_simple c then [] else [I.MOVE (ts,c)]
+          val mv = if is_simple c then [] else [Asm.MOVE (ts,c)]
        in
          (te,ve',se,mv)
        end)
@@ -255,21 +254,21 @@ struct
           (* FIXME: Output check for empty list. *)
           
           val ht = tr_ty te t1
-          val h0 = I.TEMP (Temp.newtemp (Temp.aggr [Temp.ptr Temp.i8,
+          val h0 = Asm.TEMP (Temp.newtemp (Temp.aggr [Temp.ptr Temp.i8,
                                                     Temp.ptr (Temp.self_ref 2)]))
-          val h1 = I.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
-          val h1' = I.TEMP (Temp.newtemp (Temp.ptr ht))
-          val h2 = I.TEMP (Temp.newtemp (ht))
-          val h3 = I.TEMP (Temp.newtemp (Temp.ptr (
+          val h1 = Asm.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
+          val h1' = Asm.TEMP (Temp.newtemp (Temp.ptr ht))
+          val h2 = Asm.TEMP (Temp.newtemp (ht))
+          val h3 = Asm.TEMP (Temp.newtemp (Temp.ptr (
                                            Temp.aggr [Temp.ptr Temp.i8,
                                                       Temp.ptr (Temp.self_ref 2)
                                                      ]
                                         )))
-          val headc = [I.MOVE (h0, I.LOAD c),
-                       I.MOVE (h1, I.TUPLE_IND (h0,0)),
-                       I.MOVE (h1', I.BITCAST (h1, Temp.ptr (ht))),
-                       I.MOVE (h2, I.LOAD h1'),
-                       I.MOVE (h3, I.TUPLE_IND (h0,1))]
+          val headc = [Asm.MOVE (h0, Asm.LOAD c),
+                       Asm.MOVE (h1, Asm.TUPLE_IND (h0,0)),
+                       Asm.MOVE (h1', Asm.BITCAST (h1, Temp.ptr (ht))),
+                       Asm.MOVE (h2, Asm.LOAD h1'),
+                       Asm.MOVE (h3, Asm.TUPLE_IND (h0,1))]
 
           val fh = tr_pat te ve se a
           val (te',ve',se',a') = fh (h2,t,f)
@@ -277,7 +276,7 @@ struct
           val ft = tr_pat te ve' se r
           val (te',ve'',se',b') = ft (h3,t,f)
        in
-          (te',ve'',se,headc @ a' @ b' @ [I.JUMP (I.NAME t, [t])])
+          (te',ve'',se,headc @ a' @ b' @ [Asm.JUMP (Asm.NAME t, [t])])
        end)
      | tr_pat te ve se (A.PWILD p) =
        (fn (c,t,f) =>
@@ -286,7 +285,7 @@ struct
      | tr_pat te ve se (A.PNIL p) =
        (fn (c,t,f) =>
             (te,ve,se,
-             [I.CJUMP2 (I.EQ,c,I.NULL (Temp.ptr (Temp.aggr [Temp.ptr Temp.i8,
+             [Asm.CJUMP2 (Asm.EQ,c,Asm.NULL (Temp.ptr (Temp.aggr [Temp.ptr Temp.i8,
                                                             Temp.ptr (
                                                                Temp.self_ref 2
                                                             )])),t,f)]))
@@ -326,15 +325,15 @@ struct
                let
                   val (te',ve',se',a',c) = tr_exp te ve se a
                   val rt' = Temp.newtemp (tr_ty te (T.TUPLE t))
-                  val ins = [I.MOVE(I.TEMP rt', I.TUPLE_INS (rt,a',i))]
+                  val ins = [Asm.MOVE(Asm.TEMP rt', Asm.TUPLE_INS (rt,a',i))]
                in
-                  (c' @ c @ ins,I.TEMP rt')
-               end) ([],I.UNDEF (tr_ty te (T.TUPLE t))) v
+                  (c' @ c @ ins,Asm.TEMP rt')
+               end) ([],Asm.UNDEF (tr_ty te (T.TUPLE t))) v
        in
           (te,ve,se,rt,instr) 
        end
      | tr_exp te ve se (A.ENIL p) = 
-          (te,ve,se,I.NULL (Temp.ptr (Temp.aggr [Temp.ptr Temp.i8,
+          (te,ve,se,Asm.NULL (Temp.ptr (Temp.aggr [Temp.ptr Temp.i8,
                                                             Temp.ptr (
                                                                Temp.self_ref 2
                                                             )])),[])
@@ -350,47 +349,67 @@ struct
 
           val rlab = Temp.newlabel ()
 
-          val rv = I.TEMP (Temp.newtemp (tr_ty te t))
-          val phi = [I.LABEL rlab, I.PHI (rv,tr_ty te t,[(r2,tlab),(r3,flab)])]
+          val rv = Asm.TEMP (Temp.newtemp (tr_ty te t))
+          val phi = [Asm.LABEL rlab, Asm.PHI (rv,tr_ty te t,[(r2,tlab),(r3,flab)])]
        in
           (te,ve,se,rv,
           in1 @
-          [I.CJUMP (r1, tlab, flab),
-           I.LABEL tlab] @
+          [Asm.CJUMP (r1, tlab, flab),
+           Asm.LABEL tlab] @
           in2 @
-          [I.JUMP (I.NAME rlab, [rlab]),
-           I.LABEL flab] @
+          [Asm.JUMP (Asm.NAME rlab, [rlab]),
+           Asm.LABEL flab] @
           in3 @
-          [I.JUMP (I.NAME rlab, [rlab])] @
+          [Asm.JUMP (Asm.NAME rlab, [rlab])] @
           phi)
        end
      | tr_exp te ve se (A.EWHILE (c,e,t,p)) = raise Fail "tr_exp tewhile not impl." 
+     | tr_exp te ve se (f as A.EFN (s,e,T.FN(it,rt as T.FN _),p)) =
+       let
+          val fid = Temp.newglobal (Temp.fn_ptr (map (tr_ty te) it,tr_ty te rt))
+          val (p',ve') =
+          List.foldl (fn ((s,t),(ts,ve)) =>
+               let
+                  val p = Asm.TEMP (Temp.newtemp (tr_ty te t))
+                  val v' = S.enter (ve,s,p)
+               in
+                  (ts@[p],v')
+               end) ([],ve) (ListPair.zip (s,it))
+          
+          val (te',ve'',se',e',instr) = tr_exp te ve' se 
+                  (A.EAPP ((A.ECLOSURE (
+                          S.symbol (Temp.prettyPrintNoPrefix fid),
+                          ListPair.zip (s,it),rt,p)),
+                          e,
+                          A.getTypeExp e,
+                          p))
+
+          val _ = add_fragment (FFN (fid, p',
+                                [Asm.LABEL (Temp.newlabel ())] @
+                                 instr @ 
+                                 [Asm.RET e'],tr_ty te rt))
+       in
+          (te,ve,se,Asm.NAME fid, [])
+       end
      | tr_exp te ve se (f as A.EFN (s,e,T.FN(it,rt),p)) =
        let
           val fid = Temp.newglobal (Temp.fn_ptr (map (tr_ty te) it,tr_ty te rt))
           val (p',ve') =
           List.foldl (fn ((s,t),(ts,ve)) =>
                let
-                  val p = I.TEMP (Temp.newtemp (tr_ty te t))
+                  val p = Asm.TEMP (Temp.newtemp (tr_ty te t))
                   val v' = S.enter (ve,s,p)
                in
                   (ts@[p],v')
                end) ([],ve) (ListPair.zip (s,it))
           
           val (te',ve'',se',e',instr) = tr_exp te ve' se e
-      (*    val _ = if Polymorphism.isPolymorphic f then *)
-          val _ = if false then 
-                                    (Debug.print Debug.debug "is_poly EFN\n";
-                                    add_fragment (FPOLYFN (fid, s, f, 
-                                                           tr_ty te 
-                                                            (T.FN(it,rt)))))
-                                    else
-                                    add_fragment (FFN (fid, p',
-                                            [I.LABEL (Temp.newlabel ())] @
-                                                   instr @ 
-                                                   [I.RET e'],tr_ty te rt))
+          val _ = add_fragment (FFN (fid, p',
+                                [Asm.LABEL (Temp.newlabel ())] @
+                                 instr @ 
+                                 [Asm.RET e'],tr_ty te rt))
        in
-          (te,ve,se,I.NAME fid, [])
+          (te,ve,se,Asm.NAME fid, [])
        end
      | tr_exp te ve se (A.ECASE (e,v,t,p)) =
        let
@@ -399,7 +418,7 @@ struct
           val el = Temp.newlabel ()
           val fst = Temp.newlabel ()
 
-          val rt = I.TEMP (Temp.newtemp (Temp.ptr (tr_ty te t)))
+          val rt = Asm.TEMP (Temp.newtemp (Temp.ptr (tr_ty te t)))
           
           val (instr,labs,_) =
             Vector.foldl (
@@ -414,23 +433,23 @@ struct
                   (ins @ 
                     p' @ 
                     eins @
-                    [I.STORE (e'',rt)] @
-                    [I.JUMP (I.NAME el,[el])] @
-                    [I.LABEL flab],
+                    [Asm.STORE (e'',rt)] @
+                    [Asm.JUMP (Asm.NAME el,[el])] @
+                    [Asm.LABEL flab],
                   labs @ [(e'',lst)],flab)
                end) ([],[],fst) v
 
-          val ret = I.TEMP (Temp.newtemp (tr_ty te t))
+          val ret = Asm.TEMP (Temp.newtemp (tr_ty te t))
 
-          val instr' = [I.COMMENT "Case expression"] @
+          val instr' = [Asm.COMMENT "Case expression"] @
                        in1 @
-                       [I.MOVE (rt, I.ALLOCA (tr_ty te t))] @
-                       [I.JUMP (I.NAME fst,[fst])] @
-                       [I.LABEL fst] @
+                       [Asm.MOVE (rt, Asm.ALLOCA (tr_ty te t))] @
+                       [Asm.JUMP (Asm.NAME fst,[fst])] @
+                       [Asm.LABEL fst] @
                        instr @
-                        [I.UNWIND] @
-                        [I.LABEL el] @ 
-                         [I.MOVE (ret,I.LOAD rt)]
+                        [Asm.UNWIND] @
+                        [Asm.LABEL el] @ 
+                         [Asm.MOVE (ret,Asm.LOAD rt)]
 
        in
           (te,ve,se,ret,instr')
@@ -440,45 +459,45 @@ struct
           val (_,_,_,a,ins1) = tr_exp te ve se (Vector.sub (v,0))
           val (_,_,_,b,ins2) = tr_exp te ve se (Vector.sub (v,1))
           val rt = Temp.newtemp (tr_ty te t3)
-          val ins = ins1 @ ins2 @ [I.MOVE (I.TEMP rt, I.BINOP (r,a,b))]
+          val ins = ins1 @ ins2 @ [Asm.MOVE (Asm.TEMP rt, Asm.BINOP (r,a,b))]
        in
-          (te,ve,se,I.TEMP rt,ins)
+          (te,ve,se,Asm.TEMP rt,ins)
        end
      | tr_exp te ve se (A.EAPP(A.EID((r as "-",_),t1,p1),A.ETUPLE (v,t2,p2),t3,p3)) =
        let
           val (_,_,_,a,ins1) = tr_exp te ve se (Vector.sub (v,0))
           val (_,_,_,b,ins2) = tr_exp te ve se (Vector.sub (v,1))
           val rt = Temp.newtemp (tr_ty te t3)
-          val ins = ins1 @ ins2 @ [I.MOVE (I.TEMP rt, I.BINOP (r,a,b))]
+          val ins = ins1 @ ins2 @ [Asm.MOVE (Asm.TEMP rt, Asm.BINOP (r,a,b))]
        in
-          (te,ve,se,I.TEMP rt,ins)
+          (te,ve,se,Asm.TEMP rt,ins)
        end
      | tr_exp te ve se (A.EAPP(A.EID((r as "*",_),t1,p1),A.ETUPLE (v,t2,p2),t3,p3)) =
        let
           val (_,_,_,a,ins1) = tr_exp te ve se (Vector.sub (v,0))
           val (_,_,_,b,ins2) = tr_exp te ve se (Vector.sub (v,1))
           val rt = Temp.newtemp (tr_ty te t3)
-          val ins = ins1 @ ins2 @ [I.MOVE (I.TEMP rt, I.BINOP (r,a,b))]
+          val ins = ins1 @ ins2 @ [Asm.MOVE (Asm.TEMP rt, Asm.BINOP (r,a,b))]
        in
-          (te,ve,se,I.TEMP rt,ins)
+          (te,ve,se,Asm.TEMP rt,ins)
        end
      | tr_exp te ve se (A.EAPP(A.EID((r as "/",_),t1,p1),A.ETUPLE (v,t2,p2),t3,p3)) =
        let
           val (_,_,_,a,ins1) = tr_exp te ve se (Vector.sub (v,0))
           val (_,_,_,b,ins2) = tr_exp te ve se (Vector.sub (v,1))
           val rt = Temp.newtemp (tr_ty te t3)
-          val ins = ins1 @ ins2 @ [I.MOVE (I.TEMP rt, I.BINOP (r,a,b))]
+          val ins = ins1 @ ins2 @ [Asm.MOVE (Asm.TEMP rt, Asm.BINOP (r,a,b))]
        in
-          (te,ve,se,I.TEMP rt,ins)
+          (te,ve,se,Asm.TEMP rt,ins)
        end
      | tr_exp te ve se (A.EAPP(A.EID((r as "=",_),t1,p1),A.ETUPLE (v,t2,p2),t3,p3)) =
        let
           val (_,_,_,a,ins1) = tr_exp te ve se (Vector.sub (v,0))
           val (_,_,_,b,ins2) = tr_exp te ve se (Vector.sub (v,1))
           val rt = Temp.newtemp (tr_ty te t3)
-          val ins = ins1 @ ins2 @ [I.MOVE (I.TEMP rt, I.BINOP (r,a,b))]
+          val ins = ins1 @ ins2 @ [Asm.MOVE (Asm.TEMP rt, Asm.BINOP (r,a,b))]
        in
-          (te,ve,se,I.TEMP rt,ins)
+          (te,ve,se,Asm.TEMP rt,ins)
        end
       | tr_exp te ve se (A.EAPP(A.EID((r as "<>",_),t1,p1),
                       A.ETUPLE (v,t2,p2),t3,p3)) =
@@ -486,27 +505,27 @@ struct
           val (_,_,_,a,ins1) = tr_exp te ve se (Vector.sub (v,0))
           val (_,_,_,b,ins2) = tr_exp te ve se (Vector.sub (v,1))
           val rt = Temp.newtemp (tr_ty te t3)
-          val ins = ins1 @ ins2 @ [I.MOVE (I.TEMP rt, I.BINOP (r,a,b))]
+          val ins = ins1 @ ins2 @ [Asm.MOVE (Asm.TEMP rt, Asm.BINOP (r,a,b))]
        in
-          (te,ve,se,I.TEMP rt,ins)
+          (te,ve,se,Asm.TEMP rt,ins)
        end    
       | tr_exp te ve se (A.EAPP(A.EID((r as "<",_),t1,p1),A.ETUPLE (v,t2,p2),t3,p3)) =
        let
           val (_,_,_,a,ins1) = tr_exp te ve se (Vector.sub (v,0))
           val (_,_,_,b,ins2) = tr_exp te ve se (Vector.sub (v,1))
           val rt = Temp.newtemp (tr_ty te t3)
-          val ins = ins1 @ ins2 @ [I.MOVE (I.TEMP rt, I.BINOP (r,a,b))]
+          val ins = ins1 @ ins2 @ [Asm.MOVE (Asm.TEMP rt, Asm.BINOP (r,a,b))]
        in
-          (te,ve,se,I.TEMP rt,ins)
+          (te,ve,se,Asm.TEMP rt,ins)
        end    
       | tr_exp te ve se (A.EAPP(A.EID((r as ">",_),t1,p1),A.ETUPLE (v,t2,p2),t3,p3)) =
        let
           val (_,_,_,a,ins1) = tr_exp te ve se (Vector.sub (v,0))
           val (_,_,_,b,ins2) = tr_exp te ve se (Vector.sub (v,1))
           val rt = Temp.newtemp (tr_ty te t3)
-          val ins = ins1 @ ins2 @ [I.MOVE (I.TEMP rt, I.BINOP (r,a,b))]
+          val ins = ins1 @ ins2 @ [Asm.MOVE (Asm.TEMP rt, Asm.BINOP (r,a,b))]
        in
-          (te,ve,se,I.TEMP rt,ins)
+          (te,ve,se,Asm.TEMP rt,ins)
        end    
       | tr_exp te ve se (A.EAPP(A.EID((r as "<=",_),t1,p1),
          A.ETUPLE (v,t2,p2),t3,p3)) =
@@ -514,9 +533,9 @@ struct
           val (_,_,_,a,ins1) = tr_exp te ve se (Vector.sub (v,0))
           val (_,_,_,b,ins2) = tr_exp te ve se (Vector.sub (v,1))
           val rt = Temp.newtemp (tr_ty te t3)
-          val ins = ins1 @ ins2 @ [I.MOVE (I.TEMP rt, I.BINOP (r,a,b))]
+          val ins = ins1 @ ins2 @ [Asm.MOVE (Asm.TEMP rt, Asm.BINOP (r,a,b))]
        in
-          (te,ve,se,I.TEMP rt,ins)
+          (te,ve,se,Asm.TEMP rt,ins)
        end    
       | tr_exp te ve se (A.EAPP(A.EID((r as ">=",_),t1,p1),
          A.ETUPLE (v,t2,p2),t3,p3)) =
@@ -524,9 +543,9 @@ struct
           val (_,_,_,a,ins1) = tr_exp te ve se (Vector.sub (v,0))
           val (_,_,_,b,ins2) = tr_exp te ve se (Vector.sub (v,1))
           val rt = Temp.newtemp (tr_ty te t3)
-          val ins = ins1 @ ins2 @ [I.MOVE (I.TEMP rt, I.BINOP (r,a,b))]
+          val ins = ins1 @ ins2 @ [Asm.MOVE (Asm.TEMP rt, Asm.BINOP (r,a,b))]
        in
-          (te,ve,se,I.TEMP rt,ins)
+          (te,ve,se,Asm.TEMP rt,ins)
        end    
       | tr_exp te ve se (A.EAPP(A.EID((r as "andalso",_),t1,p1),
          A.ETUPLE (v,t2,p2),t3,p3)) =
@@ -534,9 +553,9 @@ struct
           val (_,_,_,a,ins1) = tr_exp te ve se (Vector.sub (v,0))
           val (_,_,_,b,ins2) = tr_exp te ve se (Vector.sub (v,1))
           val rt = Temp.newtemp (tr_ty te t3)
-          val ins = ins1 @ ins2 @ [I.MOVE (I.TEMP rt, I.BINOP (r,a,b))]
+          val ins = ins1 @ ins2 @ [Asm.MOVE (Asm.TEMP rt, Asm.BINOP (r,a,b))]
        in
-          (te,ve,se,I.TEMP rt,ins)
+          (te,ve,se,Asm.TEMP rt,ins)
        end    
       | tr_exp te ve se (A.EAPP(A.EID((r as "orelse",_),t1,p1),
          A.ETUPLE (v,t2,p2),t3,p3)) =
@@ -544,9 +563,9 @@ struct
           val (_,_,_,a,ins1) = tr_exp te ve se (Vector.sub (v,0))
           val (_,_,_,b,ins2) = tr_exp te ve se (Vector.sub (v,1))
           val rt = Temp.newtemp (tr_ty te t3)
-          val ins = ins1 @ ins2 @ [I.MOVE (I.TEMP rt, I.BINOP (r,a,b))]
+          val ins = ins1 @ ins2 @ [Asm.MOVE (Asm.TEMP rt, Asm.BINOP (r,a,b))]
        in
-          (te,ve,se,I.TEMP rt,ins)
+          (te,ve,se,Asm.TEMP rt,ins)
        end  
      | tr_exp te ve se (A.EAPP(A.EID((r as "::",_),t1,p1),
           A.ETUPLE (v,t2,p2),t3,p3)) =
@@ -560,24 +579,42 @@ struct
           val rt = Temp.newtemp (tr_ty te t3)
 
           val listty = Temp.aggr [Temp.ptr Temp.i8,Temp.ptr (Temp.self_ref 2)]
-          val t0 = I.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
-          val t0' = I.TEMP (Temp.newtemp (Temp.ptr lhst))
-          val t1 = I.TEMP (Temp.newtemp (listty))
-          val t2 = I.TEMP (Temp.newtemp (listty))
-          val t3 = I.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
-          val t3' = I.TEMP (Temp.newtemp (Temp.ptr listty))
-          val m' = [I.MOVE (t0,I.MALLOC (lhst,1)),
-                    I.MOVE (t0',I.BITCAST (t0,Temp.ptr lhst)),
-                    I.STORE (a,t0'),
-                    I.MOVE (t1,I.TUPLE_INS(I.UNDEF listty, t0, 0)),
-                    I.MOVE (t2,I.TUPLE_INS (t1, b, 1)),
-                    I.MOVE (t3,I.MALLOC (listty,1)),
-                    I.MOVE (t3',I.BITCAST (t3,Temp.ptr listty)),
-                    I.STORE (t2,t3')]
+          val t0 = Asm.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
+          val t0' = Asm.TEMP (Temp.newtemp (Temp.ptr lhst))
+          val t1 = Asm.TEMP (Temp.newtemp (listty))
+          val t2 = Asm.TEMP (Temp.newtemp (listty))
+          val t3 = Asm.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
+          val t3' = Asm.TEMP (Temp.newtemp (Temp.ptr listty))
+          val m' = [Asm.MOVE (t0,Asm.MALLOC (lhst,1)),
+                    Asm.MOVE (t0',Asm.BITCAST (t0,Temp.ptr lhst)),
+                    Asm.STORE (a,t0'),
+                    Asm.MOVE (t1,Asm.TUPLE_INS(Asm.UNDEF listty, t0, 0)),
+                    Asm.MOVE (t2,Asm.TUPLE_INS (t1, b, 1)),
+                    Asm.MOVE (t3,Asm.MALLOC (listty,1)),
+                    Asm.MOVE (t3',Asm.BITCAST (t3,Temp.ptr listty)),
+                    Asm.STORE (t2,t3')]
 
           val ins = ins1 @ ins2 @ m' 
        in
           (te,ve,se,t3',ins)
+       end
+       | tr_exp te ve se (A.EAPP (a as A.ECLOSURE (f,l,t1,p1),b,t2,p2)) =
+       let
+          val (_,_,_,b',instr1) = tr_exp te ve se b
+          val (_,_,_,a',instr2) = tr_exp te ve se a
+
+          val tmp = Asm.TEMP (Temp.newtemp (tr_ty te t1))
+
+          val instr3 = [Asm.MOVE(tmp,Asm.TUPLE_IND (a',0))]
+
+          val c = Asm.CALL (tr_ty te t2,tmp,b')
+
+          val rt = Asm.TEMP (Temp.newtemp (tr_ty te t2))
+       in
+          if tr_ty te t2 = Temp.void then 
+             (te,ve,se,Asm.VOID,instr1 @ instr2 @ instr3 @ [Asm.EXP c])
+          else
+             (te,ve,se,rt,instr1 @ instr2 @ instr3 @ [Asm.MOVE (rt,c)])
        end
        | tr_exp te ve se (A.EAPP (a,b,t,p)) = 
        let
@@ -595,11 +632,11 @@ struct
                         let
                            val (_,_,_,a',instr2) = tr_exp te ve se a
                            val lbl = case a' of 
-                                         I.NAME l => l
-                                       | I.TEMP t => t
+                                         Asm.NAME l => l
+                                       | Asm.TEMP t => t
                                        | _ => Error.bug 
                                  ("tr_exp", "Monomorphisation: " ^ 
-                                  I.ppe a',p)
+                                  Asm.ppe a',p)
 
 
                            val _ = Debug.print Debug.debug
@@ -613,10 +650,10 @@ struct
                               SOME (FPOLYFN (l,s,exp,_)) => exp
                             | SOME _ => 
                               Error.bug
-                                 ("tr_exp","Monomorphisation2: "^I.ppe a',p)
+                                 ("tr_exp","Monomorphisation2: "^Asm.ppe a',p)
                             | NONE => 
                               Error.bug
-                                 ("tr_exp","Monomorphisation3: "^I.ppe a',p)
+                                 ("tr_exp","Monomorphisation3: "^Asm.ppe a',p)
                                        
                            val mon = 
                               Polymorphism.monomorphise (A.getTypeExp a) 
@@ -669,12 +706,12 @@ struct
 
           val rt = Temp.newtemp (tr_ty te t)
           
-          val c = I.CALL (tr_ty te t,a'',b')
+          val c = Asm.CALL (tr_ty te t,a'',b')
        in
           if tr_ty te t = Temp.void then 
-             (te,ve,se,I.VOID,instr1 @ instr2' @ [I.EXP c])
+             (te,ve,se,Asm.VOID,instr1 @ instr2' @ [Asm.EXP c])
           else
-             (te,ve,se,I.TEMP rt,instr1 @ instr2' @ [I.MOVE (I.TEMP rt,c)])
+             (te,ve,se,Asm.TEMP rt,instr1 @ instr2' @ [Asm.MOVE (Asm.TEMP rt,c)])
        end
      | tr_exp te ve se (A.EHANDLE (pa,e,t,p)) = raise Fail "tr_exp: EHANDLE"
      | tr_exp te ve se (A.ESEQ (v,t,p)) =
@@ -687,7 +724,7 @@ struct
                   in
                      (rt',v@instr)
                   end
-            ) (I.TEMP (Temp.newtemp (tr_ty te t)),[]) v
+            ) (Asm.TEMP (Temp.newtemp (tr_ty te t)),[]) v
        in
           (te,ve,se,rt,v')
        end
@@ -695,15 +732,15 @@ struct
        let
           (* Layout for constructors is: { int index, i8* data } *)
           val conty = Temp.aggr [Temp.i32, Temp.ptr Temp.i8]
-          val tt = I.TEMP (Temp.newtemp conty)
-          val tt' = I.TEMP (Temp.newtemp conty)
-          val rt' = I.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
-          val rt = I.TEMP (Temp.newtemp (Temp.ptr conty))
-          val instr = [I.MOVE (tt,I.TUPLE_INS (I.UNDEF conty,I.CONST i,0)),
-                       I.MOVE (tt',I.TUPLE_INS (tt,I.NULL (Temp.ptr Temp.i8),1)),
-                       I.MOVE (rt',I.MALLOC (conty,1)),
-                       I.MOVE (rt,I.BITCAST (rt',Temp.ptr (conty))),
-                       I.STORE (tt',rt)]
+          val tt = Asm.TEMP (Temp.newtemp conty)
+          val tt' = Asm.TEMP (Temp.newtemp conty)
+          val rt' = Asm.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
+          val rt = Asm.TEMP (Temp.newtemp (Temp.ptr conty))
+          val instr = [Asm.MOVE (tt,Asm.TUPLE_INS (Asm.UNDEF conty,Asm.CONST i,0)),
+                       Asm.MOVE (tt',Asm.TUPLE_INS (tt,Asm.NULL (Temp.ptr Temp.i8),1)),
+                       Asm.MOVE (rt',Asm.MALLOC (conty,1)),
+                       Asm.MOVE (rt,Asm.BITCAST (rt',Temp.ptr (conty))),
+                       Asm.STORE (tt',rt)]
        in
           (te,ve,se,rt,instr)
        end
@@ -713,25 +750,25 @@ struct
 
           (* Layout for constructors is: { int index, i8* data } *)
           val conty = Temp.aggr [Temp.i32, Temp.ptr Temp.i8]
-          val tt = I.TEMP (Temp.newtemp conty)
-          val tt' = I.TEMP (Temp.newtemp conty)
+          val tt = Asm.TEMP (Temp.newtemp conty)
+          val tt' = Asm.TEMP (Temp.newtemp conty)
 
-          val tmp1 = I.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
-          val tmp2' = I.TEMP (Temp.newtemp (Temp.ptr (Temp.i8)))
-          val tmp2 = I.TEMP (Temp.newtemp (Temp.ptr (tr_ty te t1)))
+          val tmp1 = Asm.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
+          val tmp2' = Asm.TEMP (Temp.newtemp (Temp.ptr (Temp.i8)))
+          val tmp2 = Asm.TEMP (Temp.newtemp (Temp.ptr (tr_ty te t1)))
 
-          val rt' = I.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
-          val rt = I.TEMP (Temp.newtemp (Temp.ptr conty))
+          val rt' = Asm.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
+          val rt = Asm.TEMP (Temp.newtemp (Temp.ptr conty))
           
-          val instr = [I.MOVE (tmp2',I.MALLOC (tr_ty te t1,1)),
-                       I.MOVE (tmp2, I.BITCAST (tmp2',Temp.ptr (tr_ty te t1))),
-                       I.STORE (e',tmp2),
-                       I.MOVE (tmp1,I.BITCAST (tmp2,Temp.ptr Temp.i8)),
-                       I.MOVE (tt,I.TUPLE_INS (I.UNDEF conty,I.CONST i,0)),
-                       I.MOVE (tt',I.TUPLE_INS (tt,tmp1,1)),
-                       I.MOVE (rt',I.MALLOC (conty,1)),
-                       I.MOVE (rt,I.BITCAST (rt',Temp.ptr conty)),
-                       I.STORE (tt',rt)]
+          val instr = [Asm.MOVE (tmp2',Asm.MALLOC (tr_ty te t1,1)),
+                       Asm.MOVE (tmp2, Asm.BITCAST (tmp2',Temp.ptr (tr_ty te t1))),
+                       Asm.STORE (e',tmp2),
+                       Asm.MOVE (tmp1,Asm.BITCAST (tmp2,Temp.ptr Temp.i8)),
+                       Asm.MOVE (tt,Asm.TUPLE_INS (Asm.UNDEF conty,Asm.CONST i,0)),
+                       Asm.MOVE (tt',Asm.TUPLE_INS (tt,tmp1,1)),
+                       Asm.MOVE (rt',Asm.MALLOC (conty,1)),
+                       Asm.MOVE (rt,Asm.BITCAST (rt',Temp.ptr conty)),
+                       Asm.STORE (tt',rt)]
        in
           (te,ve,se,rt,einstr @ instr)
        end
@@ -753,11 +790,12 @@ struct
        end
      | tr_exp te ve se (A.EANN (e,t,p)) = tr_exp te ve se e
      | tr_exp te ve se (A.ERAISE (e,p)) =
-          (te,ve,se,I.UNDEF Temp.void,[])
+          (te,ve,se,Asm.UNDEF Temp.void,[])
      | tr_exp te ve se (A.ECLOSURE (f,l,t,p)) =
        let
           val f' = case S.look (ve,f) of
-            NONE => Error.bug ("tr_exp","Closure function not found",p)
+         (*   NONE => Error.bug ("tr_exp","Closure fn '"^S.name f^"' not found",p)*)
+            NONE => Asm.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
           | SOME tm => tm
 
           val clty = 
@@ -771,10 +809,10 @@ struct
           val t1 = Temp.newtemp (clty)
 
           val ins = 
-            [I.COMMENT ("Closure: " ^ S.name f),
-             I.MOVE (I.TEMP cl,I.MALLOC (clty,1)),
-             I.MOVE (I.TEMP cl', I.BITCAST (I.TEMP cl, Temp.ptr clty)),
-             I.MOVE (I.TEMP t1,I.TUPLE_INS (I.UNDEF clty, f',0))]
+            [Asm.COMMENT ("Closure: " ^ S.name f),
+             Asm.MOVE (Asm.TEMP cl,Asm.MALLOC (clty,1)),
+             Asm.MOVE (Asm.TEMP cl', Asm.BITCAST (Asm.TEMP cl, Temp.ptr clty)),
+             Asm.MOVE (Asm.TEMP t1,Asm.TUPLE_INS (Asm.UNDEF clty, f',0))]
 
           val c = ref 1
 
@@ -790,15 +828,15 @@ struct
                   val nt = Temp.newtemp (clty)
 
                   val i'' =
-                     [I.MOVE (I.TEMP nt,I.TUPLE_INS (r, r',!c))]
+                     [Asm.MOVE (Asm.TEMP nt,Asm.TUPLE_INS (r, r',!c))]
 
                   val _ = c := !c + 1
                in
-                  (I.TEMP nt,i @ i'')
-               end) (I.TEMP t1,[]) l
+                  (Asm.TEMP nt,i @ i'')
+               end) (Asm.TEMP t1,[]) l
 
           val ins'' = 
-            [I.STORE (re,I.TEMP cl')]
+            [Asm.STORE (re,Asm.TEMP cl')]
        in
           (te,ve,se,re,ins @ ins' @ ins'')
        end
@@ -810,19 +848,19 @@ struct
           val _ = Debug.print Debug.debug ("tr_ast: DVAL\n")
           val (_,_,_,e',in1) = tr_exp te ve se e
           
-          val rt = if is_simple e' then e' else I.TEMP (Temp.newtemp (tr_ty te t))
+          val rt = if is_simple e' then e' else Asm.TEMP (Temp.newtemp (tr_ty te t))
           val ve' = S.enter (ve,s,rt)
-          val mv = if is_simple e' then [] else [I.MOVE (rt,e')]
+          val mv = if is_simple e' then [] else [Asm.MOVE (rt,e')]
        in
-          (te,ve',se,[I.COMMENT (Error.resolveErrorPos p ^ ": DVAL: " ^ S.name s)] 
+          (te,ve',se,[Asm.COMMENT (Error.resolveErrorPos p ^ ": DVAL: " ^ S.name s)] 
                      @ in1 @ mv)
        end
      | tr_ast te ve se (A.DVALREC (A.DVAL (s,e,t1,p1),t2,p2)) =
        let
           val rt = Temp.newglobal (tr_ty te t1)
-          val ve' = S.enter (ve,s,I.NAME rt)
+          val ve' = S.enter (ve,s,Asm.NAME rt)
           val (_,_,_,e',in1) = tr_exp te ve' se e
-          val _ = add_fragment (FALIAS (I.NAME rt, e'))
+          val _ = add_fragment (FALIAS (Asm.NAME rt, e'))
        in
           (te,ve',se,in1)
        end
@@ -913,15 +951,13 @@ struct
        end
      | tr_ast te ve se (A.DIMPORT (i1,t,i2,p)) =
        let
-          val bi = I.BUILTIN (S.name i1)
+          val bi = Asm.BUILTIN (S.name i1)
           val ve' = S.enter (ve,i2,bi)
        in
           (te,ve',se,[])
        end
      | tr_ast te ve se (A.DNULL p) = (te,ve,se,[])
      | tr_ast te ve se (A.DSIGNATURE _) = (te,ve,se,[])
-     | tr_ast te ve se _ = Error.bug ("tr_ast", "Not implemented", (0,""))
-
 
    fun translate te ast =
       let

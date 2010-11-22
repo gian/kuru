@@ -43,7 +43,7 @@ struct
 
    fun convertPass (s,f) tenv venv p =
       let
-         val _ = D.print D.verbose ("ParseTree conversion pass: " ^ s ^ "\n")
+         val _ = D.print D.internal ("ParseTree conversion pass: " ^ s ^ "\n")
       in
          f tenv venv p
       end
@@ -60,7 +60,7 @@ struct
       let
          (* Run all the ParseTree -> ParseTree passes *)
          val (tenv',venv',p') = convertPasses tenv venv p
-         val _ = D.print D.verbose ("ParseTree -> TypedAST conversion\n")
+         val _ = D.print D.internal ("ParseTree -> TypedAST conversion\n")
       in
          AstParseTree.convert tenv' venv' senv p'
       end

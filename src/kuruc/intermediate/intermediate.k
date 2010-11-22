@@ -16,116 +16,103 @@
 *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *******************************************************************************
 *  This file:
-*    Intermediate Representation.
+*    Intermediate representation.
+*    This IR has these properties:
+*      Patterns exist only in case expressions.
+*      Everything is monomorphic.
+*      Functions may still be higher-order
+*      All names are unique.
 ******************************************************************************)
 structure Intermediate =
 struct
-   structure T = Type
    structure S = Symbol
-   structure A = TypedAST
+   structure T = Type
 
-   datatype exp = CONST of int
-                | RCONST of real
-                | BCONST of bool
-                | EXN of string * exp list
-                | NAME of Temp.label
-                | TEMP of Temp.temp
-                | MEM of exp
-                | CALL of Temp.ty * exp * exp
-                | SEQ of exp list
-                | TUPLE of Temp.ty list * exp list
-                | TUPLE_IND of exp * int
-                | TUPLE_INS of exp * exp * int (* exp1[int] <- exp2 *)
-                | ELEM_PTR of Temp.ty * exp * int
-                | UNDEF of Temp.ty
-                | BINOP of string * exp * exp
-                | BUILTIN of string
-                | ALLOCA of Temp.ty
-                | MALLOC of Temp.ty * int
-                | LOAD of exp
-                | BITCAST of exp * Temp.ty
-                | VOID
-                | NULL of Temp.ty
-                | ALIAS of exp
+   type pos = ParseTree.pos
+
+   datatype attribute =
+      Associative
+    | Commutative
+    | Transitive
+    | Reflexive
+    | Pure
+    | Custom of string
+      (* TODO: Add other attributes here. *)
+
+   type metadata = attribute list
+
+   datatype ir =
+      N of ir_opr * ir list * T.ty * metadata * pos
+
+   and ir_opr =
+      INT of int
+    | STRING of string
+    | REAL of real
+    | BOOL of bool
+    | UNIT
+    | IDENT of S.symbol
+    | TUPLE
+    | IF
+    | WHILE
+    | FN
+    | CASE
+    | MATCH
+    | APP
+    | RAISE
+    | HANDLE
+    | SEQ
+    | LET
+    | CON of int
+    | CLOSURE
+    | BIND
+    | MUTUAL
+    | PCONST
+    | PTUPLE
+    | PWILD
+    | PCONSTR of int
+    | PINFIX of S.symbol
+    | IMPORT of S.symbol * T.ty * S.symbol
+    | PROGRAM
+
+   fun ppopr (INT i) = Int.toString i
+     | ppopr (STRING s) = "\"" ^ String.toCString s ^ "\""
+     | ppopr (REAL r) = Real.toString r
+     | ppopr (BOOL true) = "true"
+     | ppopr (BOOL false) = "false"
+     | ppopr UNIT = "()"
+     | ppopr (IDENT s) = S.name s
+     | ppopr TUPLE = "TUPLE"
+     | ppopr IF = "IF"
+     | ppopr WHILE = "WHILE"
+     | ppopr FN = "FN"
+     | ppopr CASE = "CASE"
+     | ppopr MATCH = "MATCH"
+     | ppopr APP = "APP"
+     | ppopr RAISE = "RAISE"
+     | ppopr HANDLE = "HANDLE"
+     | ppopr SEQ = "SEQ"
+     | ppopr LET = "LET"
+     | ppopr (CON i) = "CON " ^ Int.toString i
+     | ppopr CLOSURE = "CLOSURE"
+     | ppopr BIND = "BIND"
+     | ppopr MUTUAL = "MUTUAL"
+     | ppopr PCONST = "PCONST"
+     | ppopr PTUPLE = "PTUPLE"
+     | ppopr PWILD = "_"
+     | ppopr (PCONSTR i) = "PCONSTR " ^ Int.toString i
+     | ppopr (PINFIX s) = "PINFIX " ^ S.name s
+     | ppopr (IMPORT (s1,t,s2)) = "IMPORT " ^ S.name s1 ^ " as " ^ S.name s2
+     | ppopr PROGRAM = "PROGRAM"
+
+   fun ind 0 = ""
+     | ind n = "   " ^ ind (n-1)
+
+   fun pp i (N (opr,[],t,m,p)) = (ind i) ^ ppopr opr ^ " : " ^ T.prettyPrint t
+     | pp i (N (opr,l,t,m,p)) = (ind i) ^  
+         ppopr opr ^ " : " ^ T.prettyPrint t ^ " [\n" ^ 
+            String.concatWith ",\n" (map (pp (i+1)) l) ^ "\n" ^ (ind i) ^ "]\n"
    
-        and stm = MOVE of exp * exp
-                | EXP of exp
-                | JUMP of exp * Temp.label list
-                | CJUMP of exp * Temp.label * Temp.label
-                | CJUMP2 of relop * exp * exp * Temp.label * Temp.label
-                | PHI of exp * Temp.ty * (exp * Temp.label) list
-                | LABEL of Temp.label
-                | RET of exp
-                | STORE of exp * exp
-                | UNWIND
-                | COMMENT of string
-   
-      and relop = EQ | NEQ | LT | GT | LE | GE | ULT | ULE | UGT | UGE
-                | REQ | RNEQ
-
-   (* Some built-in calls *)
-   fun kstreq l1 l2 p = Error.bug("Intermediate","kstreq not implemented",p) 
-
-   val ppt = Temp.prettyPrint
-
-   fun ppr EQ = "EQ"
-     | ppr NEQ = "NEQ"
-     | ppr LT = "LT" 
-     | ppr GT = "GT" 
-     | ppr LE = "LE" 
-     | ppr GE = "GE" 
-     | ppr ULT = "ULT" 
-     | ppr ULE = "ULE" 
-     | ppr UGT = "UGT" 
-     | ppr UGE = "UGE" 
-     | ppr REQ = "REQ" 
-     | ppr RNEQ = "RNEQ" 
-
-   fun ppe (CONST i) = Int.toString i
-     | ppe (RCONST i) = Real.toString i
-     | ppe (BCONST true) = "true"
-     | ppe (BCONST false) = "false"
-     | ppe (NAME l) = ppt l
-     | ppe (TEMP t) = ppt t
-     | ppe (MEM e) = "MEM " ^ ppe e
-     | ppe (CALL (t,e1,e2)) = "CALL " ^ ppe e1 ^ " (" ^ ppe e2 ^ ")"
-     | ppe (SEQ l) = "SEQ (" ^ String.concatWith "; " (map ppe l) ^ ")"
-     | ppe (TUPLE (tl,el)) = "TUPLE (" ^ String.concatWith ","
-                                             (map ppe el) ^ ")"
-     | ppe (TUPLE_IND (e,i)) = ppe e ^ "[" ^ Int.toString i ^ "]"
-     | ppe (TUPLE_INS (e1,e2,i)) = ppe e1 ^ "[" ^ Int.toString i ^ "] <- " ^
-                                     ppe e2
-     | ppe (ELEM_PTR (t,e,i)) = "ELEM_PTR [" ^ ppe e ^ ", " ^ Int.toString i ^ "]"
-     | ppe (UNDEF _) = "UNDEF"
-     | ppe VOID = "void"
-     | ppe (BINOP (s,a,b)) = "BINOP " ^ s ^ " [" ^ ppe a ^ ", " ^ ppe b ^ "]"
-     | ppe (BUILTIN s) = "BUILTIN " ^ s
-     | ppe (ALLOCA t) = "ALLOCA"
-     | ppe _ = "???"
-
-   fun ppstm (MOVE (e1,e2)) = ppe e1 ^ " <- " ^ ppe e2
-     | ppstm (EXP e) = "EXP " ^ ppe e
-     | ppstm (JUMP (e,ll)) = "JUMP " ^ ppe e
-     | ppstm (CJUMP (e,l1,l2)) = "CJUMP " ^ ppe e ^ " " ^
-                                       ppt l1 ^ " " ^
-                                       ppt l2
-     | ppstm (CJUMP2 (r,e1,e2,l1,l2)) = "CJUMP2 " ^ ppr r ^ " " ^
-                                            ppe e1 ^ " " ^
-                                            ppe e2 ^ " " ^
-                                            ppt l1 ^ " " ^
-                                            ppt l2
-     | ppstm (PHI (e1, t, l)) = ppe e1 ^ " <- PHI [" ^
-                              String.concatWith ", " (
-                                map (fn (e,ll) => 
-                                   ppe e ^ " " ^ ppt ll) l) ^
-                                           "]"
-     | ppstm (LABEL l) = ppt l ^ ":"
-     | ppstm (RET e) = "RET " ^ ppe e
-     | ppstm (UNWIND) = "UNWIND"
-     | ppstm (STORE (e1,e2)) = "STORE " ^ ppe e2 ^ " <- " ^ ppe e1
-     | ppstm (COMMENT s) = "; " ^ s
-
-   fun prettyPrint [] = ""
-     | prettyPrint (h::t) = ppstm h ^ "\n" ^ prettyPrint t
+   val prettyPrint = pp 0
 
 end
+

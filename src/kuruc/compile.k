@@ -24,6 +24,7 @@ struct
 
    fun parseFile filename =
    let
+      val _ = Debug.startStage 2 ("parsing " ^ filename)
       val p = ref 0
       val linepositions = ref [] : int list ref
       val _ = KuruParser.errorPos := 0
@@ -61,6 +62,7 @@ struct
                         (Error.resolveErrorPos(KuruParser.error (),
                                                OS.Path.mkCanonical filename)))
               else ()
+      val _ = Debug.endStage ("parsing " ^ filename)
 	in
       map ParseTree.sanitise parseResult
    end
@@ -93,8 +95,12 @@ struct
    fun compile [] = raise Fail "No input files given"
      | compile fl = 
       let
+         val _ = Debug.startStage 0 "Compile"
+
          (* Stage 0 - Configure library paths *)
+         val _ = Debug.startStage 1 "LibraryPaths"
          val _ = Config.configureLibraryPaths ()
+         val _ = Debug.endStage "LibraryPaths"
 
          (* Stage 1 - Parse/Deserialise files *)
          fun genInputs fl = 
@@ -127,9 +133,12 @@ struct
                         then genInputs [(Config.resolveLibrary "safe.kb")]
                      else []
 
+         val _ = Debug.startStage 1 "GenInputs"
          val fl' = bs @ genInputs fl
+         val _ = Debug.endStage "GenInputs"
 
          (* Stage 2 - Parse tree passes *)
+         val _ = Debug.startStage 1 "ParseTreeTransform"
          val (te',ve',se',fl'') = 
                    List.foldl (fn (l,(te,ve,se,r)) => 
                        let
@@ -143,26 +152,31 @@ struct
                           (te',ve',se',r @ [r'])
                        end) (Env.tenv_base, Env.venv_base, Env.senv_base, []) fl'
 
+         val _ = Debug.endStage "ParseTreeTransform"
 
 			(* Stage 3 - Type inference/checking *)
-         
+         val _ = Debug.startStage 1 "TypeInference"
          val fl''' = List.concat (map TypeCheck.check fl'')        
+         val _ = Debug.endStage "TypeInference"
 
          val _ = Debug.print Debug.internal ("Typed program:\n")
          val _ = Debug.print Debug.internal 
             ("\n" ^ TypedAST.prettyPrint fl''' ^ "\n")
 
-
-			val fcc = ClosureConvert.convert fl'''
-         val _ = Debug.print Debug.internal ("Closure converted program:\n")
-         val _ = Debug.print Debug.internal 
-            ("\n" ^ TypedAST.prettyPrint (fcc) ^ "\n")
-
+         val _ = Debug.startStage 1 "Monomorphisation"
 			val flmono = Monomorphise.monomorphise fl'''
+         val _ = Debug.endStage "Monomorphisation"
 
 	      val _ = Debug.print Debug.internal ("Monomorphic program:\n")
          val _ = Debug.print Debug.internal 
             ("\n" ^ TypedAST.prettyPrint flmono ^ "\n")
+
+         val _ = Debug.startStage 1 "ClosureConversion"
+			val fcc = ClosureConvert.convert flmono
+         val _ = Debug.print Debug.internal ("Closure converted program:\n")
+         val _ = Debug.print Debug.internal 
+            ("\n" ^ TypedAST.prettyPrint (fcc) ^ "\n")
+         val _ = Debug.endStage "ClosureConversion"
 
          (* Stage 4 - Optimisation *)
 
@@ -173,22 +187,33 @@ struct
 
          (* Stage 5 - Translation to Intermediate Representation *)
 
-         val (te''',ve''',se''',d',fragments) = Translate.translate te' fl''' 
+         val _ = Debug.startStage 1 "IRTranslate"
+         val (te''',ve''',se''',d',fragments) = Translate.translate te' fcc
+         val _ = Debug.endStage "IRTranslate"
 
          val _ = Debug.print Debug.internal ("Translated Program:\n")
          val _ = Debug.print Debug.internal ("\n" ^ 
                               Translate.printFragments fragments ^ "\n" ^
-                              Intermediate.prettyPrint d' ^ "\n")
+                              Asm.prettyPrint d' ^ "\n")
 
          (* Stage 6 - Code Generation (LLVM) *)
 
+         val _ = Debug.startStage 1 "CodeGen"
          val code = CodeGen.codegen (d',fragments)
          val _ = Debug.print Debug.internal ("Generated code:\n" ^ code ^ "\n")
      
+         val _ = Debug.startStage 2 "Emit"
          val codeLocation = CodeGen.emit code
+         val _ = Debug.endStage "Emit"
+
+         val _ = Debug.endStage "CodeGen"
 
          (* Stage 7 - LLVM invokation *)
+         val _ = Debug.startStage 1 "LLVM"
          val _ = LLVMOperations.compile (codeLocation,Config.getOutputFile ())
+         val _ = Debug.endStage "LLVM"
+
+         val _ = Debug.endStage "Compile"
       in
          ()
       end
