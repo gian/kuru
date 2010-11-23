@@ -23,72 +23,286 @@ structure Monomorphise =
 struct
    structure A = TypedAST
    structure T = Type
+   structure I = Intermediate
+   structure S = Symbol
+
+   val uninst = ref S.empty : I.ir S.table ref
+   val inst = ref [] : (T.ty * S.symbol * S.symbol * I.ir) list ref
+
+   val fr = ref 0
+   fun fresh () = (fr := !fr + 1; S.symbol ("_mono" ^ Int.toString (!fr)))
+
+   fun addUninst i =
+      let
+         val s = fresh ()
+         val _ = uninst := S.enter (!uninst, s, i)
+         val _ = Debug.print Debug.debug ("Monomorphise.addUninst: " ^ 
+            S.name s ^ " = " ^ I.prettyPrint i ^ "\n")
+      in
+         s
+      end
+
+   fun addUninstS s i =
+      let
+         val _ = uninst := S.enter (!uninst, s, i)
+      in
+         s
+      end
+
+   fun addInst s t i =
+      let
+         val s' = 
+            case 
+               List.find (fn (t',s',_,_) => 
+                  (T.equal t t') andalso s = s') (!inst)
+            of
+               NONE => 
+               let
+                  val s' = fresh ()
+                  val _ = inst := (!inst) @ [(t,s,s',i)]
+               in
+                  s'
+               end
+             | SOME (_,_,s,_) => s
+
+         val _ = Debug.print Debug.debug ("Monomorphise.addInst: " ^ 
+                     S.name s ^ " = " ^ S.name s' ^ " == " ^ 
+                     I.prettyPrint i ^ " (" ^ T.prettyPrint t ^ ")\n")
+      in
+         s'
+      end
+
+   (* FIXME: check symbol first, then type equality *)
+   fun getInst s t =
+      List.find (fn (t',s',_, _) => 
+         (T.equal t t') andalso s = s') (!inst)
+
+   fun getUninst s = 
+      case S.look (!uninst, s) of 
+         NONE => 
+            Error.fail ("Monomorphise: Cannot find symbol '"^S.name s^"'",(0,""))
+       | SOME i => i
+
+   fun tymap (T.POLY i) t = [(T.POLY i, t)]
+     | tymap (T.FN ([a],b)) (T.FN ([c],d)) = tymap a c @ tymap b d
+     | tymap (T.TUPLE a) (T.TUPLE b) = 
+         List.foldl (fn ((a,b),m) => m @ tymap a b) [] (ListPair.zip (a,b))
+     | tymap (T.CONSTR (a,b)) (T.CONSTR (c,d)) =
+         (List.foldl (fn ((a,b),m) => m @ tymap a b) [] (ListPair.zip (a,c))) @
+            tymap b d
+     | tymap x _ = [] 
+
+   fun instantiate (f as I.N (I.FN, e, T.FN ([it],ot), m, p)) e2 =
+   let
+      val m = tymap it (I.getType e2)
+      
+      val f' = 
+         List.foldl (fn ((l,r),f) => I.mapType (T.substinty l r) f) f m
+   in
+      f'
+   end
+     | instantiate (I.N (I.IDENT s, _, T.FN ([it],ot), m, p)) e2 =
+   let
+      val t2 = I.getType e2
+
+      val _ = Debug.print Debug.debug 
+         ("Monomorphise.instantiate: " ^ T.prettyPrint t2 ^ "\n")
+
+      val i =
+         case getInst s t2 of
+            NONE => 
+            let
+               val f = getUninst s
+
+               val _ = Debug.print Debug.debug
+               ("Monomorphise.instantiate: Uninstantiated: " ^ 
+                  I.prettyPrint f ^ "\n")
+
+               val (it,ot) = 
+                  case I.getType f of
+                     T.FN ([it],ot) => (it,ot)
+                   | _ => Error.bug ("Monomorphise.instantiate",
+                                     "Invalid non-FN for uninstantiated fn",p)
+
+               val m = tymap it t2
+               val f' = 
+                  List.foldl (fn ((l,r),f) => I.mapType (T.substinty l r) f) f m
+            in
+               I.N (I.IDENT (addInst s t2 f'), [], I.getType f', [], p)
+            end
+          | SOME (t,s1,s2,i) =>
+               I.N (I.IDENT s2, [], I.getType i, [], p)
+   in
+      i
+   end
+     | instantiate e1 e2 = 
+      Error.bug ("Monomorphise.instantiate", 
+                 "Attempted to instantiate: " ^ I.prettyPrint e1, (0,""))
 
    (** TODO: Apply the value restriction here *)
    (** FIXME: Fix the type fields of all affected nodes. *)
    fun monomorphise prog =
    let
-      fun mexp (A.ETUPLE (v,t,p)) =
+      fun mpat (A.PCONST (e,t,p)) = mexp e
+        | mpat (A.PTUPLE (v,t,p)) =
       let
-         val v' = Vector.map mexp v
+         val (v',t') = 
+            Vector.foldl (fn (v,(e1,e2)) => 
+               let
+                  val v' = mpat v
+                  val t' = I.getType v'
+               in
+                  (e1 @ [v'], e2 @ [t'])
+               end) ([],[]) v
       in
-         A.ETUPLE (v,t,p)
+         I.N (I.TUPLE, v', T.TUPLE t', [], p) 
       end
-        | mexp (A.EIF (a,b,c,t,p)) = A.EIF (mexp a,mexp b,mexp c,t,p)
-        | mexp (A.EWHILE (a,b,t,p)) = A.EWHILE (mexp a, mexp b, t, p)
-        | mexp (A.EFN (s,e,t,p)) = A.EFN (s,mexp e,t,p)
-        | mexp (A.ECASE (e,v,t,p)) =
-            A.ECASE (mexp e, Vector.map (fn (p,e) => (p,mexp e)) v, t, p)
+        | mpat (A.PCONSTR (i,NONE,t,p)) = I.N (I.CON i, [], t, [], p)
+        | mpat (A.PCONSTR (i,SOME (pa,t'),t,p)) = I.N (I.CON i, [mpat pa], t,[], p)
+        | mpat (A.PID (s,t,p)) = I.N (I.IDENT s, [], t, [], p)
+        | mpat (A.PINFIX (p1,s,p2,t,p)) = 
+            I.N (I.PINFIX s, [mpat p1, mpat p2], t, [], p)
+        | mpat (A.PWILD p) = I.N (I.PWILD, [], T.UNKNOWN, [], p)
+        | mpat (A.PNIL p) = I.N (I.NIL, [], T.UNKNOWN, [], p)
+        | mpat (A.PUNIT p) = I.N (I.UNIT, [], T.t_unit, [], p)
+        | mpat _ = Error.bug ("Monomorphise.mpat", "Invalid pattern", (0,""))
+
+      and mexp (A.EID (s,t,p)) = I.N (I.IDENT s, [], t, [], p)
+        | mexp (A.ETUPLE (v,t,p)) =
+      let
+         val v' = Vector.foldl (fn (v,e) => e @ [mexp v]) [] v
+         val t' = map I.getType v'
+      in
+         I.N (I.TUPLE,v',T.TUPLE t',[],p) 
+      end
+        | mexp (A.EIF (a,b,c,t,p)) = 
+      let
+         val a' = mexp a
+         val b' = mexp b
+         val c' = mexp c
+      in
+         I.N (I.IF, [a',b',c'], I.getType b', [], p)
+      end
+        | mexp (A.ELIT (A.LINT (i,p), _, _)) = I.N (I.INT i,[],T.t_int,[],p)
+        | mexp (A.ELIT (A.LREAL (i,p), _, _)) =  I.N (I.REAL i,[],T.t_real,[],p)
+        | mexp (A.ELIT (A.LCHAR (i,p), _, _)) = I.N (I.CHAR i,[],T.t_char,[],p)
+        | mexp (A.ELIT (A.LSTRING (i,p), _, _)) = 
+            I.N (I.STRING i,[],T.t_string,[],p)
+        | mexp (A.ELIT (A.LUNIT p, _, _)) = I.N (I.UNIT,[],T.t_unit,[],p)
+        | mexp (A.EWHILE (a,b,t,p)) =
+      let
+         val a' = mexp a
+         val b' = mexp b
+      in
+         I.N (I.WHILE, [a',b'], T.CONSTR([I.getType b'],T.t_list), [], p)
+      end
+        | mexp (f as A.EFN ([s],e,T.FN ([it],ot),p)) =
+      let
+         val f' = I.N (I.FN, 
+                        [I.N (I.IDENT s, [], it, [], p),
+                         mexp e],
+                        T.FN ([it],ot),
+                        [],
+                        p)
+
+         val f'' = 
+            if Polymorphism.isPolymorphic f
+               then I.N (I.IDENT (addUninst f'), [], T.FN ([it],ot), [], p)
+               else f'
+
+         val _ = Debug.print Debug.debug ("Monomorphise.mexp: f': " ^ 
+                     I.prettyPrint f' ^ "\n")
+         val _ = Debug.print Debug.debug ("Monomorphise.mexp: f'': " ^ 
+                     I.prettyPrint f'' ^ "\n")
+      in
+         f''
+      end
+        | mexp (A.ECASE (e,v,t,pos)) =
+      let
+         val v' = 
+            Vector.foldl (fn ((p,e),l) => 
+               let
+                  val p' = mpat p
+                  val e' = mexp e
+               in
+                  l @ 
+                     [I.N (I.MATCH, [mpat p, mexp e], I.getType e', [], pos)]
+               end) [] v
+      in
+         I.N (I.CASE, mexp e :: v', t, [], pos)
+      end
         | mexp (A.EAPP (e1,e2,t,p)) =
-      if Polymorphism.isPolymorphic e1 then
       let
-         val te1 = A.getTypeExp e1
-         val te1' = Constrain.inst te1
-         val te2 = A.getTypeExp e2
-         val tx = T.fresh ()
-         val tf = T.FN ([A.getTypeExp e2], T.fresh ())
-         val cs = [(te1',tf,p)]
-         val cs' = Unify.unify cs
-         
-         fun apply [] e = e
-           | apply ((l,r,p)::t) e = apply t (A.subst_ty_exp l r e)
+         val e1' = mexp e1
+         val e2' = mexp e2
 
-         val e1' = apply cs' e1
-         val rt = case A.getTypeExp e1' of
-                     T.FN (_,b) => b
-                   | _ => Error.fail ("Invalid non-function for monomorphisation",p)
+         val e1'' = instantiate e1' e2'
 
-         val _ = Debug.print Debug.debug 
-            ("Monomorphise: " ^ A.ppe e1' ^ "\n" ^ 
-             "e2: " ^ A.ppe e2 ^ "\n" ^ 
-             "te1: " ^ A.ppty te1 ^ "\n" ^ 
-             "te2: " ^ A.ppty te2 ^ "\n")
+         val t' = 
+            case I.getType e1'' of
+               T.FN (_,ot) => ot
+             | _ => Error.bug ("Monomorphise","Invalid non-FN type in APP.",p)
       in
-         A.EAPP (A.EINST(e1',te1,tf),e2,rt,p)
+         I.N (I.APP, [e1'', e2'], t', [], p)
       end
-      else A.EAPP (e1,e2,t,p)
-        | mexp (A.ERAISE (e,p)) = A.ERAISE (mexp e,p)
-        | mexp (A.ESEQ (v,t,p)) = A.ESEQ (Vector.map mexp v, t, p)
-        | mexp x = x
+        | mexp (A.ERAISE (e,p)) =
+      let
+         val e' = mexp e
+      in
+         I.N (I.RAISE, [mexp e], I.getType e', [], p)
+      end
+        | mexp (A.ESEQ (v,t,p)) =
+      let
+         val v' = 
+            Vector.foldl (fn (e,l) => l @ [mexp e]) [] v
+         val t' = I.getType (hd (List.rev v'))
+      in
+         I.N (I.SEQ, v', t', [], p)
+      end
+        | mexp (A.ECON (i,NONE,t,p)) = I.N (I.CON i,[],t,[],p)
+        | mexp (A.ECON (i,SOME (e,t'),t,p)) = I.N (I.CON i,[mexp e],t,[],p)
+        | mexp (A.ESTUB (t,p)) = I.N (I.STUB,[],t,[],p)
+     (*   | mexp x = Error.bug ("Monomorphise","Not implemented: " ^ A.ppe x,(0,""))  *)
 
       fun mstm (A.DVAL (s,e,t,p)) = 
          let
             val m = mexp e
-            val t' = A.getTypeExp m
+            val t' = I.getType m
+
+            val _ = Debug.print Debug.debug ("Monomorphism.mstm: DVAL " ^ 
+                        S.name s ^ " = " ^ I.prettyPrint m ^ "\n")
+
+            val _ = 
+               case t' of T.FN _ =>
+                  let
+                     val m' = 
+                        case m of I.N(I.IDENT s,_,_,_,_) => getUninst s
+                                | _ => m
+                  in
+                     ignore (addUninstS s m')
+                  end
+                  | _ => ()
          in
-            A.DVAL (s,m,t',p)
+            I.N (I.BIND s, [m], t', [], p)
          end
-        | mstm (A.DVALREC (a,t,p)) = 
-          let
-             val m = mstm a
-             val t' = A.getType m
-          in
-             A.DVALREC (m, t', p)
-          end
-        | mstm (A.DMUTUAL (v,p)) = A.DMUTUAL (Vector.map mstm v, p)
-        | mstm x = x
+        | mstm (A.DVALREC (a,t,p)) = mstm a 
+        | mstm (A.DMUTUAL (v,p)) =
+         let
+            val v' = 
+               Vector.foldl (fn (v,e) => e @ [mstm v]) [] v
+         in
+            I.N (I.MUTUAL, v', T.UNKNOWN, [], p)
+         end
+        | mstm x = 
+            Error.bug
+               ("Monomorphise.mstm", "Unhandled: " ^ A.prettyPrint [x],(0,""))
+
+      val prog' = map mstm prog
+      val frags = map 
+         (fn (t1,s1,s2,i) => I.N (I.BIND s2, [i], I.getType i, [], (0,""))) 
+            (!inst)
    in
-      prog 
+      I.N (I.PROGRAM, frags @ map mstm prog, T.UNKNOWN, [], (0,""))
    end
 end
 

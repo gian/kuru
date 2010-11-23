@@ -46,6 +46,7 @@ struct
 
    and ir_opr =
       INT of int
+    | CHAR of char
     | STRING of string
     | REAL of real
     | BOOL of bool
@@ -64,17 +65,17 @@ struct
     | LET
     | CON of int
     | CLOSURE
-    | BIND
+    | BIND of S.symbol
     | MUTUAL
-    | PCONST
-    | PTUPLE
     | PWILD
-    | PCONSTR of int
+    | NIL
     | PINFIX of S.symbol
     | IMPORT of S.symbol * T.ty * S.symbol
+    | STUB
     | PROGRAM
 
    fun ppopr (INT i) = Int.toString i
+     | ppopr (CHAR c) = "#\"" ^ Char.toString c ^ "\""
      | ppopr (STRING s) = "\"" ^ String.toCString s ^ "\""
      | ppopr (REAL r) = Real.toString r
      | ppopr (BOOL true) = "true"
@@ -94,14 +95,13 @@ struct
      | ppopr LET = "LET"
      | ppopr (CON i) = "CON " ^ Int.toString i
      | ppopr CLOSURE = "CLOSURE"
-     | ppopr BIND = "BIND"
+     | ppopr (BIND s) = "BIND " ^ S.name s
      | ppopr MUTUAL = "MUTUAL"
-     | ppopr PCONST = "PCONST"
-     | ppopr PTUPLE = "PTUPLE"
      | ppopr PWILD = "_"
-     | ppopr (PCONSTR i) = "PCONSTR " ^ Int.toString i
      | ppopr (PINFIX s) = "PINFIX " ^ S.name s
      | ppopr (IMPORT (s1,t,s2)) = "IMPORT " ^ S.name s1 ^ " as " ^ S.name s2
+     | ppopr NIL = "NIL"
+     | ppopr STUB = "STUB"
      | ppopr PROGRAM = "PROGRAM"
 
    fun ind 0 = ""
@@ -113,6 +113,14 @@ struct
             String.concatWith ",\n" (map (pp (i+1)) l) ^ "\n" ^ (ind i) ^ "]\n"
    
    val prettyPrint = pp 0
+
+   fun mapChildren f (N (_,l,_,_,_)) = map f l
+
+   fun mapType f (N (a,b,t,c,d)) = 
+         N (a, map (mapType f) b, f t, c, d)
+
+   fun getType (N (_,_,t,_,_)) = t
+
 
 end
 

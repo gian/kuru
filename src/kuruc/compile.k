@@ -169,10 +169,13 @@ struct
 
 	      val _ = Debug.print Debug.internal ("Monomorphic program:\n")
          val _ = Debug.print Debug.internal 
-            ("\n" ^ TypedAST.prettyPrint flmono ^ "\n")
+            ("\n" ^ Intermediate.prettyPrint flmono ^ "\n")
+
+
+         val _ = Error.bug ("Compile", "Stopping for debugging", (0,""))
 
          val _ = Debug.startStage 1 "ClosureConversion"
-			val fcc = ClosureConvert.convert flmono
+			val fcc = ClosureConvert.convert fl''' 
          val _ = Debug.print Debug.internal ("Closure converted program:\n")
          val _ = Debug.print Debug.internal 
             ("\n" ^ TypedAST.prettyPrint (fcc) ^ "\n")

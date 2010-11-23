@@ -32,9 +32,9 @@ semant/unify.sml
 semant/constrain.sml
 semant/typecheck.sml
 semant/polymorphism.sml
+intermediate/intermediate.sml
 semant/monomorphise.sml
 semant/typeclass.sml
-intermediate/intermediate.sml
 codegen/temp.sml
 codegen/asm.sml
 codegen/builtins.sml

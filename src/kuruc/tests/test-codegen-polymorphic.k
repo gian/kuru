@@ -4,5 +4,5 @@ val p = id 10
 
 val q = id "hello, world\n"
 
-val _ = print q
+(* val _ = print q *)
 
