@@ -34,6 +34,8 @@ semant/polymorphism.sml
 intermediate/intermediate.sml
 intermediate/monomorphise.sml
 intermediate/closure_convert.sml
+optimise/optimise.sml
+optimise/constant_fold.sml
 semant/typeclass.sml
 codegen/temp.sml
 codegen/asm.sml

@@ -14,7 +14,8 @@ SMLDEPS= \
 	semant/typecheck.sml semant/tyconstraints.sml ast/ast_promote_exns.sml \
 	intermediate/monomorphise.sml semant/polymorphism.sml ast/ast_infix_pattern.sml \
 	intermediate/closure_convert.sml semant/typeclass.sml codegen/asm.sml \
-	codegen/temp.sml intermediate/intermediate.sml \
+	optimise/optimise.sml codegen/temp.sml intermediate/intermediate.sml \
+	optimise/constant_fold.sml \
 	codegen/translate.sml codegen/codegen.sml codegen/codegen_decs.sml \
 	codegen/builtins.sml codegen/llvm_operations.sml semant/exceptions.sml \
 	config.sml debug.sml main.sml compile.sml version.sml

@@ -126,6 +126,8 @@ struct
 
    fun getType (N (_,_,t,_,_)) = t
 
+   fun size (N (_,[],_,_,_)) = 1
+     | size (N (_,l,_,_,_)) = List.foldl (fn (c,s) => s + size c) 1 l
 
 end
 
