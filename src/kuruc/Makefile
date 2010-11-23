@@ -12,8 +12,8 @@ SMLDEPS= \
 	ast/ast_infix_unflatten.sml ast/ast_list_cons.sml \
 	ast/ast_match_compile.sml ast/convert_parse_tree.sml \
 	semant/typecheck.sml semant/tyconstraints.sml ast/ast_promote_exns.sml \
-	semant/monomorphise.sml semant/polymorphism.sml ast/ast_infix_pattern.sml \
-	ast/closure_convert.sml semant/typeclass.sml codegen/asm.sml \
+	intermediate/monomorphise.sml semant/polymorphism.sml ast/ast_infix_pattern.sml \
+	intermediate/closure_convert.sml semant/typeclass.sml codegen/asm.sml \
 	codegen/temp.sml intermediate/intermediate.sml \
 	codegen/translate.sml codegen/codegen.sml codegen/codegen_decs.sml \
 	codegen/builtins.sml codegen/llvm_operations.sml semant/exceptions.sml \

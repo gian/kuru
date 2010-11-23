@@ -1,4 +1,4 @@
 all: 
 
 clean:
-	rm -f intermediate.sml 
+	rm -f intermediate.sml closure_convert.sml monomorphise.sml

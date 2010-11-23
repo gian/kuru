@@ -171,15 +171,14 @@ struct
          val _ = Debug.print Debug.internal 
             ("\n" ^ Intermediate.prettyPrint flmono ^ "\n")
 
-
-         val _ = Error.bug ("Compile", "Stopping for debugging", (0,""))
-
          val _ = Debug.startStage 1 "ClosureConversion"
-			val fcc = ClosureConvert.convert fl''' 
+			val fcc = ClosureConvert.convert flmono 
          val _ = Debug.print Debug.internal ("Closure converted program:\n")
          val _ = Debug.print Debug.internal 
-            ("\n" ^ TypedAST.prettyPrint (fcc) ^ "\n")
+            ("\n" ^ Intermediate.prettyPrint (fcc) ^ "\n")
          val _ = Debug.endStage "ClosureConversion"
+         
+         val _ = Error.bug ("Compile", "Stopping for debugging", (0,""))
 
          (* Stage 4 - Optimisation *)
 
@@ -191,7 +190,7 @@ struct
          (* Stage 5 - Translation to Intermediate Representation *)
 
          val _ = Debug.startStage 1 "IRTranslate"
-         val (te''',ve''',se''',d',fragments) = Translate.translate te' fcc
+         val (te''',ve''',se''',d',fragments) = Translate.translate te' fl'''
          val _ = Debug.endStage "IRTranslate"
 
          val _ = Debug.print Debug.internal ("Translated Program:\n")

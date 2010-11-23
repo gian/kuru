@@ -36,8 +36,11 @@ struct
     | Transitive
     | Reflexive
     | Pure
+    | Escapes
     | Custom of string
       (* TODO: Add other attributes here. *)
+
+   fun addAttr l e = e :: l
 
    type metadata = attribute list
 
@@ -52,6 +55,7 @@ struct
     | BOOL of bool
     | UNIT
     | IDENT of S.symbol
+    | ENV of S.symbol
     | TUPLE
     | IF
     | WHILE
@@ -82,6 +86,7 @@ struct
      | ppopr (BOOL false) = "false"
      | ppopr UNIT = "()"
      | ppopr (IDENT s) = S.name s
+     | ppopr (ENV s) = "$env->" ^ S.name s
      | ppopr TUPLE = "TUPLE"
      | ppopr IF = "IF"
      | ppopr WHILE = "WHILE"

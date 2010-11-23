@@ -262,7 +262,7 @@ struct
         | mexp (A.ECON (i,NONE,t,p)) = I.N (I.CON i,[],t,[],p)
         | mexp (A.ECON (i,SOME (e,t'),t,p)) = I.N (I.CON i,[mexp e],t,[],p)
         | mexp (A.ESTUB (t,p)) = I.N (I.STUB,[],t,[],p)
-     (*   | mexp x = Error.bug ("Monomorphise","Not implemented: " ^ A.ppe x,(0,""))  *)
+        | mexp x = Error.bug ("Monomorphise","Not implemented: " ^ A.ppe x,(0,"")) 
 
       fun mstm (A.DVAL (s,e,t,p)) = 
          let
