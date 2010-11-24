@@ -24,6 +24,8 @@ struct
    structure S = Symbol
    structure A = TypedAST
 
+
+
    datatype exp = CONST of int
                 | RCONST of real
                 | BCONST of bool
@@ -36,7 +38,7 @@ struct
                 | TUPLE of Temp.ty list * exp list
                 | TUPLE_IND of exp * int
                 | TUPLE_INS of exp * exp * int (* exp1[int] <- exp2 *)
-                | ELEM_PTR of Temp.ty * exp * int
+                | ELEM_PTR of Temp.ty * exp * int list
                 | UNDEF of Temp.ty
                 | BINOP of string * exp * exp
                 | BUILTIN of string
@@ -47,6 +49,7 @@ struct
                 | VOID
                 | NULL of Temp.ty
                 | ALIAS of exp
+                | ENV of S.symbol * Temp.ty
    
         and stm = MOVE of exp * exp
                 | EXP of exp
@@ -59,6 +62,8 @@ struct
                 | STORE of exp * exp
                 | UNWIND
                 | COMMENT of string
+                | FUNCTION of Temp.ty * Temp.label * Temp.temp * stm list
+                | BLOCK of Temp.label * stm list * Temp.label
    
       and relop = EQ | NEQ | LT | GT | LE | GE | ULT | ULE | UGT | UGE
                 | REQ | RNEQ
