@@ -26,7 +26,9 @@ struct
 	structure I = Intermediate
    structure A = Asm
 
-   val env = ref S.empty : Temp.temp S.table ref
+   val venv = ref S.empty : Temp.temp S.table ref
+   val addEnv s t = 
+      (venv := S.enter (!venv, s, t); t)
 
    fun tr_exp (I.N (I.INT i, _, _, _, _)) = (A.CONST i, [])
      | tr_exp (I.N (I.CHAR c, _, _, _, _)) = (A.CONST (Char.ord c), [])
@@ -35,7 +37,9 @@ struct
      | tr_exp (I.N (I.REAL r, _, _, _, _)) = (A.RCONST r, [])
      | tr_exp (I.N (I.BOOL b, _, _, _, _)) = (A.BCONST b, [])
      | tr_exp (I.N (I.UNIT, _, _, _, _)) = (A.TEMP (Temp.newtemp Temp.unitt),[])
-     | tr_exp (I.N (I.IDENT s, _, t, _)) = (A.TEMP (Temp.newtemp (tr_ty t)),[])
+     | tr_exp (I.N (I.IDENT s, _, t, _)) =
+         (* FIXME: this needs to do a lookup first! *)
+         (A.TEMP (addEnv s (Temp.newtemp (tr_ty t))),[])
      | tr_exp (I.N (I.ENV s, _, t, _)) = (A.ENV (s, tr_ty t), [])
      | tr_exp (I.N (I.TUPLE, c, T.TUPLE t, _, _)) =
       let
