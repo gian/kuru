@@ -436,6 +436,7 @@ struct
       in
          (rt,ins)
       end
+     | tr_exp (I.N (I.EXTERN s,_,_,_,p)) = (A.BUILTIN (S.name s), [])
      | tr_exp (x as I.N (_,_,_,_,p)) = 
       Error.bug ("Translate.tr_exp", "Not implemented: " ^ I.prettyPrint x,p)
 

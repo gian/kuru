@@ -55,6 +55,7 @@ struct
     | BOOL of bool
     | UNIT
     | IDENT of S.symbol
+    | EXTERN of S.symbol
     | ENV of int 
     | TUPLE
     | IF
@@ -86,6 +87,7 @@ struct
      | ppopr (BOOL false) = "false"
      | ppopr UNIT = "()"
      | ppopr (IDENT s) = S.name s
+     | ppopr (EXTERN s) = "extern " ^ S.name s
      | ppopr (ENV s) = "*(env+1+" ^ Int.toString s ^ ")"
      | ppopr TUPLE = "TUPLE"
      | ppopr IF = "IF"

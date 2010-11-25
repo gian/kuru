@@ -20,11 +20,6 @@ infix 2 orelse
 infix 2 andalso
 infix 0 before
 
-datatype option =
-   SOME of 'a
- | NONE
-
-
 structure CommandLine =
 struct
 

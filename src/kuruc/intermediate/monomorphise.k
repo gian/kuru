@@ -262,6 +262,7 @@ struct
         | mexp (A.ECON (i,NONE,t,p)) = I.N (I.CON i,[],t,[],p)
         | mexp (A.ECON (i,SOME (e,t'),t,p)) = I.N (I.CON i,[mexp e],t,[],p)
         | mexp (A.ESTUB (t,p)) = I.N (I.STUB,[],t,[],p)
+        | mexp (A.ENIL p) = I.N (I.NIL,[],T.UNKNOWN,[],p)
         | mexp x = Error.bug ("Monomorphise","Not implemented: " ^ A.ppe x,(0,"")) 
 
       fun mstm (A.DVAL (s,e,t,p)) = 
@@ -292,6 +293,12 @@ struct
                Vector.foldl (fn (v,e) => e @ [mstm v]) [] v
          in
             I.N (I.MUTUAL, v', T.UNKNOWN, [], p)
+         end
+        | mstm (A.DIMPORT (s1,t as T.FN ([it],ot),s2,p)) = 
+         let
+            val _ = addInst s2 it (I.N (I.EXTERN s1,[],t,[],p)) 
+         in
+            I.N (I.IMPORT (s1,t,s2), [], t, [], p)
          end
         | mstm x = 
             Error.bug
