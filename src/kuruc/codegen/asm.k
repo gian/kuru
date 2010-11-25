@@ -63,6 +63,8 @@ struct
                 | UNWIND
                 | COMMENT of string
                 | DECLARE of Temp.ty * string * Temp.ty
+                | FUNDEC of Temp.ty * string * Temp.temp * stm list
+                | SCONST of Temp.label * string
                 | UNREACHABLE
    
       and relop = EQ | NEQ | LT | GT | LE | GE | ULT | ULE | UGT | UGE
@@ -129,10 +131,13 @@ struct
      | ppstm (STORE (e1,e2)) = "STORE " ^ ppe e2 ^ " <- " ^ ppe e1
      | ppstm (COMMENT s) = "; " ^ s
      | ppstm (UNREACHABLE) = "unreachable"
-     | ppstm (DECLARE (ot,n,it)) = 
-         "DECLARE " ^ n
+     | ppstm (DECLARE (ot,n,it)) = "DECLARE " ^ n
+     | ppstm (SCONST (l,s)) = "STRING CONST: \"" ^ s ^ "\""
+     | ppstm (FUNDEC (t1,s,p,body)) =
+         "FUNDEC " ^ s ^ " (" ^ ppt p ^ ") {\n" ^ 
+         prettyPrint body ^ "}\n"
 
-   fun prettyPrint [] = ""
+   and prettyPrint [] = ""
      | prettyPrint (h::t) = ppstm h ^ "\n" ^ prettyPrint t
 
 end

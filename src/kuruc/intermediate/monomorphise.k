@@ -305,11 +305,16 @@ struct
                ("Monomorphise.mstm", "Unhandled: " ^ A.prettyPrint [x],(0,""))
 
       val prog' = map mstm prog
+
+      (* FIXME: This is a hack. All this poly stuff should be gone. *)
+      val prog'' = 
+         List.filter (fn x => not (Polymorphism.isPolyTy (I.getType x))) prog'
+
       val frags = map 
          (fn (t1,s1,s2,i) => I.N (I.BIND s2, [i], I.getType i, [], (0,""))) 
             (!inst)
    in
-      I.N (I.PROGRAM, frags @ map mstm prog, T.UNKNOWN, [], (0,""))
+      I.N (I.PROGRAM, frags @ prog'', T.UNKNOWN, [], (0,""))
    end
 end
 

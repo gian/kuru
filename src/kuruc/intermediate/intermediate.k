@@ -56,7 +56,7 @@ struct
     | UNIT
     | IDENT of S.symbol
     | EXTERN of S.symbol
-    | ENV of int 
+    | ENV of int * S.symbol 
     | TUPLE
     | IF
     | WHILE
@@ -77,6 +77,7 @@ struct
     | PINFIX of S.symbol
     | IMPORT of S.symbol * T.ty * S.symbol
     | STUB
+    | FUNDEC of S.symbol
     | PROGRAM
 
    fun ppopr (INT i) = Int.toString i
@@ -88,7 +89,7 @@ struct
      | ppopr UNIT = "()"
      | ppopr (IDENT s) = S.name s
      | ppopr (EXTERN s) = "extern " ^ S.name s
-     | ppopr (ENV s) = "*(env+1+" ^ Int.toString s ^ ")"
+     | ppopr (ENV (i,s)) = "*(env+1+" ^ Int.toString i ^ ", "^ S.name s ^ ")"
      | ppopr TUPLE = "TUPLE"
      | ppopr IF = "IF"
      | ppopr WHILE = "WHILE"
@@ -109,6 +110,7 @@ struct
      | ppopr (IMPORT (s1,t,s2)) = "IMPORT " ^ S.name s1 ^ " as " ^ S.name s2
      | ppopr NIL = "NIL"
      | ppopr STUB = "STUB"
+     | ppopr (FUNDEC s) = "FUNDEC " ^ S.name s
      | ppopr PROGRAM = "PROGRAM"
 
    fun ind 0 = ""

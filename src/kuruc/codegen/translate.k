@@ -33,9 +33,17 @@ struct
    
    fun getEnv p s =
       case S.look (!venv,s) of
+        (* NONE => A.UNDEF (Temp.fn_ptr ([Temp.ptr Temp.i8], Temp.ptr Temp.i8)) *)
          NONE => Error.bug ("Translate.getEnv",
                      "Cannot find symbol '" ^ S.name s ^ "'", p)
        | SOME x => x
+
+   val _ = addEnv (S.symbol "true") (A.BCONST true)
+   val _ = addEnv (S.symbol "false") (A.BCONST false)
+
+   val data = ref [] : A.stm list ref
+
+   fun addData d = data := !data @ [d]
 
    fun tr_ty (T.NAME s) =
       (case S.name s of
@@ -43,7 +51,8 @@ struct
        | "real" => Temp.r32
        | "char" => Temp.i8
        | "bool" => Temp.i1
-       | "void" => Temp.void
+       | "cvoid" => Temp.void
+       | "unit" => Temp.ptr Temp.i8
        | n => Temp.named n)
      | tr_ty (T.FN (t1,t2)) =
          Temp.fn_ptr (map tr_ty t1, tr_ty t2)
@@ -173,14 +182,43 @@ struct
 
    and tr_exp (I.N (I.INT i, _, _, _, _)) = (A.CONST i, [])
      | tr_exp (I.N (I.CHAR c, _, _, _, _)) = (A.CONST (Char.ord c), [])
-     | tr_exp (I.N (I.STRING s, _, _, _, p)) = 
-         Error.bug ("tr_exp", "Strings not implemented.", p)
+     | tr_exp (I.N (I.STRING s, _, _, _, p)) =
+      let
+         val strty = Temp.named "string"
+         val rt' = A.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
+         val rt = A.TEMP (Temp.newtemp (Temp.ptr strty))
+         val tt = A.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
+         val tlen = A.TEMP (Temp.newtemp (Temp.ptr Temp.i32))
+         val tptr = A.TEMP (Temp.newtemp (Temp.ptr (Temp.ptr Temp.i8)))
+         val l = Temp.newglobal (Temp.array (size s, Temp.i8))
+         val _ = addData (A.SCONST (l,s))
+      in
+         (rt,
+          [A.MOVE (rt', A.MALLOC (strty,1)),
+           A.MOVE (rt, A.BITCAST (rt',Temp.ptr strty)),
+           A.MOVE (tlen, A.ELEM_PTR (Temp.ptr strty, rt, [0,0])),
+           A.STORE (A.CONST (size s), tlen),
+           A.MOVE (tt,A.ELEM_PTR (Temp.array (size s, Temp.i8),A.NAME l,[0,0])),
+           A.MOVE (tptr, A.ELEM_PTR (Temp.ptr strty, rt, [0,1])),
+           A.STORE (tt,tptr)
+          ])
+      end
      | tr_exp (I.N (I.REAL r, _, _, _, _)) = (A.RCONST r, [])
      | tr_exp (I.N (I.BOOL b, _, _, _, _)) = (A.BCONST b, [])
      | tr_exp (I.N (I.UNIT, _, _, _, _)) = 
          (A.TEMP (Temp.newtemp (Temp.named "unit")),[])
      | tr_exp (I.N (I.IDENT s, _, t, _, p)) = (getEnv p s, [])
-     | tr_exp (I.N (I.ENV s, _, t, _, _)) = (A.ENV (s, tr_ty t), [])
+     | tr_exp (I.N (I.ENV (i,s), _, t, _, _)) = 
+      let
+         val clty = Temp.named ("closure" ^ S.name s ^ "_t")
+         val rt' = A.TEMP (Temp.newtemp (Temp.ptr (tr_ty t)))
+         val rt = A.TEMP (Temp.newtemp (tr_ty t))
+         val env = A.TEMP (Temp.newtemp (Temp.env clty))
+      in
+         (rt, 
+          [A.MOVE (rt',A.ELEM_PTR (clty,env,[0,i])),
+           A.MOVE (rt, A.LOAD rt')])
+      end
      | tr_exp (I.N (I.TUPLE, c, T.TUPLE t, _, _)) =
       let
          val tty = Temp.aggr (map tr_ty t)
@@ -413,14 +451,16 @@ struct
          val ety = map (tr_ty o I.getType) env
 
          val cty = Temp.aggr ((tr_ty t) :: ety)
+         val rt' = A.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
          val rt = A.TEMP (Temp.newtemp (Temp.ptr cty))
          val tmp1 = A.TEMP (Temp.newtemp (Temp.ptr (tr_ty t)))
 
          val ix = ref 0
 
          val ins = fi @ (List.concat envi) @
-            [A.MOVE (rt, A.MALLOC (cty,1)),
-             A.MOVE (tmp1, A.ELEM_PTR (Temp.ptr cty, rt, [0,0])),
+            [A.MOVE (rt', A.MALLOC (cty,1)),
+             A.MOVE (rt, A.BITCAST (rt',Temp.ptr cty)),
+             A.MOVE (tmp1, A.ELEM_PTR (cty, rt, [0,0])),
              A.STORE (f', tmp1)] @
            (List.concat (List.map
             (fn (v,t) => 
@@ -453,13 +493,33 @@ struct
       let
          val b = A.BUILTIN (S.name ename)
          val _ = addEnv iname b
+         val _ = addData (A.DECLARE (tr_ty ot, S.name ename, tr_ty it))
       in
-         [A.DECLARE (tr_ty ot, S.name ename, tr_ty it)]
+         []
+      end
+     | tr_stm (I.N(I.FUNDEC s,[I.N(I.IDENT s',_,_,_,_),e],T.FN ([it],ot), _, p)) =
+      let
+         val param = Temp.newtemp (tr_ty it)
+         val _ = addEnv s' (A.TEMP param)
+         val _ = addEnv s (A.NAME (Temp.labelFromString (S.name s)))
+         val (e',ei) = tr_exp e
+
+         val _ = addData (A.FUNDEC (tr_ty ot, S.name s, param, 
+                           [A.LABEL (Temp.newlabel ())] @
+                           ei @
+                           [A.RET e']))
+      in
+         []
       end
      | tr_stm (I.N (I.PROGRAM, v, _, _, p)) =
          List.concat (map tr_stm v)
      | tr_stm (s as I.N (_,_,_,_,p)) = 
          Error.bug ("Translate.tr_stm", "Unhandled: " ^ I.prettyPrint s, p)
 
-   fun translate ir = tr_stm ir 
+   fun translate ir = 
+      let
+         val ir' = tr_stm ir 
+      in
+         (!data, ir')
+      end
 end

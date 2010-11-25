@@ -48,19 +48,27 @@ struct
    val frn = ref 0
    fun fresh () = S.symbol (frn := !frn + 1; "_cc" ^ Int.toString (!frn))
 
+   val globals = ref S.empty : unit S.table ref
+   fun addGlobal s = globals := S.enter (!globals, s, ())
+   fun isGlobal s = 
+      case S.look (!globals,s) of
+         NONE => false
+       | SOME _ => true
+
+
    fun exSym (I.N (I.IDENT k,_,_,_,_)) = k
      | exSym (I.N (_,_,_,_,p)) = 
          Error.bug ("ClosureConvert.exSym", "Called on invalid symbol",p)
 
-   fun repEnv l n =
+   fun repEnv gs l n =
    let
       val e = ref 0
       fun inc () = !e before e := !e + 1
 
       fun repEnv' s (n as I.N (I.IDENT k,_,t,m,p)) = 
-            if s = k then I.N (I.ENV (inc ()),[],t,[],p) else n
+            if s = k then I.N (I.ENV (inc (),gs),[],t,[],p) else n
         | repEnv' s (I.N (opr,l,t,m,p)) = 
-            I.N (opr, map (repEnv s) l, t, m, p)
+            I.N (opr, map (repEnv' s) l, t, m, p)
    in
       repEnv' l n
    end
@@ -69,25 +77,50 @@ struct
       environment accesses. *)
    fun lift s [] n = lifted := !lifted @ [(s,n)]
      | lift s (h::t) n = 
-         lift s t (repEnv (exSym h) n)
+         lift s t (repEnv s (exSym h) n)
 
    fun names b (n as I.N (I.IDENT k,_,_,_,_)) = 
-      if List.exists (fn x => x = k) b then [] else [n]
+      if (List.exists (fn x => x = k) b) orelse
+            isGlobal k then [] else [n]
      | names b (n as I.N (I.BIND k,[e],_,_,_)) =
          names (k :: b) e
      | names b (I.N (_,l,_,_,_)) = 
          List.concat (map (names b) l)
 
-   fun liftFun (I.N (I.FN, [s,b], t, m, p)) = 
+   fun liftFun (n as I.N (I.FN, [s,b], t, m, p)) = 
    let
+      val _ = Debug.print Debug.debug
+         ("ClosureConvert: Lifting function: " ^ I.prettyPrint n ^ "\n")
       val bound = [exSym s]
       val b' = liftFun b
       val fr = names bound b'
       val k = fresh ()
-      val _ = lift k fr (I.N (I.FN, [s,b'], t, m, p))
+      val _ = lift k fr (I.N (I.FUNDEC k, [s,b'], t, m, p))
       val _ = setEnv k fr
    in
-      I.N (I.CLOSURE, [I.N (I.IDENT k,[],t,[],p)] @ fr, t, [], p)
+      I.N (I.CLOSURE, [I.N (I.IDENT k,[],t,[],p)] @ fr, t, [], p) 
+   end
+     | liftFun (I.N (I.PROGRAM, l, t, m, p)) =
+   let
+      val l' = map liftFun l
+
+      val lifted' = 
+         map (fn (_,i) => i) (!lifted)
+   in
+      I.N (I.PROGRAM, lifted' @ l', t, m, p)
+   end
+     | liftFun (I.N (I.BIND s, [e], t, m, p)) =
+   let
+      val _ = Debug.print Debug.debug
+         ("ClosureConvert: BIND " ^ S.name s ^ " = " ^ I.prettyPrint e ^ "\n")
+
+      val e' = liftFun e
+
+      val _ = Debug.print Debug.debug
+         ("ClosureConvert: (post) BIND " ^ S.name s ^ " = " ^
+            I.prettyPrint e' ^ "\n")
+   in
+      I.N (I.BIND s, [e'], t, m, p)
    end
      | liftFun (I.N (opr,l,t,m,p)) = 
          I.N (opr, map liftFun l, t, m, p)

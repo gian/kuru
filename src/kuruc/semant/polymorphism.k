@@ -23,11 +23,9 @@ struct
 	structure T = Type
    structure S = Symbol
    structure A = TypedAST
-   
-   fun isPolymorphic e =
+  
+   fun isPolyTy t = 
       let
-         val t = A.getTypeExp e
-
          fun oc tyT = (case tyT of
 				 T.FN(tyT1,tyT2) => (List.all oc tyT1) orelse oc tyT2
 			  | T.TUPLE tyT1 => List.all oc tyT1
@@ -36,8 +34,15 @@ struct
            | T.VAR x => true
            | T.POLY x => true
 			  | _ => false)
+      in
+         oc t
+      end
 
-         val p = oc t
+   fun isPolymorphic e =
+      let
+         val t = A.getTypeExp e
+
+         val p =  isPolyTy t
 
          val _ = if p then Debug.print 
                Debug.debugmore ("is polymorphic: " ^ A.ppe e ^ "\n") 

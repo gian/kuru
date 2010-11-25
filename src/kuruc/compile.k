@@ -192,7 +192,7 @@ struct
          (* Stage 6 - Translation to Asm *)
 
          val _ = Debug.startStage 1 "AsmTranslate"
-         val d' = Translate.translate (* te' *) fcc
+         val (seg,d') = Translate.translate (* te' *) fcc
          val _ = Debug.endStage "AsmTranslate"
 
          val _ = Debug.print Debug.internal ("Translated Program:\n")
@@ -202,7 +202,7 @@ struct
          (* Stage 6 - Code Generation (LLVM) *)
 
          val _ = Debug.startStage 1 "CodeGen"
-         val code = CodeGen.codegen (d',[])
+         val code = CodeGen.codegen (seg, d')
          val _ = Debug.print Debug.internal ("Generated code:\n" ^ code ^ "\n")
      
          val _ = Debug.startStage 2 "Emit"

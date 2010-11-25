@@ -52,6 +52,7 @@ struct
      | cg_ty (Temp.array (i,t)) = j [ "[", Int.toString i, " x ", cg_ty t, "]" ]
      | cg_ty (Temp.self_ref i) = j ["\\",Int.toString i]
      | cg_ty (Temp.named s) = "%" ^ s
+     | cg_ty (Temp.env t) = cg_ty t
 
    val ppt = Temp.prettyPrint
    val ppt_np = Temp.prettyPrintNoPrefix 
@@ -60,10 +61,7 @@ struct
      | opt_t (false,s) = ""
 
  (*  fun cg_frag' (T.FSTRING (l,s)) = 
-      j [ppt l, " = ", 
-         "private constant ",
-           "[", Int.toString (size s + 1), " x i8] c",
-          dquote, s, "\\00", dquote]
+
      | cg_frag' (T.FFN (l,exps,stms,t)) =
          j [
             jsp ["define ",cg_ty t,ppt l,"("],
@@ -133,7 +131,7 @@ struct
          ]
      | cg_exp' b (Asm.ELEM_PTR (ty,e1,i)) =
          j [
-            "getelementptr ", cg_ty ty, "* ", cg_exp e1, ", i32 0, i32 ",
+            "getelementptr ", cg_ty ty, "* ", cg_exp e1, ", i32 ",
             (String.concatWith ", i32 " (map Int.toString i))
          ]
      | cg_exp' b (Asm.VOID) = 
@@ -180,7 +178,8 @@ struct
              j ["alias ", cg_exp e]
      | cg_exp' b (Asm.CMP (r,e1,e2)) =
              cg_cmp r e1 e2
-     | cg_exp' b _ = raise Fail "cg_exp' b: Not implemented"
+     | cg_exp' b x = 
+         Error.bug ("cg_exp' b", "Not implemented: " ^ Asm.ppe x, (0,""))
 
    and cg_exp_t e = (cg_exp' true e)
    
@@ -216,11 +215,24 @@ struct
      | cg_stm i (Asm.UNREACHABLE) =
           j [ind i, "unreachable"]
      | cg_stm i (Asm.DECLARE (ot,n,it)) =
-          j [ind i, "declare ", cg_ty ot, " @", n, " (", cg_ty it, ")"]
+          j [ind i, "; declare ", cg_ty ot, " @", n, " (", cg_ty it, ")"]
+     | cg_stm i (Asm.SCONST (l,s)) =
+          j [ppt l, " = ", 
+             "private constant ",
+             "[", Int.toString (size s + 1), " x i8] c",
+             dquote, s, "\\00", dquote]
+     | cg_stm i (Asm.FUNDEC (rt,name,param,body)) =
+            j [
+               jsp ["define ",cg_ty rt,j ["@",name],"("],
+               "%closure",name,"_t %env, ",
+               cg_exp_t (Asm.TEMP param), ") {\n",
+               jnl (map (cg_stm 2) body),
+               "\n}\n"
+            ]
 
-   fun codegen (stms, frags) =
+   fun codegen (pre, stms) =
       jnl [
-         jnl (map cg_frag frags),
+         jnl (map (cg_stm 0) pre),
          "define i32 @main (i32 %argc, i8** %argv) {\n   entry:\n",
          "      call void @io_init ()",
          "      call void @int_init ()",

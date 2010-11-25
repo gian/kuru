@@ -38,6 +38,7 @@ struct
                | array of int * ty
                | self_ref of int
                | named of string
+               | env of ty
 
    type temp = int * ty
    type label = temp
@@ -56,12 +57,12 @@ struct
 
    fun prettyPrint (i,label s) = "%" ^ s
      | prettyPrint (i,global (s,_)) = "@" ^ s
-     | prettyPrint (i,named s) = "%" ^ s
+     | prettyPrint (i,env _) = "%env"
      | prettyPrint (i,_) = "%t" ^ Int.toString i
 
    fun prettyPrintNoPrefix (i,label s) = s
      | prettyPrintNoPrefix (i,global (s,_)) = s
-     | prettyPrintNoPrefix (i,named s) = s
+     | prettyPrintNoPrefix (i,env _) = "env"
      | prettyPrintNoPrefix (i,_) = "t" ^ Int.toString i
 
    fun getMachineWord () = 
