@@ -52,10 +52,18 @@ struct
      | exSym (I.N (_,_,_,_,p)) = 
          Error.bug ("ClosureConvert.exSym", "Called on invalid symbol",p)
 
-   fun repEnv s (n as I.N (I.IDENT k,_,t,m,p)) = 
-         if s = k then I.N (I.ENV k,[],t,[],p) else n
-     | repEnv s (I.N (opr,l,t,m,p)) = 
-         I.N (opr, map (repEnv s) l, t, m, p)
+   fun repEnv l n =
+   let
+      val e = ref 0
+      fun inc () = !e before e := !e + 1
+
+      fun repEnv' s (n as I.N (I.IDENT k,_,t,m,p)) = 
+            if s = k then I.N (I.ENV (inc ()),[],t,[],p) else n
+        | repEnv' s (I.N (opr,l,t,m,p)) = 
+            I.N (opr, map (repEnv s) l, t, m, p)
+   in
+      repEnv' l n
+   end
 
    (* Substitute anything in the free set 'fr' with 
       environment accesses. *)

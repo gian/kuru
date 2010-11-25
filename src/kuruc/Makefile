@@ -1,5 +1,5 @@
 BIN=../../bin
-COMPILER=mlton -profile time
+COMPILER=mlton 
 KUPEG=$(BIN)/kupeg
 
 SMLDEPS= \

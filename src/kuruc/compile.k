@@ -183,8 +183,6 @@ struct
          val _ = Debug.print Debug.internal 
             ("\n" ^ Intermediate.prettyPrint (fcc) ^ "\n")
          val _ = Debug.endStage "ClosureConversion"
-         
-         val _ = Error.bug ("Compile", "Stopping for debugging", (0,""))
 
          (* Error Checking State: We proceed no further if errors occurred. *)
          val _ = if Error.getErrorCount () > 0 then 
@@ -194,18 +192,17 @@ struct
          (* Stage 6 - Translation to Asm *)
 
          val _ = Debug.startStage 1 "AsmTranslate"
-         val (te''',ve''',se''',d',fragments) = Translate.translate te' fl'''
+         val d' = Translate.translate (* te' *) fcc
          val _ = Debug.endStage "AsmTranslate"
 
          val _ = Debug.print Debug.internal ("Translated Program:\n")
          val _ = Debug.print Debug.internal ("\n" ^ 
-                              Translate.printFragments fragments ^ "\n" ^
                               Asm.prettyPrint d' ^ "\n")
 
          (* Stage 6 - Code Generation (LLVM) *)
 
          val _ = Debug.startStage 1 "CodeGen"
-         val code = CodeGen.codegen (d',fragments)
+         val code = CodeGen.codegen (d',[])
          val _ = Debug.print Debug.internal ("Generated code:\n" ^ code ^ "\n")
      
          val _ = Debug.startStage 2 "Emit"

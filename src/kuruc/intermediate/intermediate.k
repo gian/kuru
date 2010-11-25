@@ -55,7 +55,7 @@ struct
     | BOOL of bool
     | UNIT
     | IDENT of S.symbol
-    | ENV of S.symbol
+    | ENV of int 
     | TUPLE
     | IF
     | WHILE
@@ -86,7 +86,7 @@ struct
      | ppopr (BOOL false) = "false"
      | ppopr UNIT = "()"
      | ppopr (IDENT s) = S.name s
-     | ppopr (ENV s) = "$env->" ^ S.name s
+     | ppopr (ENV s) = "*(env+1+" ^ Int.toString s ^ ")"
      | ppopr TUPLE = "TUPLE"
      | ppopr IF = "IF"
      | ppopr WHILE = "WHILE"

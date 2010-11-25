@@ -51,7 +51,7 @@ struct
                                " }"]
      | cg_ty (Temp.array (i,t)) = j [ "[", Int.toString i, " x ", cg_ty t, "]" ]
      | cg_ty (Temp.self_ref i) = j ["\\",Int.toString i]
-     | cg_ty (Temp.named s) = s
+     | cg_ty (Temp.named s) = "%" ^ s
 
    val ppt = Temp.prettyPrint
    val ppt_np = Temp.prettyPrintNoPrefix 
@@ -59,7 +59,7 @@ struct
    fun opt_t (true,s) = s ^ " "
      | opt_t (false,s) = ""
 
-   fun cg_frag' (T.FSTRING (l,s)) = 
+ (*  fun cg_frag' (T.FSTRING (l,s)) = 
       j [ppt l, " = ", 
          "private constant ",
            "[", Int.toString (size s + 1), " x i8] c",
@@ -83,11 +83,13 @@ struct
          ]
      | cg_frag' _ = Error.bug ("cg_frag","Invalid POLYFN fragment",(0,""))
         
-   and cg_frag l = (cg_frag' l)
+   and cg_frag l = (cg_frag' l)*)
 
-   and cg_cmp t (Asm.REQ) _ _ = raise Fail "cg_cmp: REQ not implemented"
-     | cg_cmp t (Asm.RNEQ) _ _ = raise Fail "cg_cmp: RNEQ not implemented"
-     | cg_cmp t opr e1 e2 =
+   fun cg_frag _ = "; FRAG WOULD GO HERE MAYBE" (* FIXME *)
+
+   and cg_cmp (Asm.REQ) _ _ = raise Fail "cg_cmp: REQ not implemented"
+     | cg_cmp (Asm.RNEQ) _ _ = raise Fail "cg_cmp: RNEQ not implemented"
+     | cg_cmp opr e1 e2 =
        let
           val opr' = 
            (case opr of 
@@ -103,7 +105,7 @@ struct
              | Asm.UGE => "uge"
              | _ => "???")
        in
-          j [ppt t, " = icmp ", opr', " ",
+          j ["icmp ", opr', " ",
              cg_exp_t e1, ", ", cg_exp e2]
        end
 
@@ -132,7 +134,7 @@ struct
      | cg_exp' b (Asm.ELEM_PTR (ty,e1,i)) =
          j [
             "getelementptr ", cg_ty ty, "* ", cg_exp e1, ", i32 0, i32 ",
-            Int.toString i
+            (String.concatWith ", i32 " (map Int.toString i))
          ]
      | cg_exp' b (Asm.VOID) = 
          j [opt_t (b,"void"), "void"]
@@ -176,6 +178,8 @@ struct
                 " to ", cg_ty ty]
      | cg_exp' b (Asm.ALIAS e) = 
              j ["alias ", cg_exp e]
+     | cg_exp' b (Asm.CMP (r,e1,e2)) =
+             cg_cmp r e1 e2
      | cg_exp' b _ = raise Fail "cg_exp' b: Not implemented"
 
    and cg_exp_t e = (cg_exp' true e)
@@ -190,20 +194,6 @@ struct
           j [ind i, "br label ", cg_exp e]
      | cg_stm i (Asm.CJUMP (e,l1,l2)) =
        j [ind i, "br ", cg_exp_t e, ", label ", ppt l1, ", label ", ppt l2]
-     | cg_stm i (Asm.CJUMP2 (r,e1,e2,l1,l2)) =
-       let
-          val c = Temp.newtemp (Temp.i1)
-       in
-          jnl [
-             j [ind i, cg_cmp c r e1 e2],
-             j [ind i, "br i1 ", ppt c, ", ",
-                jc [
-                   j ["label ", ppt l1],
-                   j ["label ", ppt l2]
-                ]
-             ]
-          ]
-       end
      | cg_stm i (Asm.PHI (e, t, el)) =
        let
           val el' = 
@@ -223,6 +213,10 @@ struct
           j [ind i, "store ", cg_exp_t e1, ", ", cg_exp_t e2]
      | cg_stm i (Asm.COMMENT s) = 
           j [ind i, "; ", s]
+     | cg_stm i (Asm.UNREACHABLE) =
+          j [ind i, "unreachable"]
+     | cg_stm i (Asm.DECLARE (ot,n,it)) =
+          j [ind i, "declare ", cg_ty ot, " @", n, " (", cg_ty it, ")"]
 
    fun codegen (stms, frags) =
       jnl [

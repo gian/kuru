@@ -56,10 +56,12 @@ struct
 
    fun prettyPrint (i,label s) = "%" ^ s
      | prettyPrint (i,global (s,_)) = "@" ^ s
+     | prettyPrint (i,named s) = "%" ^ s
      | prettyPrint (i,_) = "%t" ^ Int.toString i
 
    fun prettyPrintNoPrefix (i,label s) = s
      | prettyPrintNoPrefix (i,global (s,_)) = s
+     | prettyPrintNoPrefix (i,named s) = s
      | prettyPrintNoPrefix (i,_) = "t" ^ Int.toString i
 
    fun getMachineWord () = 

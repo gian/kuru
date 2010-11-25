@@ -33,6 +33,7 @@ struct
                 | NAME of Temp.label
                 | TEMP of Temp.temp
                 | MEM of exp
+                | CMP of relop * exp * exp
                 | CALL of Temp.ty * exp * exp
                 | SEQ of exp list
                 | TUPLE of Temp.ty list * exp list
@@ -49,21 +50,20 @@ struct
                 | VOID
                 | NULL of Temp.ty
                 | ALIAS of exp
-                | ENV of S.symbol * Temp.ty
+                | ENV of int * Temp.ty
    
         and stm = MOVE of exp * exp
                 | EXP of exp
                 | JUMP of exp * Temp.label list
                 | CJUMP of exp * Temp.label * Temp.label
-                | CJUMP2 of relop * exp * exp * Temp.label * Temp.label
                 | PHI of exp * Temp.ty * (exp * Temp.label) list
                 | LABEL of Temp.label
                 | RET of exp
                 | STORE of exp * exp
                 | UNWIND
                 | COMMENT of string
-                | FUNCTION of Temp.ty * Temp.label * Temp.temp * stm list
-                | BLOCK of Temp.label * stm list * Temp.label
+                | DECLARE of Temp.ty * string * Temp.ty
+                | UNREACHABLE
    
       and relop = EQ | NEQ | LT | GT | LE | GE | ULT | ULE | UGT | UGE
                 | REQ | RNEQ
@@ -100,12 +100,16 @@ struct
      | ppe (TUPLE_IND (e,i)) = ppe e ^ "[" ^ Int.toString i ^ "]"
      | ppe (TUPLE_INS (e1,e2,i)) = ppe e1 ^ "[" ^ Int.toString i ^ "] <- " ^
                                      ppe e2
-     | ppe (ELEM_PTR (t,e,i)) = "ELEM_PTR [" ^ ppe e ^ ", " ^ Int.toString i ^ "]"
+     | ppe (ELEM_PTR (t,e,i)) = "ELEM_PTR [" ^ ppe e ^ ", " ^ 
+            (String.concatWith ", " (map Int.toString i)) ^ "]"
      | ppe (UNDEF _) = "UNDEF"
      | ppe VOID = "void"
      | ppe (BINOP (s,a,b)) = "BINOP " ^ s ^ " [" ^ ppe a ^ ", " ^ ppe b ^ "]"
      | ppe (BUILTIN s) = "BUILTIN " ^ s
      | ppe (ALLOCA t) = "ALLOCA"
+     | ppe (CMP (r,e1,e2)) = "CMP " ^ ppr r ^ " " ^
+                                            ppe e1 ^ " " ^
+                                            ppe e2 
      | ppe _ = "???"
 
    fun ppstm (MOVE (e1,e2)) = ppe e1 ^ " <- " ^ ppe e2
@@ -114,11 +118,6 @@ struct
      | ppstm (CJUMP (e,l1,l2)) = "CJUMP " ^ ppe e ^ " " ^
                                        ppt l1 ^ " " ^
                                        ppt l2
-     | ppstm (CJUMP2 (r,e1,e2,l1,l2)) = "CJUMP2 " ^ ppr r ^ " " ^
-                                            ppe e1 ^ " " ^
-                                            ppe e2 ^ " " ^
-                                            ppt l1 ^ " " ^
-                                            ppt l2
      | ppstm (PHI (e1, t, l)) = ppe e1 ^ " <- PHI [" ^
                               String.concatWith ", " (
                                 map (fn (e,ll) => 
@@ -129,6 +128,9 @@ struct
      | ppstm (UNWIND) = "UNWIND"
      | ppstm (STORE (e1,e2)) = "STORE " ^ ppe e2 ^ " <- " ^ ppe e1
      | ppstm (COMMENT s) = "; " ^ s
+     | ppstm (UNREACHABLE) = "unreachable"
+     | ppstm (DECLARE (ot,n,it)) = 
+         "DECLARE " ^ n
 
    fun prettyPrint [] = ""
      | prettyPrint (h::t) = ppstm h ^ "\n" ^ prettyPrint t
