@@ -216,7 +216,7 @@ struct
          val env = A.TEMP (Temp.newtemp (Temp.env clty))
       in
          (rt, 
-          [A.MOVE (rt',A.ELEM_PTR (clty,env,[0,i])),
+          [A.MOVE (rt',A.ELEM_PTR (clty,env,[0,i+1])),
            A.MOVE (rt, A.LOAD rt')])
       end
      | tr_exp (I.N (I.TUPLE, c, T.TUPLE t, _, _)) =

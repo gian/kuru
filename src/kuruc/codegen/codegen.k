@@ -224,7 +224,7 @@ struct
      | cg_stm i (Asm.FUNDEC (rt,name,param,body)) =
             j [
                jsp ["define ",cg_ty rt,j ["@",name],"("],
-               "%closure",name,"_t %env, ",
+               "%closure",name,"_t* %env, ",
                cg_exp_t (Asm.TEMP param), ") {\n",
                jnl (map (cg_stm 2) body),
                "\n}\n"
