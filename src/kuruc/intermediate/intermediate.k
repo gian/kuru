@@ -78,6 +78,7 @@ struct
     | IMPORT of S.symbol * T.ty * S.symbol
     | STUB
     | FUNDEC of S.symbol
+    | ALIAS of S.symbol * S.symbol * T.ty
     | PROGRAM
 
    fun ppopr (INT i) = Int.toString i
@@ -111,6 +112,7 @@ struct
      | ppopr NIL = "NIL"
      | ppopr STUB = "STUB"
      | ppopr (FUNDEC s) = "FUNDEC " ^ S.name s
+     | ppopr (ALIAS (k,s,t)) = "ALIAS " ^ S.name k ^ " = " ^ S.name s
      | ppopr PROGRAM = "PROGRAM"
 
    fun ind 0 = ""

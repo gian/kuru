@@ -114,7 +114,7 @@ struct
      | cg_exp' b (Asm.BCONST i) = j [opt_t (b, "i1"), if i then "true" else "false"]
      | cg_exp' b (Asm.EXN _) = j [opt_t (b, "i32"), "123456"] (* FIXME *)
      | cg_exp' b (Asm.NAME l) = j [opt_t (b, cg_ty (Temp.getType l)), ppt l]
-     | cg_exp' b (Asm.BUILTIN s) = "@" ^ s
+     | cg_exp' b (Asm.BUILTIN (s,t)) = j [opt_t (b, cg_ty t), "@",s]
      | cg_exp' b (Asm.NULL t) = j [opt_t (b, cg_ty t), "null"]
      | cg_exp' b (Asm.TEMP t) = j [opt_t (b,cg_ty (Temp.getType t)), ppt t]
      | cg_exp' b (Asm.CALL (ty,e1,e2)) = 

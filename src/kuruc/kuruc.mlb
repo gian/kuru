@@ -39,7 +39,6 @@ optimise/constant_fold.sml
 semant/typeclass.sml
 codegen/temp.sml
 codegen/asm.sml
-codegen/builtins.sml
 codegen/translate.sml
 codegen/codegen_decs.sml
 codegen/codegen.sml

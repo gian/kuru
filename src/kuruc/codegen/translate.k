@@ -185,8 +185,9 @@ struct
      | tr_exp (I.N (I.STRING s, _, _, _, p)) =
       let
          val strty = Temp.named "string"
+         val nstrty = Temp.aggr [Temp.i32, Temp.ptr Temp.i8]
          val rt' = A.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
-         val rt = A.TEMP (Temp.newtemp (Temp.ptr strty))
+         val rt = A.TEMP (Temp.newtemp (strty))
          val tt = A.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
          val tlen = A.TEMP (Temp.newtemp (Temp.ptr Temp.i32))
          val tptr = A.TEMP (Temp.newtemp (Temp.ptr (Temp.ptr Temp.i8)))
@@ -194,19 +195,19 @@ struct
          val _ = addData (A.SCONST (l,s))
       in
          (rt,
-          [A.MOVE (rt', A.MALLOC (strty,1)),
-           A.MOVE (rt, A.BITCAST (rt',Temp.ptr strty)),
-           A.MOVE (tlen, A.ELEM_PTR (Temp.ptr strty, rt, [0,0])),
+          [A.MOVE (rt', A.MALLOC (nstrty,1)),
+           A.MOVE (rt, A.BITCAST (rt',strty)),
+           A.MOVE (tlen, A.ELEM_PTR (nstrty, rt, [0,0])),
            A.STORE (A.CONST (size s), tlen),
-           A.MOVE (tt,A.ELEM_PTR (Temp.array (size s, Temp.i8),A.NAME l,[0,0])),
-           A.MOVE (tptr, A.ELEM_PTR (Temp.ptr strty, rt, [0,1])),
+           A.MOVE (tt,A.ELEM_PTR (Temp.array (1+size s, Temp.i8),A.NAME l,[0,0])),
+           A.MOVE (tptr, A.ELEM_PTR (nstrty, rt, [0,1])),
            A.STORE (tt,tptr)
           ])
       end
      | tr_exp (I.N (I.REAL r, _, _, _, _)) = (A.RCONST r, [])
      | tr_exp (I.N (I.BOOL b, _, _, _, _)) = (A.BCONST b, [])
      | tr_exp (I.N (I.UNIT, _, _, _, _)) = 
-         (A.TEMP (Temp.newtemp (Temp.named "unit")),[])
+         (A.NULL (Temp.named "unit"),[])
      | tr_exp (I.N (I.IDENT s, _, t, _, p)) = (getEnv p s, [])
      | tr_exp (I.N (I.ENV (i,s), _, t, _, _)) = 
       let
@@ -222,11 +223,14 @@ struct
      | tr_exp (I.N (I.TUPLE, c, T.TUPLE t, _, _)) =
       let
          val tty = Temp.aggr (map tr_ty t)
+         val t'' = A.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
          val t' = A.TEMP (Temp.newtemp (Temp.ptr tty))
 
          val offset = ref 0
 
-         val ins = A.MOVE (t', A.MALLOC (tty,1)) ::
+         val ins = 
+            [A.MOVE (t'', A.MALLOC (tty,1)),
+             A.MOVE (t', A.BITCAST (t'', Temp.ptr tty))] @
             (List.foldl (
                fn (e, i) =>
                let
@@ -246,7 +250,6 @@ struct
      | tr_exp (I.N (I.IF, [a,b,c], t, _, p)) =
       let
          (* Layout will look like this:
-            entryLabel:
                <code to calculate %a>
                br i1 %a, %trueLabel, %falseLabel
             trueLabel:
@@ -273,16 +276,17 @@ struct
          val (c',ci) = tr_exp c
 
          val (trueSource,trueDest) = 
-               if length bi = 0 then (entryLabel,endLabel) 
-                                else (trueLabel,trueLabel)
+             (*  if length bi = 0 then (entryLabel,endLabel) 
+                                else *) (trueLabel,trueLabel)
          val (falseSource,falseDest) = 
-               if length ci = 0 then (entryLabel,endLabel)
-                                else (falseLabel,falseLabel)
+           (*    if length ci = 0 then (entryLabel,endLabel)
+                                else*) (falseLabel,falseLabel)
 
          val rt = A.TEMP (Temp.newtemp (tr_ty t))
       in
-         (rt, 
-          A.LABEL entryLabel ::
+         (rt,
+         [A.JUMP (A.NAME entryLabel, [entryLabel]),
+          A.LABEL entryLabel] @
           ai @
          [A.CJUMP (a',trueDest,falseDest),
           A.LABEL trueLabel] @
@@ -382,7 +386,7 @@ struct
          val (e',ei) = tr_exp e
       in
          (A.VOID,
-          ei @ [A.EXP (A.CALL (Temp.void, A.BUILTIN "RAISE", e')),
+          ei @ [A.EXP (A.CALL (Temp.void, A.BUILTIN ("RAISE",Temp.void), e')),
                 A.UNREACHABLE])
       end
      | tr_exp (I.N (I.HANDLE,_,_,_,p)) = 
@@ -431,29 +435,35 @@ struct
                     | _ => Error.bug ("Translate.tr_exp",
                                       "Constructor with > 1 arg", p)
 
+         val rt' = A.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
          val rt = A.TEMP (Temp.newtemp (Temp.ptr t'))
          val tmp1 = A.TEMP (Temp.newtemp (Temp.ptr Temp.i32))
          val tmp2 = A.TEMP (Temp.newtemp (Temp.ptr (Temp.ptr Temp.i8)))
 
          val ins = ci @
-            [A.MOVE (rt, A.MALLOC (t',1)),
-             A.MOVE (tmp1, A.ELEM_PTR (Temp.ptr t', rt, [0,0])),
-             A.MOVE (tmp2, A.ELEM_PTR (Temp.ptr t', rt, [0,1])),
+            [A.MOVE (rt', A.MALLOC (t',1)),
+             A.MOVE (rt, A.BITCAST (rt',Temp.ptr t')),
+             A.MOVE (tmp1, A.ELEM_PTR (t', rt, [0,0])),
+             A.MOVE (tmp2, A.ELEM_PTR (t', rt, [0,1])),
              A.STORE (A.CONST i, tmp1),
              A.STORE (c',tmp2)]
       in
          (rt,ins)
       end
-     | tr_exp (I.N (I.CLOSURE, f::env, t, _, p)) =
+     | tr_exp (I.N (I.CLOSURE, f::env, T.FN ([it],ot), _, p)) =
       let
          val (f',fi) = tr_exp f
          val (env',envi) = ListPair.unzip (map tr_exp env)
          val ety = map (tr_ty o I.getType) env
 
-         val cty = Temp.aggr ((tr_ty t) :: ety)
+         val fty = Temp.fn_ptr 
+                     ([Temp.ptr (Temp.named "closure_t"), tr_ty it], tr_ty ot)
+
+         val cty = Temp.aggr (fty :: ety)
          val rt' = A.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
          val rt = A.TEMP (Temp.newtemp (Temp.ptr cty))
-         val tmp1 = A.TEMP (Temp.newtemp (Temp.ptr (tr_ty t)))
+         val tmp1 = A.TEMP (Temp.newtemp (Temp.ptr (fty)))
+         val tmp2 = A.TEMP (Temp.newtemp ((fty)))
 
          val ix = ref 0
 
@@ -461,7 +471,8 @@ struct
             [A.MOVE (rt', A.MALLOC (cty,1)),
              A.MOVE (rt, A.BITCAST (rt',Temp.ptr cty)),
              A.MOVE (tmp1, A.ELEM_PTR (cty, rt, [0,0])),
-             A.STORE (f', tmp1)] @
+             A.MOVE (tmp2, A.BITCAST (f', fty)),
+             A.STORE (tmp2, tmp1)] @
            (List.concat (List.map
             (fn (v,t) => 
              let
@@ -469,14 +480,14 @@ struct
                 val ix' = !ix
                 val _ = ix := ix' + 1
              in
-               [A.MOVE (tmp, A.ELEM_PTR (Temp.ptr cty, rt, [0,ix'])),
+               [A.MOVE (tmp, A.ELEM_PTR (cty, rt, [0,ix'])),
                 A.STORE (v,tmp)]
              end)
             (ListPair.zip (env',ety))))
       in
          (rt,ins)
       end
-     | tr_exp (I.N (I.EXTERN s,_,_,_,p)) = (A.BUILTIN (S.name s), [])
+     | tr_exp (I.N (I.EXTERN s,_,t,_,p)) = (A.BUILTIN (S.name s, tr_ty t), [])
      | tr_exp (x as I.N (_,_,_,_,p)) = 
       Error.bug ("Translate.tr_exp", "Not implemented: " ^ I.prettyPrint x,p)
 
@@ -487,27 +498,42 @@ struct
       in
          ei
       end
+     | tr_stm (I.N (I.BIND s, [], _, _, _)) = []
      | tr_stm (I.N (I.MUTUAL, v, _, _, p)) = 
          List.concat (map tr_stm v)
-     | tr_stm (I.N (I.IMPORT (ename, T.FN ([it],ot), iname), _, _, _, _)) =
+     | tr_stm (I.N (I.IMPORT (ename, t as T.FN ([it],ot), iname), _, _, _, _)) =
       let
-         val b = A.BUILTIN (S.name ename)
+         val b = A.BUILTIN (S.name ename, tr_ty t)
          val _ = addEnv iname b
          val _ = addData (A.DECLARE (tr_ty ot, S.name ename, tr_ty it))
       in
          []
       end
-     | tr_stm (I.N(I.FUNDEC s,[I.N(I.IDENT s',_,_,_,_),e],T.FN ([it],ot), _, p)) =
+     | tr_stm 
+         (I.N(I.FUNDEC s,[I.N(I.IDENT s',_,_,_,_),e],t as T.FN ([it],ot), _, p)) =
       let
          val param = Temp.newtemp (tr_ty it)
          val _ = addEnv s' (A.TEMP param)
-         val _ = addEnv s (A.NAME (Temp.labelFromString (S.name s)))
+         val _ = addEnv s 
+            (A.NAME (
+               Temp.newtemp (
+                  Temp.global (
+                     S.name s,
+                        Temp.fn_ptr ([Temp.ptr 
+                                       (Temp.named ("closure" ^ S.name s ^ "_t")),
+                                      tr_ty it], tr_ty ot)))))
          val (e',ei) = tr_exp e
 
          val _ = addData (A.FUNDEC (tr_ty ot, S.name s, param, 
                            [A.LABEL (Temp.newlabel ())] @
                            ei @
                            [A.RET e']))
+      in
+         []
+      end
+     | tr_stm (I.N (I.ALIAS (k,s,t),_,_,_,_)) =
+      let
+         val _ = addEnv k (A.BUILTIN (S.name s,tr_ty t)) 
       in
          []
       end

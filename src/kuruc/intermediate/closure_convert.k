@@ -79,7 +79,8 @@ struct
      | lift s (h::t) n = 
          lift s t (repEnv s (exSym h) n)
 
-   fun names b (n as I.N (I.IDENT k,_,_,_,_)) = 
+   fun names b (n as I.N (I.IDENT k,_,T.FN _,_,_)) = []
+     | names b (n as I.N (I.IDENT k,_,_,_,_)) = 
       if (List.exists (fn x => x = k) b) orelse
             isGlobal k then [] else [n]
      | names b (n as I.N (I.BIND k,[e],_,_,_)) =
@@ -108,6 +109,12 @@ struct
          map (fn (_,i) => i) (!lifted)
    in
       I.N (I.PROGRAM, lifted' @ l', t, m, p)
+   end
+     | liftFun (I.N (I.BIND k, [I.N (I.EXTERN s,_,t,_,_)], _,_,p)) =
+   let
+      val _ = lift k [] (I.N (I.ALIAS (k,s,t),[],t,[],p))
+   in
+      I.N (I.BIND k,[],T.UNKNOWN,[],p)
    end
      | liftFun (I.N (I.BIND s, [e], t, m, p)) =
    let

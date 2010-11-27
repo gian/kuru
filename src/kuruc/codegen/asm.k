@@ -42,7 +42,7 @@ struct
                 | ELEM_PTR of Temp.ty * exp * int list
                 | UNDEF of Temp.ty
                 | BINOP of string * exp * exp
-                | BUILTIN of string
+                | BUILTIN of string * Temp.ty
                 | ALLOCA of Temp.ty
                 | MALLOC of Temp.ty * int
                 | LOAD of exp
@@ -107,7 +107,7 @@ struct
      | ppe (UNDEF _) = "UNDEF"
      | ppe VOID = "void"
      | ppe (BINOP (s,a,b)) = "BINOP " ^ s ^ " [" ^ ppe a ^ ", " ^ ppe b ^ "]"
-     | ppe (BUILTIN s) = "BUILTIN " ^ s
+     | ppe (BUILTIN (s,t)) = "BUILTIN " ^ s
      | ppe (ALLOCA t) = "ALLOCA"
      | ppe (CMP (r,e1,e2)) = "CMP " ^ ppr r ^ " " ^
                                             ppe e1 ^ " " ^
