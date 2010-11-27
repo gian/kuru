@@ -208,6 +208,20 @@ struct
      | tr_exp (I.N (I.BOOL b, _, _, _, _)) = (A.BCONST b, [])
      | tr_exp (I.N (I.UNIT, _, _, _, _)) = 
          (A.NULL (Temp.named "unit"),[])
+(*     | tr_exp (I.N (I.IDENT s, _, T.FN ([it],ot), _, p)) =
+      let
+         val cl = getEnv p s (* The closure for the function *)
+         val fty = Temp.fn_ptr ([Temp.named "closure_t", tr_ty it],tr_ty ot)
+         val f' = A.TEMP (Temp.newtemp (Temp.ptr fty)) 
+         val f = A.TEMP (Temp.newtemp fty) 
+         val cl' = A.TEMP (Temp.newtemp (Temp.named "closure_t"))
+      in
+         case cl of A.BUILTIN _ => (cl,[]) | _ =>
+         (f, 
+         [A.MOVE (cl', A.BITCAST (cl, Temp.named "closure_t")),
+          A.MOVE (f', A.ELEM_PTR (Temp.named "closure_t", cl', [0,0])),
+          A.MOVE (f, A.LOAD f')])
+      end*)
      | tr_exp (I.N (I.IDENT s, _, t, _, p)) = (getEnv p s, [])
      | tr_exp (I.N (I.ENV (i,s), _, t, _, _)) = 
       let
@@ -371,22 +385,58 @@ struct
       let
          val t' = tr_ty t
 
-         val (a',ai) = tr_exp a
+         val _ = Debug.print Debug.debug
+            ("tr_exp: APP (" ^ I.prettyPrint a ^ ", ...)\n")
+
+         val (a',cl,ai) = 
+         case tr_exp a of 
+            (a' as A.BUILTIN _,ai) => (a',NONE,ai)
+          | (a',ai) => (* Closure *)
+          let
+             val t'' = 
+               case I.getType a of
+                  T.FN ([it],ot) => 
+                      (Temp.fn_ptr ([Temp.ptr (Temp.named "closure_t"),tr_ty it],
+                                   tr_ty ot))
+               | _ => Error.bug ("Translate.tr_exp",
+                        "Non-function application", p)
+
+             val a'' = A.TEMP (Temp.newtemp (Temp.ptr (Temp.named "closure_t")))
+             val f' = A.TEMP (Temp.newtemp (Temp.ptr (Temp.ptr Temp.i8)))
+             val f = A.TEMP (Temp.newtemp (t''))
+          in
+             (f,SOME a'',
+              ai @
+              [A.MOVE (a'', A.BITCAST (a', Temp.ptr (Temp.named "closure_t"))),
+               A.MOVE (f', 
+                  A.ELEM_PTR ((Temp.named "closure_t"), a'', [0,0])),
+               A.MOVE (f, A.BITCAST (f', t''))])
+          end
+         
          val (b',bi) = tr_exp b
+
+         val b'' = 
+            case cl of 
+               NONE => [b']
+             | SOME c => [c,b']
+              
+
+         val _ = Debug.print Debug.debug
+            ("tr_exp ASM: APP (" ^ Asm.ppe a' ^ ", ...)\n")
 
          val rt = A.TEMP (Temp.newtemp t')
       in
          if t' = Temp.void then
             (A.VOID, 
-             ai @ bi @ [A.EXP (A.CALL (t',a',b'))])
-         else (rt, ai @ bi @ [A.MOVE (rt, A.CALL (t',a',b'))])
+             ai @ bi @ [A.EXP (A.CALL (t',a',b''))])
+         else (rt, ai @ bi @ [A.MOVE (rt, A.CALL (t',a',b''))])
       end
      | tr_exp (I.N (I.RAISE, [e], t, _, p)) =
       let
          val (e',ei) = tr_exp e
       in
          (A.VOID,
-          ei @ [A.EXP (A.CALL (Temp.void, A.BUILTIN ("RAISE",Temp.void), e')),
+          ei @ [A.EXP (A.CALL (Temp.void, A.BUILTIN ("RAISE",Temp.void), [e'])),
                 A.UNREACHABLE])
       end
      | tr_exp (I.N (I.HANDLE,_,_,_,p)) = 
@@ -456,10 +506,12 @@ struct
          val (env',envi) = ListPair.unzip (map tr_exp env)
          val ety = map (tr_ty o I.getType) env
 
-         val fty = Temp.fn_ptr 
-                     ([Temp.ptr (Temp.named "closure_t"), tr_ty it], tr_ty ot)
+         (* val fty = Temp.fn_ptr 
+                     ([Temp.ptr (Temp.named "closure_t"), tr_ty it], tr_ty ot) *)
+         val fty = Temp.ptr (Temp.i8)
 
-         val cty = Temp.aggr (fty :: ety)
+         (* val cty = Temp.aggr (fty :: ety) *)
+         val cty = Temp.named "closure_t"
          val rt' = A.TEMP (Temp.newtemp (Temp.ptr Temp.i8))
          val rt = A.TEMP (Temp.newtemp (Temp.ptr cty))
          val tmp1 = A.TEMP (Temp.newtemp (Temp.ptr (fty)))
@@ -520,7 +572,7 @@ struct
                   Temp.global (
                      S.name s,
                         Temp.fn_ptr ([Temp.ptr 
-                                       (Temp.named ("closure" ^ S.name s ^ "_t")),
+                                       (Temp.named ("closure_t")),
                                       tr_ty it], tr_ty ot)))))
          val (e',ei) = tr_exp e
 

@@ -119,7 +119,7 @@ struct
      | cg_exp' b (Asm.TEMP t) = j [opt_t (b,cg_ty (Temp.getType t)), ppt t]
      | cg_exp' b (Asm.CALL (ty,e1,e2)) = 
          jsp ["call ",cg_ty ty,cg_exp e1,
-                j ["(", cg_exp_t e2, ")"]
+                j ["(", jc (map cg_exp_t e2), ")"]
              ]
      | cg_exp' b (Asm.TUPLE_IND (e,i)) =
          j [
@@ -224,7 +224,7 @@ struct
      | cg_stm i (Asm.FUNDEC (rt,name,param,body)) =
             j [
                jsp ["define ",cg_ty rt,j ["@",name],"("],
-               "%closure",name,"_t* %env, ",
+               "%closure_t* %env, ",
                cg_exp_t (Asm.TEMP param), ") {\n",
                jnl (map (cg_stm 2) body),
                "\n}\n"

@@ -34,7 +34,7 @@ struct
                 | TEMP of Temp.temp
                 | MEM of exp
                 | CMP of relop * exp * exp
-                | CALL of Temp.ty * exp * exp
+                | CALL of Temp.ty * exp * exp list
                 | SEQ of exp list
                 | TUPLE of Temp.ty list * exp list
                 | TUPLE_IND of exp * int
@@ -95,7 +95,8 @@ struct
      | ppe (NAME l) = ppt l
      | ppe (TEMP t) = ppt t
      | ppe (MEM e) = "MEM " ^ ppe e
-     | ppe (CALL (t,e1,e2)) = "CALL " ^ ppe e1 ^ " (" ^ ppe e2 ^ ")"
+     | ppe (CALL (t,e1,e2)) = 
+         "CALL " ^ ppe e1 ^ " (" ^ String.concatWith ", " (map ppe e2) ^ ")"
      | ppe (SEQ l) = "SEQ (" ^ String.concatWith "; " (map ppe l) ^ ")"
      | ppe (TUPLE (tl,el)) = "TUPLE (" ^ String.concatWith ","
                                              (map ppe el) ^ ")"
