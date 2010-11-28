@@ -163,7 +163,7 @@ struct
         | mpat (A.PINFIX (p1,s,p2,t,p)) = 
             I.N (I.PINFIX s, [mpat p1, mpat p2], t, [], p)
         | mpat (A.PWILD p) = I.N (I.PWILD, [], T.UNKNOWN, [], p)
-        | mpat (A.PNIL p) = I.N (I.NIL, [], T.UNKNOWN, [], p)
+        | mpat (A.PNIL p) = I.N (I.NIL, [], T.t_list, [], p)
         | mpat (A.PUNIT p) = I.N (I.UNIT, [], T.t_unit, [], p)
         | mpat _ = Error.bug ("Monomorphise.mpat", "Invalid pattern", (0,""))
 
@@ -262,7 +262,7 @@ struct
         | mexp (A.ECON (i,NONE,t,p)) = I.N (I.CON i,[],t,[],p)
         | mexp (A.ECON (i,SOME (e,t'),t,p)) = I.N (I.CON i,[mexp e],t,[],p)
         | mexp (A.ESTUB (t,p)) = I.N (I.STUB,[],t,[],p)
-        | mexp (A.ENIL p) = I.N (I.NIL,[],T.UNKNOWN,[],p)
+        | mexp (A.ENIL p) = I.N (I.NIL,[],T.t_list,[],p)
         | mexp x = Error.bug ("Monomorphise","Not implemented: " ^ A.ppe x,(0,"")) 
 
       fun mstm (A.DVAL (s,e,t,p)) = 

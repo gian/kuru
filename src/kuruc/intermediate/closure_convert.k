@@ -85,6 +85,8 @@ struct
             isGlobal k then [] else [n]
      | names b (n as I.N (I.BIND k,[e],_,_,_)) =
          names (k :: b) e
+     | names b (n as I.N (I.MATCH, [a,c],_,_,_)) =
+         names (b @ (map exSym (names b a))) c
      | names b (I.N (_,l,_,_,_)) = 
          List.concat (map (names b) l)
 

@@ -109,7 +109,7 @@ struct
      | pp (CON (i,NONE,t2)) = " CON : " ^ pp t2 
      | pp (CON (i,SOME t1,t2)) = " CON of " ^ pp t1 ^ " : " ^ pp t2
      | pp (CLOSURE l) = "CLOSURE {" ^ String.concatWith "," (map pp l) ^ "}"
-     | pp _ = "???"
+     | pp (UNKNOWN) = "T.UNKNOWN"
 
 	val prettyPrint = pp
 

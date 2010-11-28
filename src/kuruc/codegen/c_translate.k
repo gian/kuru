@@ -54,6 +54,7 @@ struct
        | "unit" => "kuru_unit_t"
        | "bool" => "kuru_bool_t"
        | "cvoid" => "void"
+       | "list" => "kuru_list_t *"
        | n => "constr_t *")
      | tr_ty (T.TUPLE t) =
       let
@@ -65,12 +66,12 @@ struct
                val i = !ixi
                val _ = ixi := !ixi + 1
             in
-               "f " ^ Int.toString i
+               "f" ^ Int.toString i
             end
 
          val b = 
             String.concatWith ";\n   " 
-               (map (fn x => tr_ty x ^ " " ^ (ix ())) t)
+               (map (fn x => tr_ty x ^ " " ^ (ix ()) ^ ";") t)
 
          val d = ["typedef struct {"] @
                   [b] @
@@ -80,9 +81,10 @@ struct
       in
          tn
       end
-     | tr_ty (T.CONSTR ([t1],t2)) = "constr_t *" 
+     | tr_ty (T.CONSTR ([t1],t2)) = tr_ty t2 (* FIXME *) 
      | tr_ty (T.FN ([t1],t2)) = "closure_t *"
-     | tr_ty t = 
+     | tr_ty (T.UNKNOWN) = "void *"
+     | tr_ty t =
       Error.bug ("CTranslate.tr_ty", "Not implemented: " ^ T.prettyPrint t, (0,""))
 
    fun tr_pat ex (I.N (I.INT i,_,_,_,_)) = (ex ^ " == " ^ Int.toString i,[])
@@ -97,37 +99,52 @@ struct
      | tr_pat ex (I.N (I.TUPLE, v, T.TUPLE t, _, _)) =
       let
          val rt = fresh ()
-         
+        
+         val endLabel = fresh ()
+
          val ixi = ref 0
          fun ix () = 
             let
                val i = !ixi
                val _ = ixi := !ixi + 1
             in
-               "f " ^ Int.toString i
+               "f" ^ Int.toString i
             end
 
-      (*   val v' =
-            List.foldr
-            (fn (p,bdy) => 
+         val v' =
+         List.concat (
+            List.map
+            (fn p => 
                let
                   val i = ix ()
                   val (p',pi) = tr_pat (j [ex,"->",i]) p
                in
                   pi @
-                 [j ["if ((",p',")) {"]] @
-                  bdy @
-                 ["}"]
-               end) [rt^" = TRUE;"] v *)
+                 [j ["if (!(",p',")) {"],
+                  j [rt," = FALSE;"],
+                  j ["goto ", endLabel,";"],
+                 "}"]
+               end) v)
 
       in
-        (* (rt,
-         [j ["bool ",rt," = FALSE;"]] @ v') *)
-        ("FOOBARRR****",[]) (* FIXME *)
+         (rt,
+         [j ["kuru_bool_t ",rt," = TRUE;"]] @ v' @ [endLabel ^ ":"]) 
       end
      | tr_pat ex (I.N(I.PWILD,_,_,_,_)) = ("TRUE",[])
      | tr_pat ex (I.N(I.NIL,_,_,_,_)) =
-         (j [ex," == NULL"], []) 
+         (j [ex," == NULL"], [])
+     | tr_pat ex (I.N(I.CON i,b,_,_,p)) =
+      let
+         val c1 = ex ^ "->i == " ^ Int.toString i
+
+         val (b',bi) = 
+            case b of [] => ("TRUE",[])
+                    | [e] => tr_pat (ex ^ "->data") e
+                    | _ => 
+                    Error.bug ("CTranslate.tr_pat","Invalid CON",p)
+      in
+         (j ["(",c1," && ",b',")"], bi)
+      end
      | tr_pat ex (x as I.N (_,_,_,_,p)) =
          Error.bug ("Translate.tr_pat", "Invalid pattern: " ^ I.prettyPrint x, p)
 
@@ -291,7 +308,7 @@ struct
          bi @
          [j ["constr_t *", rt, " = (constr_t *) KMALLOC(sizeof(constr_t));"],
           j [rt,"->i = ",Int.toString i,";"],
-          j [rt,"->data = ", b', ";"]])
+          j [rt,"->data = (void *)", b', ";"]])
       end
      | tr_exp (I.N (I.CLOSURE, f::env, T.FN ([it],ot), _, p)) =
       let
@@ -304,6 +321,7 @@ struct
          [j["closure_t *",rt," = (closure_t *) KMALLOC (sizeof(closure_t));"],
           j[rt,"->func = ",f',";"]])
       end
+     | tr_exp (I.N (I.NIL, _, _, _, _)) = ("NULL",[])
      | tr_exp (x as I.N (_,_,_,_,p)) = 
       Error.bug ("CTranslate.tr_exp", "Not implemented: " ^ I.prettyPrint x,p)
 

@@ -25,3 +25,5 @@ struct
 
 end
 
+datatype option = SOME of 'a | NONE
+

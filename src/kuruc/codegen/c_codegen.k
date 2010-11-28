@@ -34,7 +34,12 @@ struct
    fun codegen (pre, stms) =
       jnl [
          "#include <stdlib.h>",
+         "#include <stdio.h>",
          "#include <string.h>\n",
+         "void RAISE (const char *s) {",
+         "   fprintf(stderr,\"Exception: %s\\n\", s);",
+         "   exit(1);",
+         "}\n",
          jnl (map jnl pre),
          "int main (int argc, char** argv) {\n",
          "      io_init ();",
@@ -83,6 +88,10 @@ struct
            \    int length; \n\
            \    char *data; \n\
            \ } kuru_string_t; \n\n\
+           \ typedef struct kuru_list_t { \n\
+           \    char *data; \n\
+           \    struct kuru_list_t *next; \n\
+           \ } kuru_list_t; \n\
            \ typedef struct closure_t { \n\
            \    void *(*func)(struct closure_t*, void *data); \n\
            \ } closure_t; \n\n\
