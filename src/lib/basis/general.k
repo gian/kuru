@@ -31,3 +31,5 @@ _import k_int_add : (int * int) -> int as +
 _import k_int_sub  : (int * int) -> int as -
 _import k_int_mul : (int * int) -> int as *
 
+_import k_list_cons : ('a * 'a list) -> 'a list as ::
+
