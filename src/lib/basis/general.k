@@ -27,3 +27,7 @@ end
 
 datatype option = SOME of 'a | NONE
 
+_import k_int_add : (int * int) -> int as +
+_import k_int_sub  : (int * int) -> int as -
+_import k_int_mul : (int * int) -> int as *
+

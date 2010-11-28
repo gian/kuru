@@ -2,7 +2,7 @@ fun f x = x
 
 fun g x y = x + y
 
-and h p 0 = 1
+fun h p 0 = 1
   | h p n = n + 1
 
 fun i a b c 0 = a + b + c * 10

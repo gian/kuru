@@ -32,6 +32,9 @@ struct
    val toplev = ref [] : string list list ref
    fun addData s = toplev := !toplev @ [s]
 
+   val toplevty = ref [] : string list list ref
+   fun addType s = toplevty := !toplevty @ [s]
+
    val frs = ref 0
    fun fresh () = "tmp" ^ (Int.toString (frs := !frs + 1; !frs))
 
@@ -157,7 +160,8 @@ struct
      | tr_exp (I.N (I.UNIT,_,_,_,_)) = ("UNIT",[])
      | tr_exp (I.N (I.IDENT s,_,_,_,_)) = (S.name s,[])
      | tr_exp (I.N (I.EXTERN s,_,_,_,_)) = (S.name s,[])
-     | tr_exp (I.N (I.ENV (i,s),_,_,_,_)) = ("*(env+"^ Int.toString i ^")",[])
+     | tr_exp (I.N (I.ENV (i,s),_,_,_,_)) = 
+         ("(((closure"^S.name s^"_t *)env)->d"^ Int.toString (i+1)^")",[])
      | tr_exp (I.N (I.TUPLE, v, t, _, _)) =
       let
          val rt = fresh ()
@@ -242,8 +246,24 @@ struct
          val (a',ai) = tr_exp a
          val (b',bi) = tr_exp b
 
+         fun detuple (n as I.N (_,c,T.TUPLE t, _, p)) =
+         let
+            val ixi = ref 0
+            fun ix () = 
+            let
+               val i = !ixi
+               val _ = ixi := !ixi + 1
+            in
+               "->f" ^ Int.toString i
+            end
+         in
+            String.concatWith ", " 
+               (map (fn x => b' ^ ix()) c)
+         end
+           | detuple _ = b'
+
          val (a'',b'') = 
-            if getAlias (S.symbol a') then (a',b')
+            if getAlias (S.symbol a') then (a',detuple b)
             else ("((closure_t *)"^a'^")->func",
                   a' ^ ", " ^ b')
 
@@ -315,11 +335,42 @@ struct
          val rt = fresh ()
          val (f',fi) = tr_exp f
 
-         (* FIXME: include body *)
+         val ixi = ref 1 (* Field names in closures start from d1 *)
+         fun ix () =
+            let
+               val i = !ixi
+               val _ = ixi := !ixi + 1
+            in
+               "d" ^ Int.toString i
+            end
+
+         val types = map (tr_ty o I.getType) env
+         val td = 
+            ["typedef struct closure"^f'^"_t {",
+             j["   ",tr_ty ot,
+                  " (*func)(struct closure",f',"_t *, ",tr_ty it,");"]] @
+              (map (fn t => "   " ^ t ^ " " ^ (ix()) ^ ";") types) @
+            ["} closure" ^ f' ^ "_t;"]
+
+         val _ = ixi := 1
+
+         val body =
+         List.concat (
+            map (fn e =>
+               let
+                  val (e',ei) = tr_exp e
+               in
+                  ei @ 
+                  [j [rt,"->",ix()," = ",e',";"]]
+               end) env)
+
+         val _ = addType td
       in
          (rt,
-         [j["closure_t *",rt," = (closure_t *) KMALLOC (sizeof(closure_t));"],
-          j[rt,"->func = ",f',";"]])
+         [j["closure"^f'^"_t *",rt,
+            " = (closure"^f'^"_t *) KMALLOC (sizeof(closure"^f'^"_t));"],
+          j[rt,"->func = ",f',";"]] @
+          body)
       end
      | tr_exp (I.N (I.NIL, _, _, _, _)) = ("NULL",[])
      | tr_exp (x as I.N (_,_,_,_,p)) = 
@@ -337,9 +388,9 @@ struct
          List.concat (map tr_stm v)
      | tr_stm (I.N (I.IMPORT (ename, t as T.FN ([it],ot), iname), _, _, _, _)) =
       let
-         val _ = addData 
+        (* val _ = addData 
             [(j ["extern ", tr_ty ot, " ", S.name ename, 
-                  "(",tr_ty it,");"])]
+                  "(",tr_ty it,");"])] *)
       in
          []
       end
@@ -376,6 +427,6 @@ struct
       let
          val prog' = tr_stm prog
       in
-         (!toplev, prog')
+         (!toplevty @ !toplev, prog')
       end
 end

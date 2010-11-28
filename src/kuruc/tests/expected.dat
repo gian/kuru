@@ -1,7 +1,10 @@
 4b7af85548ce79d5dabe762c189167f5  test-all-symbol.k.out
 75ca1dfb1ff77086c41ea63949d5bf92  test-ast-datatype-unfold.k.out
+44ad9b2930b0f24ccb80651bb243934c  test-ast-fun-curry.k.out
 ade17224672440d8229520af34d8af8b  test-ast-open.k.out
 e6d82383ae0f31aa685bf1ccc29af4a6  test-ast-structure.k.out
+bc160413321f69fe6688fc471307d167  test-closure-convert.k.out
+8c5360541892e69129bd6ddee6a0e838  test-codegen-arith.k.out
 eb3dd007057d0436ee7bf803774b50c6  test-codegen-builtin.k.out
 e17e46e45583aa8422708447a82dfdad  test-codegen-if.k.out
 184990a16192fe4c14893c6ffa24ecd0  test-codegen-polymorphic.k.out
@@ -10,9 +13,12 @@ e360fa70339e161657ad56bd74e202f2  test-codegen-string.k.out
 fd8f1012924d30563e46e786ed366e76  test-intermediate-const.k.out
 1c13acb87425e6dff1aec2385c002925  test-intermediate-fn.k.out
 6f179c93ef1025adad09432f6d7fd1d3  test-parse-datatype-simple.k.out
+9533fc955c84734d8051c6534ab0e8cf  test-parse-fun-curry.k.out
+ea8960daaf49d504ad34aacb99d5da1c  test-parse-infix.k.out
 1e8469e2f83d39965718b6417ec42339  test-parse-raise.k.out
 a4259c11cb722a18c9a511f81090bbfa  test-parse-structure-assign.k.out
 5e0ef93ed113f76cf35034f0fc2d8ecb  test-parse-type.k.out
+57f473c6156a7d66a28fd5f921c0fdfa  test-parse-type2.k.out
 01e138ef0190aaada33e64127698f313  test-parse-wildcard-assign.k.out
 178dc8daac2d0deede14c31e8fe0aa60  test-semant-bool.k.out
 e360fa70339e161657ad56bd74e202f2  test-semant-unify-annotate-fail.k.out
