@@ -26,6 +26,7 @@ struct
    val machineWord = ref 32
    val keepLLVM = ref false
    val libPath = ref [] : string list ref
+   val backend = ref "c"
 
    fun configureLibraryPaths () =
       libPath :=
@@ -70,6 +71,7 @@ struct
          | SOME i => maxErrors := i
    fun setSafe t = safe := t
    fun setBasis t = basis := t
+   fun setBackend t = backend := t
 
    fun getOutputFile () = !outputFile
    fun getOptimiser () = !optimiserLevel
@@ -79,6 +81,7 @@ struct
    fun getMaxErrors () = !maxErrors
    fun getSafe () = !safe
    fun getBasis () = !basis
+   fun getBackend () = !backend
 
    (* Resolve a full path to a library, based on the library path *)
 

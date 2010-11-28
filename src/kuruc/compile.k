@@ -189,6 +189,20 @@ struct
                   raise Fail ("Errors: " ^ Int.toString (Error.getErrorCount()))
                   else ()
 
+      in
+         if Config.getBackend () = "llvm" then
+            compileLLVM (fcc)
+         else if Config.getBackend () = "c" then
+            compileC (fcc)
+         else 
+            Error.fail ("Invalid compiler backend selected.", (0,""))
+      end
+
+      and compileLLVM fcc =
+      let
+         val _ = Debug.print Debug.verbose 
+            "LLVM code generator backend selected"
+         
          (* Stage 6 - Translation to Asm *)
 
          val _ = Debug.startStage 1 "AsmTranslate"
@@ -211,10 +225,39 @@ struct
 
          val _ = Debug.endStage "CodeGen"
 
-         (* Stage 7 - LLVM invokation *)
+         (* Stage 7 - LLVM invocation *)
          val _ = Debug.startStage 1 "LLVM"
          val _ = LLVMOperations.compile (codeLocation,Config.getOutputFile ())
          val _ = Debug.endStage "LLVM"
+
+         val _ = Debug.endStage "Compile"
+      in
+         ()
+      end
+
+      and compileC fcc =
+      let
+         val _ = Debug.print Debug.verbose 
+            "C code generator backend selected"
+
+         val _ = Debug.startStage 1 "CTranslate"
+         val (seg,d') = CTranslate.translate fcc
+         val _ = Debug.endStage "CTranslate"
+         
+         val _ = Debug.startStage 1 "CodeGen"
+         val code = CCodeGen.codegen (seg, d')
+         val _ = Debug.print Debug.internal ("Generated code:\n" ^ code ^ "\n")
+     
+         val _ = Debug.startStage 2 "Emit"
+         val codeLocation = CCodeGen.emit code
+         val _ = Debug.endStage "Emit"
+
+         val _ = Debug.endStage "CodeGen"
+         
+         (* Stage 7 - GCC invocation *)
+         val _ = Debug.startStage 1 "GCC"
+         val _ = GCCOperations.compile (codeLocation,Config.getOutputFile ())
+         val _ = Debug.endStage "GCC"
 
          val _ = Debug.endStage "Compile"
       in

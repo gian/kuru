@@ -40,9 +40,12 @@ semant/typeclass.sml
 codegen/temp.sml
 codegen/asm.sml
 codegen/translate.sml
+codegen/c_translate.sml
+codegen/c_codegen.sml
 codegen/codegen_decs.sml
 codegen/codegen.sml
 codegen/llvm_operations.sml
+codegen/gcc_operations.sml
 compile.sml
 version.sml
 main.sml

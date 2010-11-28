@@ -15,9 +15,10 @@ SMLDEPS= \
 	intermediate/monomorphise.sml semant/polymorphism.sml ast/ast_infix_pattern.sml \
 	intermediate/closure_convert.sml semant/typeclass.sml codegen/asm.sml \
 	optimise/optimise.sml codegen/temp.sml intermediate/intermediate.sml \
-	optimise/constant_fold.sml \
+	optimise/constant_fold.sml codegen/c_translate.sml codegen/c_codegen.sml \
 	codegen/translate.sml codegen/codegen.sml codegen/codegen_decs.sml \
 	codegen/builtins.sml codegen/llvm_operations.sml semant/exceptions.sml \
+	codegen/gcc_operations.sml \
 	config.sml debug.sml main.sml compile.sml version.sml
 
 all: $(BIN)/kuruc

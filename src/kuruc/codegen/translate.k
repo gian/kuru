@@ -402,7 +402,7 @@ struct
                         "Non-function application", p)
 
              val a'' = A.TEMP (Temp.newtemp (Temp.ptr (Temp.named "closure_t")))
-             val f' = A.TEMP (Temp.newtemp (Temp.ptr (Temp.ptr Temp.i8)))
+             val f' = A.TEMP (Temp.newtemp (Temp.ptr (t'')))
              val f = A.TEMP (Temp.newtemp (t''))
           in
              (f,SOME a'',
@@ -506,9 +506,8 @@ struct
          val (env',envi) = ListPair.unzip (map tr_exp env)
          val ety = map (tr_ty o I.getType) env
 
-         (* val fty = Temp.fn_ptr 
-                     ([Temp.ptr (Temp.named "closure_t"), tr_ty it], tr_ty ot) *)
-         val fty = Temp.ptr (Temp.i8)
+         val fty = Temp.fn_ptr 
+                     ([Temp.ptr (Temp.named "closure_t"), tr_ty it], tr_ty ot) 
 
          (* val cty = Temp.aggr (fty :: ety) *)
          val cty = Temp.named "closure_t"
