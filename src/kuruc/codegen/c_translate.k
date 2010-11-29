@@ -48,6 +48,10 @@ struct
          NONE => false
        | SOME _ => true
 
+   val fnlk = ref S.empty : string S.table ref
+   fun addFnLk (k,s) = fnlk := S.enter (!fnlk,k,s)
+   fun lookupFn k = S.look (!fnlk,k)
+
    fun tr_ty (T.NAME s) = 
       (case S.name s of
          "int" => "int"
@@ -148,6 +152,23 @@ struct
       in
          (j ["(",c1," && ",b',")"], bi)
       end
+     | tr_pat ex (I.N (I.PINFIX s,[a,b],t,m,p)) =
+         (case S.name s of
+            "::" =>
+            let
+               val failLabel = fresh()
+               val (a',ai) = 
+                  tr_pat ("("^tr_ty (I.getType a)^")"^ex^"->data") a
+               val (b',bi) =
+                  tr_pat ("("^tr_ty (I.getType b)^")"^ex^"->next") b
+            in
+               ("("^ex^" != NULL)",
+               [j ["if (",ex," == NULL) goto ", failLabel, ";"]] @
+               ai @
+               bi @
+               [j [failLabel,":"]])
+            end
+          | n => Error.fail ("Unrecognised infix pattern '"^n^"'",p))
      | tr_pat ex (x as I.N (_,_,_,_,p)) =
          Error.bug ("Translate.tr_pat", "Invalid pattern: " ^ I.prettyPrint x, p)
 
@@ -158,7 +179,9 @@ struct
      | tr_exp (I.N (I.REAL r,_,_,_,_)) = (Real.toString r ^ "f",[])
      | tr_exp (I.N (I.BOOL b,_,_,_,_)) = (if b then "TRUE" else "FALSE",[])
      | tr_exp (I.N (I.UNIT,_,_,_,_)) = ("UNIT",[])
-     | tr_exp (I.N (I.IDENT s,_,_,_,_)) = (S.name s,[])
+     | tr_exp (I.N (I.IDENT s,_,_,_,_)) = 
+        (case lookupFn s of NONE => (S.name s,[])
+                          | SOME s' => (s',[]))
      | tr_exp (I.N (I.EXTERN s,_,_,_,_)) = (S.name s,[])
      | tr_exp (I.N (I.ENV (i,s),_,_,_,_)) = 
          ("(((closure"^S.name s^"_t *)env)->d"^ Int.toString (i+1)^")",[])
@@ -352,6 +375,7 @@ struct
               (map (fn t => "   " ^ t ^ " " ^ (ix()) ^ ";") types) @
             ["} closure" ^ f' ^ "_t;"]
 
+
          val _ = ixi := 1
 
          val body =
@@ -364,7 +388,9 @@ struct
                   [j [rt,"->",ix()," = ",e',";"]]
                end) env)
 
-         val _ = addType td
+         val _ = if getAlias (S.symbol ("closure"^f'^"_t")) then () else
+                (addType td;
+                 addAlias (S.symbol ("closure"^f'^"_t"),""))
       in
          (rt,
          [j["closure"^f'^"_t *",rt,
@@ -376,7 +402,13 @@ struct
      | tr_exp (x as I.N (_,_,_,_,p)) = 
       Error.bug ("CTranslate.tr_exp", "Not implemented: " ^ I.prettyPrint x,p)
 
-   and tr_stm (I.N (I.BIND s, [e], t, _, p)) =
+   and tr_stm (I.N (I.BIND k, [I.N (I.IDENT s,_,_,_,_)], t, _, p)) =
+      let
+         val _ = addFnLk (k,S.name s)
+      in
+         []
+      end
+     | tr_stm (I.N (I.BIND s, [e], t, _, p)) =
       let
          val (e',ei) = tr_exp e
       in
@@ -413,7 +445,7 @@ struct
       end
      | tr_stm (I.N (I.ALIAS (k,s,t),_,_,_,_)) =
       let
-         val _ = addData ["#define " ^ S.name k ^ " " ^ S.name s]
+         val _ = addType ["#define " ^ S.name k ^ " " ^ S.name s]
          val _ = addAlias (k, S.name s)
       in
          []

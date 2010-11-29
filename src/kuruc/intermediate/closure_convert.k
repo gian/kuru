@@ -101,7 +101,8 @@ struct
       val _ = lift k fr (I.N (I.FUNDEC k, [s,b'], t, m, p))
       val _ = setEnv k fr
    in
-      I.N (I.CLOSURE, [I.N (I.IDENT k,[],t,[],p)] @ fr, t, [], p) 
+      I.N (I.IDENT k,[],t,[],p)
+      (* I.N (I.CLOSURE, [I.N (I.IDENT k,[],t,[],p)] @ fr, t, [], p) *)
    end
      | liftFun (I.N (I.PROGRAM, l, t, m, p)) =
    let
@@ -118,6 +119,33 @@ struct
    in
       I.N (I.BIND k,[],T.UNKNOWN,[],p)
    end
+     | liftFun (I.N (I.BIND k, [I.N (I.IDENT s,_,t,_,_)], _,_,p)) =
+   let
+      val _ = lift k [] (I.N (I.ALIAS (k,s,t),[],t,[],p))
+   in
+      I.N (I.BIND k,[],T.UNKNOWN,[],p)
+   end
+     | liftFun (I.N (I.APP, [a,b], t, m, p)) =
+   let
+      val a' = liftFun a
+      val b' = liftFun b
+
+      val t' = I.getType a'
+
+      val k = 
+         case a' of 
+            I.N (I.IDENT s,_,_,_,_) => s
+          | x => Error.bug ("ClosureConvert.liftFun",
+                     "Invalid non-identifier in APP node.", p)
+
+      val fr = getEnv k
+   in
+      I.N (I.APP,
+         [
+            I.N (I.CLOSURE, [I.N (I.IDENT k,[],t',[],p)] @ fr, t', [], p),
+            b'
+         ], t, m, p)
+   end
      | liftFun (I.N (I.BIND s, [e], t, m, p)) =
    let
       val _ = Debug.print Debug.debug
@@ -128,8 +156,14 @@ struct
       val _ = Debug.print Debug.debug
          ("ClosureConvert: (post) BIND " ^ S.name s ^ " = " ^
             I.prettyPrint e' ^ "\n")
+
+      val ins = 
+         case e' of 
+            I.N (I.IDENT k,_,_,_,_) => I.N (I.ALIAS (s,k,t),[],t,[],p)
+          | _ => I.N (I.BIND s, [e'], t, m, p)
+
    in
-      I.N (I.BIND s, [e'], t, m, p)
+      ins
    end
      | liftFun (I.N (opr,l,t,m,p)) = 
          I.N (opr, map liftFun l, t, m, p)

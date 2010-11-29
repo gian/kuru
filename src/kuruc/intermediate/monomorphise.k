@@ -83,6 +83,9 @@ struct
             Error.fail ("Monomorphise: Cannot find symbol '"^S.name s^"'",(0,""))
        | SOME i => i
 
+   val aliases = ref [] : I.ir list ref
+   fun addAlias i = aliases := !aliases @ [i]
+
    fun tymap (T.POLY i) t = [(T.POLY i, t)]
      | tymap (T.FN ([a],b)) (T.FN ([c],d)) = tymap a c @ tymap b d
      | tymap (T.TUPLE a) (T.TUPLE b) = 
@@ -102,11 +105,22 @@ struct
       f'
    end
      | instantiate (I.N (I.IDENT s, _, T.FN ([it],ot), m, p)) e2 =
+    (case S.name s of 
+      "::" => 
+         I.N (I.IDENT s, [], 
+            T.FN ([T.TUPLE [T.POLY 0,T.CONSTR ([T.POLY 0],T.t_list)]],
+                     T.CONSTR ([T.POLY 0],T.t_list)), m, p)
+    | "@" =>
+         I.N (I.IDENT s, [], 
+            T.FN ([T.TUPLE [T.CONSTR ([T.POLY 0],T.t_list),
+               T.CONSTR ([T.POLY 0],T.t_list),T.t_list]],
+                     T.CONSTR ([T.POLY 0],T.t_list)), m, p)
+    | _ =>
    let
       val t2 = I.getType e2
 
       val _ = Debug.print Debug.debug 
-         ("Monomorphise.instantiate: " ^ T.prettyPrint t2 ^ "\n")
+         ("Monomorphise.instantiate: " ^ S.name s ^ " : " ^ T.prettyPrint t2 ^ "\n")
 
       val i =
          case getInst s t2 of
@@ -134,7 +148,7 @@ struct
                I.N (I.IDENT s2, [], I.getType i, [], p)
    in
       i
-   end
+   end)
      | instantiate e1 e2 = 
       Error.bug ("Monomorphise.instantiate", 
                  "Attempted to instantiate: " ^ I.prettyPrint e1, (0,""))
@@ -267,6 +281,11 @@ struct
 
       fun mstm (A.DVAL (s,e,t,p)) = 
          let
+            val _ = Debug.print Debug.debug ("Monomorphism.mstm: DVAL " ^ 
+                        S.name s ^ " = " ^ A.ppe e ^ "\n")
+
+            val _ = addUninstS s (I.N (I.IDENT s,[],t,[],p))
+
             val m = mexp e
             val t' = I.getType m
 
@@ -277,7 +296,10 @@ struct
                case t' of T.FN _ =>
                   let
                      val m' = 
-                        case m of I.N(I.IDENT s,_,_,_,_) => getUninst s
+                        case m of I.N(I.IDENT s',_,_,_,_) => 
+                           (addAlias (
+                              I.N (I.ALIAS (s,s',t),[],t,[],p)); 
+                              getUninst s')
                                 | _ => m
                   in
                      ignore (addUninstS s m')
@@ -307,7 +329,7 @@ struct
       val prog' = map mstm prog
 
       (* FIXME: This is a hack. All this poly stuff should be gone. *)
-      val prog'' = 
+      val prog'' =
          List.filter (fn x => not (Polymorphism.isPolyTy (I.getType x))) prog'
 
       val frags = map 

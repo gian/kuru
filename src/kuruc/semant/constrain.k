@@ -150,7 +150,7 @@ struct
          val (te,e') = cpat e
          val _ = TyConstraints.add (te,t1,p)
       in
-         (t2,A.PCONSTR (i,SOME (e',te),t2,p))
+         (t2,A.PCONSTR (i,SOME (e',te),t1,p))
       end
         | cpat (A.PID (s,t,p)) =
       let

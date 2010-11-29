@@ -5,6 +5,7 @@
 
 kuru_string_t *c2ks(const char *cstr)
 {
+	printf("Duping (%p) %s\n", cstr, cstr);
 	kuru_string_t *ret = malloc(sizeof(kuru_string_t));
 	ret->data = strdup(cstr);
 	ret->length = strlen(ret->data);

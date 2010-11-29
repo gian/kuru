@@ -44,9 +44,11 @@ struct
          "int main (int argc, char** argv) {\n",
          "      io_init ();",
          "      int_init ();",
+         "      string_init ();",
          jnl (map (ind 2) stms),
          "      io_done ();",
          "      int_done ();",
+         "      string_done ();",
          "      return 0;\n}\n"
       ]
 
@@ -70,7 +72,8 @@ struct
             end
          
          val _ = includeLib "io_kuru.h"
-         val _ = includeLib "int_kuru.h" 
+         val _ = includeLib "int_kuru.h"
+         val _ = includeLib "string_kuru.h"
          
          (* Final code emit *)
          val _ = TextIO.output (fp, code)
