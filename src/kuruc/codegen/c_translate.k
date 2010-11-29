@@ -84,7 +84,7 @@ struct
                   [b] @
                  ["} " ^ tn ^ ";"]
 
-         val _ = addData d
+         val _ = addType d
       in
          tn
       end
