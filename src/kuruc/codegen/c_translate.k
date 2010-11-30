@@ -278,6 +278,15 @@ struct
           j [rt,"->data = (void *)",a',";"],
           j [rt,"->next = ",b',";"]])
       end
+     | tr_exp (I.N (I.APP, [I.N (I.EQ,_,_,_,_),I.N(I.TUPLE,[a,b],_,_,_)],t,_,_))=
+      let
+         val (a',ai) = tr_exp a
+         val (b',bi) = tr_exp b
+      in
+         ("("^a'^ " == " ^ b' ^ ")",
+          ai @
+          bi) 
+      end
      | tr_exp (I.N (I.APP, [a, b], t, _, p)) =
       let
          val t' = tr_ty t

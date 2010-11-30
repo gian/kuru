@@ -524,7 +524,11 @@ struct
           let
              val a' = S.symbol a
 
-             val te' = S.enter (te,a',T.NAME a')
+             val a'' = 
+               case l of [] => T.NAME a'
+                       | l => T.CONSTR (map (t te ve se) l, T.NAME a')
+
+             val te' = S.enter (te,a',a'')
              val cbi = ref 0
              val cons = ref [] : T.ty list ref
 
@@ -541,15 +545,15 @@ struct
 																		               T.CON (
                                                                      !cbi,
                                                                      NONE,
-                                                                     T.NAME a')))
+                                                                     a'')))
                                  val _ = cons := !cons @ [T.NAME (n')]
                                  
                                  val ins' =
                                              [A.DVAL (n',
                                                       A.ECON (!cbi,NONE,
-                                                              T.NAME a',
+                                                              a'',
                                                               pos),
-                                                      T.NAME a',pos)]
+                                                              a'',pos)]
                                  val _ = cbi := !cbi + 1
                               in
                                  (te',ve',ins')
@@ -562,7 +566,7 @@ struct
                               val ve' = S.enter (ve,S.symbol id,
                                            Env.VarEntry (n',T.CON (!cbi,
                                                                 SOME f',
-                                                                T.NAME a')))
+                                                                a'')))
 
                               val _ = cons := !cons @ 
                                     [T.FN ([f'],T.NAME n')]
@@ -573,10 +577,10 @@ struct
                                                A.ECON (!cbi,
                                                 SOME (A.EID (p,f',pos),
                                                       f'),
-                                                T.NAME a',
+                                                a'',
                                                 pos),
-                                             T.FN ([f'],T.NAME a'),pos),
-                                             T.FN ([f'],T.NAME a'),pos)]
+                                             T.FN ([f'],a''),pos),
+                                             T.FN ([f'],a''),pos)]
                               val _ = cbi := !cbi + 1 
                            in
                                (te',ve',ins')

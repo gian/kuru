@@ -108,7 +108,11 @@ struct
            | inst' (T.FN (a,b)) = T.FN (map inst' a, inst' b)
            | inst' (T.TUPLE l) = T.TUPLE (map inst' l)
            | inst' (T.CONSTR (l,t)) = T.CONSTR (map inst' l, inst' t)
-           | inst' t = t
+           | inst' (T.META x) = T.META x
+           | inst' (T.NAME s) = T.NAME s
+           | inst' t =
+               Error.bug ("Constrain.inst",
+                  "Instantiating unknown: " ^ T.prettyPrint t, (0,""))
       in
          inst' l
       end

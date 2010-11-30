@@ -25,7 +25,7 @@ struct
 
 end
 
-datatype option = SOME of 'a | NONE
+datatype 'a option = SOME of 'a | NONE
 
 _import k_int_add : (int * int) -> int as +
 _import k_int_sub  : (int * int) -> int as -

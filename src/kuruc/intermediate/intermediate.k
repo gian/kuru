@@ -76,6 +76,7 @@ struct
     | PWILD
     | NIL
     | CONS
+    | EQ
     | PINFIX of S.symbol
     | IMPORT of S.symbol * T.ty * S.symbol
     | STUB
@@ -114,6 +115,7 @@ struct
      | ppopr (IMPORT (s1,t,s2)) = "IMPORT " ^ S.name s1 ^ " as " ^ S.name s2
      | ppopr NIL = "NIL"
      | ppopr CONS = "CONS"
+     | ppopr EQ = "EQ"
      | ppopr STUB = "STUB"
      | ppopr (FUNDEC s) = "FUNDEC " ^ S.name s
      | ppopr (ALIAS (k,s,t)) = "ALIAS " ^ S.name k ^ " = " ^ S.name s

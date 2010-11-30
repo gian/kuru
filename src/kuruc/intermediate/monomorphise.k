@@ -106,6 +106,8 @@ struct
    end
      | instantiate (x as I.N (I.SELF s,_,t,m,p)) e2 =
          Error.bug ("Monomorphise.instantiate","SELF: " ^ I.prettyPrint x,p)
+     | instantiate e1 (I.N (_,_,T.POLY _,_,p)) = 
+         I.N (I.IDENT (addUninst e1), [], I.getType e1, [], p)
      | instantiate (I.N (I.IDENT s, _, T.FN ([it],ot), m, p)) e2 =
     (case S.name s of 
       "::" =>
@@ -117,6 +119,23 @@ struct
          val ty = T.FN ([it],ot)
 
          val f = I.N (I.CONS, [], ty, m, p) 
+
+         val m = tymap it t2
+
+         val f' = 
+            List.foldl (fn ((l,r),f) => I.mapType (T.substinty l r) f) f m
+      in
+         f'
+      end
+    | "=" =>
+      let
+         val t2 = I.getType e2
+
+         val it = T.TUPLE [T.POLY 0,T.POLY 0]
+         val ot = T.t_bool
+         val ty = T.FN ([it],ot)
+
+         val f = I.N (I.EQ, [], ty, m, p) 
 
          val m = tymap it t2
 
@@ -169,9 +188,13 @@ struct
    in
       i
    end)
-     | instantiate e1 e2 = 
+     | instantiate e1 e2 =
+         if Polymorphism.isPolyTy (I.getType e2) then
+            I.N (I.IDENT (addUninst e1),[],I.getType e1,[],(0,""))
+         else 
       Error.bug ("Monomorphise.instantiate", 
-                 "Attempted to instantiate: " ^ I.prettyPrint e1, (0,""))
+                 "Attempted to instantiate: " ^ I.prettyPrint e1 ^ 
+                 " with " ^ I.prettyPrint e2, (0,""))
 
    (** TODO: Apply the value restriction here *)
    (** FIXME: Fix the type fields of all affected nodes. *)
