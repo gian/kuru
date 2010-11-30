@@ -108,10 +108,23 @@ struct
          Error.bug ("Monomorphise.instantiate","SELF: " ^ I.prettyPrint x,p)
      | instantiate (I.N (I.IDENT s, _, T.FN ([it],ot), m, p)) e2 =
     (case S.name s of 
-      "::" => 
-         I.N (I.IDENT s, [], 
-            T.FN ([T.TUPLE [T.POLY 0,T.CONSTR ([T.POLY 0],T.t_list)]],
-                     T.CONSTR ([T.POLY 0],T.t_list)), m, p)
+      "::" =>
+      let
+         val t2 = I.getType e2
+
+         val it = T.TUPLE [T.POLY 0,T.CONSTR ([T.POLY 0],T.t_list)]
+         val ot = T.CONSTR ([T.POLY 0],T.t_list)
+         val ty = T.FN ([it],ot)
+
+         val f = I.N (I.CONS, [], ty, m, p) 
+
+         val m = tymap it t2
+
+         val f' = 
+            List.foldl (fn ((l,r),f) => I.mapType (T.substinty l r) f) f m
+      in
+         f'
+      end
     | "@" =>
          I.N (I.IDENT s, [], 
             T.FN ([T.TUPLE [T.CONSTR ([T.POLY 0],T.t_list),

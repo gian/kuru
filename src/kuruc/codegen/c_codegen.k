@@ -92,7 +92,7 @@ struct
            \    char *data; \n\
            \ } kuru_string_t; \n\n\
            \ typedef struct kuru_list_t { \n\
-           \    char *data; \n\
+           \    void *data; \n\
            \    struct kuru_list_t *next; \n\
            \ } kuru_list_t; \n\
            \ typedef struct closure_t { \n\

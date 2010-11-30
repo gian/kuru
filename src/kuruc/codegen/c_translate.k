@@ -263,6 +263,21 @@ struct
          ["RAISE (\"Match\");",
           endLabel ^ ":"])
       end
+     | tr_exp (I.N (I.APP, [I.N (I.CONS,_,_,_,_),I.N(I.TUPLE,[a,b],_,_,_)],t,_,_))=
+      let
+         val (a',ai) = tr_exp a
+         val (b',bi) = tr_exp b
+
+         val rt = fresh ()
+         val t' = "kuru_list_t" 
+      in
+         (rt,
+          ai @
+          bi @
+         [j [t'," *",rt," = (",t',"*) KMALLOC(sizeof(",t',"));"],
+          j [rt,"->data = (void *)",a',";"],
+          j [rt,"->next = ",b',";"]])
+      end
      | tr_exp (I.N (I.APP, [a, b], t, _, p)) =
       let
          val t' = tr_ty t
@@ -438,6 +453,7 @@ struct
                 "(closure_t *env, ",
                 tr_ty it," ",S.name s',
                 ") {"]] @
+            [j ["   printf(\"",S.name s,"\\n\");"]] @
              (map (fn x => "   " ^ x) ei) @
             [j ["   return ", e', ";"],
              "}"])
