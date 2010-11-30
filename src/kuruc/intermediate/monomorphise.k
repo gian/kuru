@@ -284,7 +284,7 @@ struct
             val _ = Debug.print Debug.debug ("Monomorphism.mstm: DVAL " ^ 
                         S.name s ^ " = " ^ A.ppe e ^ "\n")
 
-            val _ = addUninstS s (I.N (I.IDENT s,[],t,[],p))
+            val _ = addUninstS s (I.N (I.SELF,[],t,[],p))
 
             val m = mexp e
             val t' = I.getType m

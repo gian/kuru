@@ -42,14 +42,14 @@ struct
          "}\n",
          jnl (map jnl pre),
          "int main (int argc, char** argv) {\n",
-         "      io_init ();",
-         "      int_init ();",
-         "      string_init ();",
-         jnl (map (ind 2) stms),
-         "      io_done ();",
-         "      int_done ();",
-         "      string_done ();",
-         "      return 0;\n}\n"
+         "   io_init ();",
+         "   int_init ();",
+         "   string_init ();",
+         jnl (map (ind 1) stms),
+         "   io_done ();",
+         "   int_done ();",
+         "   string_done ();",
+         "   return 0;\n}\n"
       ]
 
    fun emit code =

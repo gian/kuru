@@ -104,6 +104,22 @@ struct
       I.N (I.IDENT k,[],t,[],p)
       (* I.N (I.CLOSURE, [I.N (I.IDENT k,[],t,[],p)] @ fr, t, [], p) *)
    end
+     | liftFun (I.N (I.IDENT k, _, t as T.FN ([it],ot), m, p)) =
+   let
+      val fr = getEnv k
+      val _ = Debug.print Debug.debug
+         ("ClosureConvert: liftFun IDENT " ^ S.name k ^ "\n")
+   in
+      I.N (I.CLOSURE, [I.N (I.IDENT k,[],t,[],p)] @ fr, t, [], p)
+   end
+     | liftFun (x as I.N (I.IDENT k, c, t, m, p)) =
+   let
+      val _ = Debug.print Debug.debug
+         ("ClosureConvert.liftFun: Non-FN Ident: " ^ S.name k ^ " : " ^
+            T.prettyPrint t ^ "\n")
+   in
+      x
+   end
      | liftFun (I.N (I.PROGRAM, l, t, m, p)) =
    let
       val l' = map liftFun l
@@ -119,12 +135,6 @@ struct
    in
       I.N (I.BIND k,[],T.UNKNOWN,[],p)
    end
-     | liftFun (I.N (I.BIND k, [I.N (I.IDENT s,_,t,_,_)], _,_,p)) =
-   let
-      val _ = lift k [] (I.N (I.ALIAS (k,s,t),[],t,[],p))
-   in
-      I.N (I.BIND k,[],T.UNKNOWN,[],p)
-   end
      | liftFun (I.N (I.APP, [a,b], t, m, p)) =
    let
       val a' = liftFun a
@@ -134,17 +144,20 @@ struct
 
       val k = 
          case a' of 
-            I.N (I.IDENT s,_,_,_,_) => s
-          | x => Error.bug ("ClosureConvert.liftFun",
-                     "Invalid non-identifier in APP node.", p)
-
-      val fr = getEnv k
+            I.N (I.IDENT k,_,_,_,_) => 
+            let
+               val fr = getEnv k
+            in
+             I.N (I.APP,
+               [
+                  I.N (I.CLOSURE, [I.N (I.IDENT k,[],t',[],p)] @ fr, t', [], p),
+                  b'
+               ], t, m, p)
+            end
+          | x => 
+             I.N (I.APP, [a',b'], t, m, p)
    in
-      I.N (I.APP,
-         [
-            I.N (I.CLOSURE, [I.N (I.IDENT k,[],t',[],p)] @ fr, t', [], p),
-            b'
-         ], t, m, p)
+      k
    end
      | liftFun (I.N (I.BIND s, [e], t, m, p)) =
    let
@@ -167,6 +180,11 @@ struct
    end
      | liftFun (I.N (opr,l,t,m,p)) = 
          I.N (opr, map liftFun l, t, m, p)
+
+   (* FIXME: Need to add a top-level that does not change the names of
+      bound functions, but instead just converts 
+       BIND nodes with FN RHS to FUNDEC nodes, and then recurses on the body
+       with a function that will actually hoist functions out to top level. *)
 
    fun convert p = 
    let

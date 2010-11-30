@@ -56,7 +56,8 @@ struct
     | UNIT
     | IDENT of S.symbol
     | EXTERN of S.symbol
-    | ENV of int * S.symbol 
+    | ENV of int * S.symbol
+    | SELF
     | TUPLE
     | IF
     | WHILE
@@ -91,6 +92,7 @@ struct
      | ppopr (IDENT s) = S.name s
      | ppopr (EXTERN s) = "extern " ^ S.name s
      | ppopr (ENV (i,s)) = "*(env+1+" ^ Int.toString i ^ ", "^ S.name s ^ ")"
+     | ppopr SELF = "SELF"
      | ppopr TUPLE = "TUPLE"
      | ppopr IF = "IF"
      | ppopr WHILE = "WHILE"

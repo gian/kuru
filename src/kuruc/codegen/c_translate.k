@@ -128,8 +128,8 @@ struct
                in
                   pi @
                  [j ["if (!(",p',")) {"],
-                  j [rt," = FALSE;"],
-                  j ["goto ", endLabel,";"],
+                  j ["   ", rt," = FALSE;"],
+                  j ["   goto ", endLabel,";"],
                  "}"]
                end) v)
 
@@ -185,6 +185,7 @@ struct
      | tr_exp (I.N (I.EXTERN s,_,_,_,_)) = (S.name s,[])
      | tr_exp (I.N (I.ENV (i,s),_,_,_,_)) = 
          ("(((closure"^S.name s^"_t *)env)->d"^ Int.toString (i+1)^")",[])
+     | tr_exp (I.N (I.SELF, _, _, _, _)) = ("SELF",[])
      | tr_exp (I.N (I.TUPLE, v, t, _, _)) =
       let
          val rt = fresh ()
@@ -219,11 +220,11 @@ struct
          [j [t'," ",rt,";"]] @
           ai @
          [j ["if (",a',") {"]] @
-          bi @
-         [j [rt, " = ", b', ";"],
+          (map (fn x => "   " ^ x) bi) @
+         [j ["   ",rt, " = ", b', ";"],
           "} else {"] @
-          ci @
-         [j [rt, " = ", c', ";"]] @
+          (map (fn x => "   " ^ x) ci) @
+         [j ["   ",rt, " = ", c', ";"]] @
          ["}"])
       end
      | tr_exp (I.N (I.CASE, e::cases, t, _, _)) =
@@ -245,9 +246,9 @@ struct
                      pats @
                      pati @
                     [j ["if (", pat', ") {"]] @
-                     expi @
-                    [j [rt, " = ", exp', ";"]] @
-                    [j ["goto ", endLabel, ";"],
+                     (map (fn x => "   " ^ x) expi) @
+                    [j ["   ",rt, " = ", exp', ";"]] @
+                    [j ["   goto ", endLabel, ";"],
                      "}"]
                   end
                 | (I.N (_, _, _, _, p),_) =>
@@ -437,8 +438,8 @@ struct
                 "(closure_t *env, ",
                 tr_ty it," ",S.name s',
                 ") {"]] @
-             ei @
-            [j ["return ", e', ";"],
+             (map (fn x => "   " ^ x) ei) @
+            [j ["   return ", e', ";"],
              "}"])
       in
          []
