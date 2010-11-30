@@ -104,6 +104,8 @@ struct
    in
       f'
    end
+     | instantiate (x as I.N (I.SELF s,_,t,m,p)) e2 =
+         Error.bug ("Monomorphise.instantiate","SELF: " ^ I.prettyPrint x,p)
      | instantiate (I.N (I.IDENT s, _, T.FN ([it],ot), m, p)) e2 =
     (case S.name s of 
       "::" => 
@@ -142,7 +144,12 @@ struct
                val f' = 
                   List.foldl (fn ((l,r),f) => I.mapType (T.substinty l r) f) f m
             in
-               I.N (I.IDENT (addInst s t2 f'), [], I.getType f', [], p)
+               case f of I.N (I.SELF s,_,t,m,p) =>
+                  I.N (I.IDENT s, [], I.getType f', m, p) (* FIXME: Poly? *)
+                | _ =>
+                  if Polymorphism.isPolyTy (I.getType f) then
+                     I.N (I.IDENT (addInst s t2 f'), [], I.getType f', [], p)
+                  else I.N (I.IDENT s,[],I.getType f,[],p)
             end
           | SOME (t,s1,s2,i) =>
                I.N (I.IDENT s2, [], I.getType i, [], p)
@@ -250,6 +257,12 @@ struct
          val e1' = mexp e1
          val e2' = mexp e2
 
+         val _ = Debug.print Debug.debug
+            ("Monomorphise.mexp: EAPP: " ^ 
+               A.ppe e1 ^ " (" ^ A.ppe e2 ^ ")\n" ^
+             "Mapped to: " ^ 
+               I.prettyPrint e1' ^ " (" ^ I.prettyPrint e2' ^ ")\n")
+
          val e1'' = instantiate e1' e2'
 
          val t' = 
@@ -283,8 +296,11 @@ struct
          let
             val _ = Debug.print Debug.debug ("Monomorphism.mstm: DVAL " ^ 
                         S.name s ^ " = " ^ A.ppe e ^ "\n")
-
-            val _ = addUninstS s (I.N (I.SELF,[],t,[],p))
+         
+            val _ = case t of 
+               T.FN ([it],ot) => 
+                  ignore (addUninstS s (I.N (I.SELF s,[],t,[],p)))
+                | _ => ()
 
             val m = mexp e
             val t' = I.getType m

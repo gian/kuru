@@ -185,7 +185,7 @@ struct
      | tr_exp (I.N (I.EXTERN s,_,_,_,_)) = (S.name s,[])
      | tr_exp (I.N (I.ENV (i,s),_,_,_,_)) = 
          ("(((closure"^S.name s^"_t *)env)->d"^ Int.toString (i+1)^")",[])
-     | tr_exp (I.N (I.SELF, _, _, _, _)) = ("SELF",[])
+     | tr_exp (I.N (I.SELF s, _, _, _, _)) = ("SELF",[])
      | tr_exp (I.N (I.TUPLE, v, t, _, _)) =
       let
          val rt = fresh ()

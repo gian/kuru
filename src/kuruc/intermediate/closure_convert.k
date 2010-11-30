@@ -101,8 +101,7 @@ struct
       val _ = lift k fr (I.N (I.FUNDEC k, [s,b'], t, m, p))
       val _ = setEnv k fr
    in
-      I.N (I.IDENT k,[],t,[],p)
-      (* I.N (I.CLOSURE, [I.N (I.IDENT k,[],t,[],p)] @ fr, t, [], p) *)
+      I.N (I.CLOSURE, [I.N (I.IDENT k,[],t,[],p)] @ fr, t, [], p) 
    end
      | liftFun (I.N (I.IDENT k, _, t as T.FN ([it],ot), m, p)) =
    let
@@ -123,11 +122,8 @@ struct
      | liftFun (I.N (I.PROGRAM, l, t, m, p)) =
    let
       val l' = map liftFun l
-
-      val lifted' = 
-         map (fn (_,i) => i) (!lifted)
-   in
-      I.N (I.PROGRAM, lifted' @ l', t, m, p)
+  in
+      I.N (I.PROGRAM, l', t, m, p)
    end
      | liftFun (I.N (I.BIND k, [I.N (I.EXTERN s,_,t,_,_)], _,_,p)) =
    let
@@ -186,9 +182,33 @@ struct
        BIND nodes with FN RHS to FUNDEC nodes, and then recurses on the body
        with a function that will actually hoist functions out to top level. *)
 
+   fun liftStm (I.N(I.BIND k,[x as I.N(I.FN,[s,b],t,m,p)],_,_,_)) =
+   let
+      val bound = [exSym s,k]
+      val b' = liftFun b
+      val fr = names bound b'
+      val _ = lift k fr (I.N (I.FUNDEC k, [s,b'], t, m, p))
+      val _ = setEnv k fr
+      val _ = Debug.print Debug.debug
+         ("ClosureConvert.liftStm: Function: " ^ S.name k ^ " = " ^
+            I.prettyPrint x ^ "\nLifted: " ^ I.prettyPrint b' ^ "\n")
+   in
+      I.N (I.BIND k,[],t,[],p)
+   end
+     | liftStm (I.N (I.PROGRAM,v,t,m,p)) =
+   let
+      val l' = map liftStm v
+
+      val lifted' = 
+         map (fn (_,i) => i) (!lifted)
+   in
+      I.N (I.PROGRAM, lifted' @ l', t, m, p)
+   end
+     | liftStm x = liftFun x
+
    fun convert p = 
    let
-      val p' = liftFun p
+      val p' = liftStm p
       val _ = Debug.print Debug.debug 
          ("ClosureConvert: Lifted:\n" ^ 
             (String.concatWith "\n"
