@@ -195,6 +195,8 @@ struct
    in
       I.N (I.BIND k,[],t,[],p)
    end
+     | liftStm (I.N(I.BIND s,[I.N(I.IDENT k,_,t,m,p)],_,_,_)) =
+         I.N (I.ALIAS (s,k,t),[],t,[],p)
      | liftStm (I.N (I.PROGRAM,v,t,m,p)) =
    let
       val l' = map liftStm v
