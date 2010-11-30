@@ -131,6 +131,11 @@ struct
       let
          val t2 = I.getType e2
 
+
+         val _ = Debug.print Debug.debug 
+         ("Monomorphise.instantiate: EQ : " ^ T.prettyPrint t2 ^ 
+            " (from " ^ I.prettyPrint e2 ^ ")\n")
+
          val it = T.TUPLE [T.POLY 0,T.POLY 0]
          val ot = T.t_bool
          val ty = T.FN ([it],ot)
@@ -326,9 +331,17 @@ struct
         | mexp (A.ECON (i,SOME (e,t'),t,p)) = I.N (I.CON i,[mexp e],t,[],p)
         | mexp (A.ESTUB (t,p)) = I.N (I.STUB,[],t,[],p)
         | mexp (A.ENIL p) = I.N (I.NIL,[],T.t_list,[],p)
+        | mexp (A.ELET (v,e,t,p)) =
+      let
+         val v' = 
+            Vector.foldl (fn (e,l) => l @ [mstm e]) [] v
+         val e' = mexp e
+      in
+         I.N (I.LET,v' @ [e'],t,[],p)
+      end
         | mexp x = Error.bug ("Monomorphise","Not implemented: " ^ A.ppe x,(0,"")) 
 
-      fun mstm (A.DVAL (s,e,t,p)) = 
+      and mstm (A.DVAL (s,e,t,p)) = 
          let
             val _ = Debug.print Debug.debug ("Monomorphism.mstm: DVAL " ^ 
                         S.name s ^ " = " ^ A.ppe e ^ "\n")

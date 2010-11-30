@@ -69,7 +69,7 @@ struct
             ("-",           T.FN([T.TUPLE [T.t_int,T.t_int]],T.t_int)),
             ("*",           T.FN([T.TUPLE [T.t_int,T.t_int]],T.t_int)),
             ("/",           T.FN([T.TUPLE [T.t_int,T.t_int]],T.t_int)),
-            ("=",           T.FN([T.TUPLE [T.fresh(),T.fresh()]],T.t_bool)),
+            ("=",           T.FN([T.TUPLE [T.POLY 0,T.POLY 0]],T.t_bool)),
             ("<>",          T.FN([T.TUPLE [T.fresh(),T.fresh()]],T.t_bool)),
             ("<",           T.FN([T.TUPLE [T.t_int,T.t_int]],T.t_bool)),
             (">",           T.FN([T.TUPLE [T.t_int,T.t_int]],T.t_bool)),
