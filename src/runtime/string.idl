@@ -12,5 +12,12 @@ c   *(ret->data+lhs->length+rhs->length) = '\0';
 c   return ret;
 c }
 
+c static int kstrcmp(kuru_string_t *lhs, kuru_string_t *rhs)
+c {
+c	 if (lhs->length != rhs->length) return 0;
+c   return !(strncmp(lhs->data,rhs->data,lhs->length));
+c }
+
 pure concat kconcat kstring lhs:kstring rhs:kstring
 pure strlen kstrlen int str:kstring
+pure strcmp kstrcmp int lhs:kstring rhs:kstring
