@@ -140,13 +140,18 @@ struct
      | tr_pat ex (I.N(I.PWILD,_,_,_,_)) = ("TRUE",[])
      | tr_pat ex (I.N(I.NIL,_,_,_,_)) =
          (j [ex," == NULL"], [])
-     | tr_pat ex (I.N(I.CON i,b,_,_,p)) =
+     | tr_pat ex (I.N(I.CON i,b,t,_,p)) =
       let
+         val _ = Debug.print Debug.debug 
+            ("tr_pat CON ty: " ^ T.prettyPrint t ^ "\n")
+
+         val t' = tr_ty t
+
          val c1 = ex ^ "->i == " ^ Int.toString i
 
          val (b',bi) = 
             case b of [] => ("TRUE",[])
-                    | [e] => tr_pat (ex ^ "->data") e
+                    | [e] => tr_pat ("(("^t'^")((constr_t *)"^ex ^ ")->data)") e
                     | _ => 
                     Error.bug ("CTranslate.tr_pat","Invalid CON",p)
       in
@@ -457,6 +462,31 @@ struct
          (I.N(I.FUNDEC s,[I.N(I.IDENT s',_,_,_,_),e],t as T.FN ([it],ot), _, p)) =
       let
          val (e',ei) = tr_exp e
+         val f' = S.name s
+
+         val _ = if getAlias (S.symbol ("closure"^f'^"_t")) then () else
+               let
+                  val ixi = ref 1 (* Field names in closures start from d1 *)
+                  fun ix () =
+                  let
+                     val i = !ixi
+                     val _ = ixi := !ixi + 1
+                  in
+                     "d" ^ Int.toString i
+                  end
+                  val env = ClosureConvert.getEnv s
+                  val types = map (tr_ty o I.getType) env
+                  val td = 
+                     ["typedef struct closure"^f'^"_t {",
+                     j["   ",tr_ty ot,
+                       " (*func)(struct closure",f',"_t *, ",tr_ty it,");"]] @
+                     (map (fn t => "   " ^ t ^ " " ^ (ix()) ^ ";") types) @
+                     ["} closure" ^ f' ^ "_t;"]
+               in
+                   (addType td;
+                    addAlias (S.symbol ("closure"^f'^"_t"),""))
+               end
+
          val _ = addData
            ([j [tr_ty ot,
                 " ",

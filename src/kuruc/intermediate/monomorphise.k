@@ -196,10 +196,19 @@ struct
      | instantiate e1 e2 =
          if Polymorphism.isPolyTy (I.getType e2) then
             I.N (I.IDENT (addUninst e1),[],I.getType e1,[],(0,""))
-         else 
-      Error.bug ("Monomorphise.instantiate", 
+         else
+         let
+            val t2 = I.getType e2
+            val t1 = I.getType e1
+            val m = tymap t1 t2
+            val f' = 
+               List.foldl (fn ((l,r),f) => I.mapType (T.substinty l r) f) e1 m
+         in
+            f'   
+         end
+    (*  Error.bug ("Monomorphise.instantiate", 
                  "Attempted to instantiate: " ^ I.prettyPrint e1 ^ 
-                 " with " ^ I.prettyPrint e2, (0,""))
+                 " with " ^ I.prettyPrint e2, (0,"")) *)
 
    (** TODO: Apply the value restriction here *)
    (** FIXME: Fix the type fields of all affected nodes. *)
@@ -387,6 +396,8 @@ struct
          in
             I.N (I.IMPORT (s1,t,s2), [], t, [], p)
          end
+        | mstm (A.DSIGNATURE (s,_,p)) =
+            I.N (I.BIND s,[],T.UNKNOWN,[],p)
         | mstm x = 
             Error.bug
                ("Monomorphise.mstm", "Unhandled: " ^ A.prettyPrint [x],(0,""))
