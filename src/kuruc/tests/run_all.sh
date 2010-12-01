@@ -20,10 +20,12 @@ do
 			f=$(($f+1))
 		else echo "	[passed]"
 		fi
+	else if `echo $i | grep "fail" 1>/dev/null 2>&1` ; then
+		echo "	[passed]"
 	else
 		f=$(($f+1))
 		echo "	[FAILED (Compilation Failed)]"
-	fi
+	fi fi
 done
 
 echo ""

@@ -1,5 +1,6 @@
 21e81a50db9102a30b239a8950f04265  test-all-symbol.k.out
 19fd614c4fb7f2d4f085580f995fd6fe  test-ast-datatype-unfold.k.out
+cbe2fa3a241788da1e968862e143b56b  test-ast-exn.k.out
 6d494b8a67550a3a511a01d5c955fa89  test-ast-fun-curry.k.out
 ee924bdb95586219a4b6c39ac04ee53d  test-ast-infix-pattern.k.out
 3be8354272a7d41cbdd03a2bfc77a4e1  test-ast-open.k.out
@@ -26,8 +27,10 @@ eaec07e5a7566e0e30a08b23e6a49752  test-parse-fun-curry.k.out
 5fe5509d9aa5a14ba598e2608196cdba  test-parse-infix-assoc.k.out
 197010633b0b4318ee6c36435ee4ae0a  test-parse-infix-case.k.out
 af4d360dced9291713a46b15b2ea6949  test-parse-infix.k.out
+644fc249edaf5444ee9f487d214ffc16  test-parse-pattern-assign.k.out
 6d3b1b5da5066ea6369c7591cedf4398  test-parse-raise.k.out
 003fa933f6ec462fa739ac6b0cce0d86  test-parse-structure-assign.k.out
+421e5dd08fb8f6cb38cef714ec14fe8e  test-parse-tuple-assign.k.out
 3e8195ae48fc26b3e383aca37cb13fce  test-parse-type.k.out
 6be871acd85aeb6f25eadc72bc086005  test-parse-type2.k.out
 2fcacb9ba7c8a6c60a149f175ec96f9c  test-parse-wildcard-assign.k.out

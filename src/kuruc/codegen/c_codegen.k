@@ -111,6 +111,7 @@ struct
            \ #define false 0 \n\
            \ #define KMALLOC(x) malloc(x) \n\
            \ #define KSTRDUP(x) c2ks(x) \n\
+           \ #define Match \"Match\" \n\
            \ kuru_string_t *c2ks(const char *cstr); \n\
            \ void kuru_string_destroy(kuru_string_t *kstr); \n\
            \ kuru_string_t *ksdup(const kuru_string_t *kstr); \n\

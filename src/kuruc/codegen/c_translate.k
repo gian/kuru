@@ -332,7 +332,7 @@ struct
       let
          val (e',ei) = tr_exp e
       in
-         ("void", ei @
+         ("NULL", ei @
           [j ["RAISE(",e',");"]])
       end
      | tr_exp (I.N (I.SEQ, c, t, _, p)) =
