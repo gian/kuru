@@ -77,19 +77,19 @@ struct
             end
 
          val b = 
-            String.concatWith ";\n   " 
-               (map (fn x => tr_ty x ^ " " ^ (ix ()) ^ ";") t)
+               (map (fn x => "   " ^ tr_ty x ^ " " ^ (ix ()) ^ ";") t)
 
          val d = ["typedef struct {"] @
-                  [b] @
+                  b @
                  ["} " ^ tn ^ ";"]
 
          val _ = addType d
       in
-         tn
+         tn ^ " *" 
       end
      | tr_ty (T.CONSTR ([t1],t2)) = tr_ty t2 (* FIXME *) 
      | tr_ty (T.FN ([t1],t2)) = "closure_t *"
+     | tr_ty (T.POLY _) = "void *"
      | tr_ty (T.UNKNOWN) = "void *"
      | tr_ty t =
       Error.bug ("CTranslate.tr_ty", "Not implemented: " ^ T.prettyPrint t, (0,""))
@@ -190,6 +190,7 @@ struct
       let
          val rt = fresh ()
          val t' = tr_ty t
+         val t'' = String.substring (t',0,size t' - 2)
          val v' = map tr_exp v
 
          val ind = ref 0
@@ -205,7 +206,7 @@ struct
                end) v')
       in
          (rt,
-          [j [t',"* ",rt," = (",t',"*) KMALLOC(sizeof (",t',"));"]] @
+          [j [t'," ",rt," = (",t',") KMALLOC(sizeof (",t'',"));"]] @
           v'')
       end
      | tr_exp (I.N (I.IF,[a,b,c],t,_,_)) =

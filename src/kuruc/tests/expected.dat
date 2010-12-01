@@ -20,8 +20,9 @@ b68367ae35eace9fd0da6a15ea2d7d44  test-intermediate-fn.k.out
 600401f3e940b18317e07bbda1645f96  test-intermediate-recursive.k.out
 9e99a9717db5e73a41fb4ffa9f5a1bc8  test-parse-datatype-simple.k.out
 919cbcc09b7af83c8b91d60368ddc794  test-parse-datatype.k.out
-3e8195ae48fc26b3e383aca37cb13fce  test-parse-eq.k.out
+305922909fd5f838115526bdc2fb68b9  test-parse-eq.k.out
 eaec07e5a7566e0e30a08b23e6a49752  test-parse-fun-curry.k.out
+2dfe15f2db7c5969cda9ece08e3fa476  test-parse-if.k.out
 5fe5509d9aa5a14ba598e2608196cdba  test-parse-infix-assoc.k.out
 af4d360dced9291713a46b15b2ea6949  test-parse-infix.k.out
 6d3b1b5da5066ea6369c7591cedf4398  test-parse-raise.k.out
