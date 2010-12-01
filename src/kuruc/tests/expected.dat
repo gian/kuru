@@ -24,6 +24,7 @@ b68367ae35eace9fd0da6a15ea2d7d44  test-intermediate-fn.k.out
 eaec07e5a7566e0e30a08b23e6a49752  test-parse-fun-curry.k.out
 2dfe15f2db7c5969cda9ece08e3fa476  test-parse-if.k.out
 5fe5509d9aa5a14ba598e2608196cdba  test-parse-infix-assoc.k.out
+197010633b0b4318ee6c36435ee4ae0a  test-parse-infix-case.k.out
 af4d360dced9291713a46b15b2ea6949  test-parse-infix.k.out
 6d3b1b5da5066ea6369c7591cedf4398  test-parse-raise.k.out
 003fa933f6ec462fa739ac6b0cce0d86  test-parse-structure-assign.k.out

@@ -26,7 +26,8 @@ struct
       let
          val files' = files
 
-         val args = ["-I"^String.concatWith ":" (Config.getLibPath()),
+         val args = Config.getCCArgs () :: 
+                     ["-I"^String.concatWith ":" (Config.getLibPath()),
                                                   "-o",filename] @ files'
 
          val _ = Debug.print Debug.verbose

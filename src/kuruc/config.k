@@ -27,6 +27,7 @@ struct
    val keepLLVM = ref false
    val libPath = ref [] : string list ref
    val backend = ref "c"
+   val ccargs = ref ""
 
    fun configureLibraryPaths () =
       libPath :=
@@ -72,6 +73,7 @@ struct
    fun setSafe t = safe := t
    fun setBasis t = basis := t
    fun setBackend t = backend := t
+   fun setCCArgs t = ccargs := t
 
    fun getOutputFile () = !outputFile
    fun getOptimiser () = !optimiserLevel
@@ -82,6 +84,7 @@ struct
    fun getSafe () = !safe
    fun getBasis () = !basis
    fun getBackend () = !backend
+   fun getCCArgs () = !ccargs
 
    (* Resolve a full path to a library, based on the library path *)
 

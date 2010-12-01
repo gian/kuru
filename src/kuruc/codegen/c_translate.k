@@ -135,7 +135,7 @@ struct
 
       in
          (rt,
-         [j ["kuru_bool_t ",rt," = TRUE;"]] @ v' @ [endLabel ^ ":"]) 
+         [j ["kuru_bool_t ",rt," = TRUE;"]] @ v' @ [endLabel ^ ":"] @ [";"]) 
       end
      | tr_pat ex (I.N(I.PWILD,_,_,_,_)) = ("TRUE",[])
      | tr_pat ex (I.N(I.NIL,_,_,_,_)) =
@@ -166,7 +166,8 @@ struct
                [j ["if (",ex," == NULL) goto ", failLabel, ";"]] @
                ai @
                bi @
-               [j [failLabel,":"]])
+               [j [failLabel,":"]] @
+               [";"])
             end
           | n => Error.fail ("Unrecognised infix pattern '"^n^"'",p))
      | tr_pat ex (x as I.N (_,_,_,_,p)) =
@@ -262,7 +263,7 @@ struct
           ei @
           pats @
          ["RAISE (\"Match\");",
-          endLabel ^ ":"])
+          endLabel ^ ":",";"])
       end
      | tr_exp (I.N (I.APP, [I.N (I.CONS,_,_,_,_),I.N(I.TUPLE,[a,b],_,_,_)],t,_,_))=
       let
