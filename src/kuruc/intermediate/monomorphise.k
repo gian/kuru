@@ -333,7 +333,8 @@ struct
          val t' = 
             case I.getType e1'' of
                T.FN (_,ot) => ot
-             | _ => Error.bug ("Monomorphise","Invalid non-FN type in APP.",p)
+             | _ => Error.bug ("Monomorphise","Invalid non-FN type in APP: " ^
+                        I.prettyPrint e1'',p)
       in
          I.N (I.APP, [e1'', e2'], t', [], p)
       end

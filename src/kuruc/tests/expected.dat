@@ -8,7 +8,7 @@ eb40ad7b52cf875db75912b786059fd3  test-ast-open.k.out
 40833984797237c5b6f74b5f26dae87a  test-closure-convert.k.out
 0f4978ddcb3503b750e6e44b3a88133e  test-codegen-arith.k.out
 0bb8062c8c179ff688b5d3a3d63dd655  test-codegen-builtin.k.out
-bb2735a909d9e544bb98fd522dfadfa0  test-codegen-datatype.k.out
+a16431e381d8742e4bf4d92860ae027d  test-codegen-datatype.k.out
 40f09bb01d55272c1f1cbd551fb80fef  test-codegen-if.k.out
 2b226522928d05c695d427cb27d92eda  test-codegen-list-pattern.k.out
 323ab683a33d0e194b7fff1a9f670058  test-codegen-list.k.out
@@ -36,7 +36,7 @@ c10cd6c7a9fc3d0a002356055d109ac8  test-parse-structure-assign.k.out
 83215d15d8284a72b7f46019e33bc9b1  test-parse-type.k.out
 20ef004a93ee1a6c885b2e8b14dc7dcb  test-parse-type2.k.out
 e525d59a5e9a3fbda4a972872cd78d97  test-parse-wildcard-assign.k.out
-1b489fa924e82c96d605d0823d3307f6  test-semant-bool.k.out
+83215d15d8284a72b7f46019e33bc9b1  test-semant-bool.k.out
 becfc0936f370f600960f9d15084386f  test-semant-constrain.k.out
 adca676b9dd43ac71e5bfccdf7bb0efd  test-semant-option.k.out
 ccc602c93a66adbad893600166b19e29  test-semant-unify-annotate.k.out

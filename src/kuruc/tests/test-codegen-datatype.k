@@ -2,7 +2,7 @@ datatype bla = Foo of int
 				 | Bar of string 
 				 | Baz of bla
 
-fun extract (Foo i) = (print (toString i);())
+fun extract (Foo i) = (print (Int.toString i);())
   | extract (Bar s) = (print s;())
   | extract (Baz b) = extract b
 

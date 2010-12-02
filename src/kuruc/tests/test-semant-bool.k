@@ -1,1 +1,1 @@
-val p = Compiler.Internal.true 
+val p = true 
