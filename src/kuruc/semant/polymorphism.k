@@ -33,6 +33,7 @@ struct
 			  | T.META x => true
            | T.VAR x => true
            | T.POLY x => true
+           | T.CLASS x => true
 			  | _ => false)
       in
          oc t

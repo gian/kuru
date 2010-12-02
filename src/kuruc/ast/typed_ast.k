@@ -71,6 +71,8 @@ struct
                  | DSIGNATURE of S.symbol * tast vector * pos
                  | DOPEN of texp * pos
                  | DIMPORT of S.symbol * T.ty * S.symbol * pos
+                 | DCLASSIMPL of T.ty * S.symbol * Env.enventry S.table * pos
+                 | DCLASS of S.symbol * S.symbol * tast list * pos
                  | DNULL of pos (* For things we've removed *)
 
    val ppty = T.pp
@@ -106,6 +108,8 @@ struct
      | getType (DSTRUCTASSIGN _) = T.UNKNOWN
      | getType (DOPEN _) = T.UNKNOWN
      | getType (DIMPORT (_,t,_,_)) = t
+     | getType (DCLASS _) = T.UNKNOWN
+     | getType (DCLASSIMPL _) = T.UNKNOWN
 	  | getType _ = raise Fail "Can't getType for non DVAL or DVALREC"
 
 	fun setType (DVAL (a,b,_,c)) t = DVAL (a,b,t,c)
@@ -324,6 +328,12 @@ struct
      | prettyPrint ((DIMPORT (i1,t,i2,p))::r) = 
             "DIMPORT [" ^ S.name i1 ^ " : " ^ ppty t ^ " as " ^ S.name i2 ^ "]\n" ^ 
              prettyPrint r
+     | prettyPrint ((DCLASS (i1,i2,l,p))::r) =
+            "DCLASS " ^ S.name i1 ^ " of " ^ S.name i2 ^ " [\n" ^ 
+               prettyPrint l ^ "\n]\n" ^ prettyPrint r
+     | prettyPrint ((DCLASSIMPL (t,c,tab,p))::r) =
+            "DCLASSIMPL " ^ ppty t ^ " implements " ^ S.name c ^ " in [...]\n" ^ 
+               prettyPrint r
 end
 
 

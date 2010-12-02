@@ -20,10 +20,15 @@ infix 2 orelse
 infix 2 andalso
 infix 0 before
 
+exception Match
+
 structure CommandLine =
 struct
 
 end
+
+val true = 1 = 1
+val false = 1 = 0
 
 datatype 'a option = SOME of 'a | NONE
 
@@ -33,3 +38,4 @@ _import k_int_mul : (int * int) -> int as *
 
 _import k_list_cons : ('a * 'a list) -> 'a list as ::
 _import k_string_strlen : string -> int as strlen
+

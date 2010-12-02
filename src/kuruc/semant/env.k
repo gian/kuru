@@ -77,14 +77,12 @@ struct
          val listty = T.CONSTR ([consty],T.t_list)
          val benv =
           [
-            ("true",        T.t_bool),
-            ("false",       T.t_bool),
-            ("Match",       T.t_exn),
+            ("=",           T.FN([T.TUPLE [T.fresh(),T.fresh()]],T.t_bool))
+        (*    ("Match",       T.t_exn),
             ("+",           T.FN([T.TUPLE [T.t_int,T.t_int]],T.t_int)),
             ("-",           T.FN([T.TUPLE [T.t_int,T.t_int]],T.t_int)),
             ("*",           T.FN([T.TUPLE [T.t_int,T.t_int]],T.t_int)),
             ("/",           T.FN([T.TUPLE [T.t_int,T.t_int]],T.t_int)),
-            ("=",           T.FN([T.TUPLE [T.fresh(),T.fresh()]],T.t_bool)),
             ("<>",          T.FN([T.TUPLE [T.fresh(),T.fresh()]],T.t_bool)),
             ("<",           T.FN([T.TUPLE [T.t_int,T.t_int]],T.t_bool)),
             (">",           T.FN([T.TUPLE [T.t_int,T.t_int]],T.t_bool)),
@@ -93,9 +91,9 @@ struct
             ("andalso",    T.FN([T.TUPLE [T.t_bool,T.t_bool]],T.t_bool)),
             ("orelse",     T.FN([T.TUPLE [T.t_bool,T.t_bool]],T.t_bool)),
             ("print",       T.FN ([T.t_string], T.t_void)),
-            ("toString",    T.FN ([T.t_int],T.t_string)),
+            ("toString",    T.FN ([T.t_int],T.t_string)), 
             ("::",          T.FN([T.TUPLE [consty,listty]],listty)),
-            ("@",           T.FN([T.TUPLE [listty,listty]],listty))
+            ("@",           T.FN([T.TUPLE [listty,listty]],listty)) *)
           ]
          val b = 
             List.foldl (fn ((s,t),st) => 

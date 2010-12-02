@@ -19,8 +19,8 @@ type int implements Foo in FooInt
 type char implements Foo in FooChar
 
 
-val k = foo 0 
-val j = foo #"c"
+val k = Foo.foo 0 
+val j = Foo.foo #"c"
 
 val _ = print (Int.toString k)
 val _ = print "\n"

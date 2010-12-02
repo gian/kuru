@@ -201,7 +201,7 @@ struct
       and compileLLVM fcc =
       let
          val _ = Debug.print Debug.verbose 
-            "LLVM code generator backend selected"
+            "LLVM code generator backend selected\n"
          
          (* Stage 6 - Translation to Asm *)
 
@@ -238,7 +238,7 @@ struct
       and compileC fcc =
       let
          val _ = Debug.print Debug.verbose 
-            "C code generator backend selected"
+            "C code generator backend selected\n"
 
          val _ = Debug.startStage 1 "CTranslate"
          val (seg,d') = CTranslate.translate fcc

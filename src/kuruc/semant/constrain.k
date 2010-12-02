@@ -64,12 +64,12 @@ struct
           [
             ("true",        T.t_bool),
             ("false",       T.t_bool),
-            ("Match",       T.t_exn),
+            ("=",           T.FN([T.TUPLE [T.POLY 0,T.POLY 0]],T.t_bool))
+        (*    ("Match",       T.t_exn),
             ("+",           T.FN([T.TUPLE [T.t_int,T.t_int]],T.t_int)),
             ("-",           T.FN([T.TUPLE [T.t_int,T.t_int]],T.t_int)),
             ("*",           T.FN([T.TUPLE [T.t_int,T.t_int]],T.t_int)),
             ("/",           T.FN([T.TUPLE [T.t_int,T.t_int]],T.t_int)),
-            ("=",           T.FN([T.TUPLE [T.POLY 0,T.POLY 0]],T.t_bool)),
             ("<>",          T.FN([T.TUPLE [T.fresh(),T.fresh()]],T.t_bool)),
             ("<",           T.FN([T.TUPLE [T.t_int,T.t_int]],T.t_bool)),
             (">",           T.FN([T.TUPLE [T.t_int,T.t_int]],T.t_bool)),
@@ -78,9 +78,9 @@ struct
             ("andalso",     T.FN([T.TUPLE [T.t_bool,T.t_bool]],T.t_bool)),
             ("orelse",      T.FN([T.TUPLE [T.t_bool,T.t_bool]],T.t_bool)),
             ("print",       T.FN ([T.t_string], T.t_void)),
-            ("toString",    T.FN ([T.t_int],T.t_string)),
+            ("toString",    T.FN ([T.t_int],T.t_string)), 
             ("::",          T.FN([T.TUPLE [consty,listty]],listty)),
-            ("@",           T.FN([T.TUPLE [listty,listty]],listty))
+            ("@",           T.FN([T.TUPLE [listty,listty]],listty)) *) 
           ]
 
    val _ = List.app (fn (a,b) => setType (S.symbol a) b) benv
@@ -110,6 +110,7 @@ struct
            | inst' (T.CONSTR (l,t)) = T.CONSTR (map inst' l, inst' t)
            | inst' (T.META x) = T.META x
            | inst' (T.NAME s) = T.NAME s
+           | inst' (T.CLASS x) = T.CLASS x
            | inst' t =
                Error.bug ("Constrain.inst",
                   "Instantiating unknown: " ^ T.prettyPrint t, (0,""))
@@ -407,6 +408,7 @@ struct
       in
          A.DIMPORT (a,t,b,p)
       end
+        | cstm (A.DCLASS (s1,s2,l,p)) = A.DCLASS (s1,s2,map cstm l,p)
         | cstm x = x
    in
       cstm de

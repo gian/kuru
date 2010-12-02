@@ -9,3 +9,6 @@ struct
 
 	val stdErr = 0
 end
+
+fun print x = TextIO.print x
+

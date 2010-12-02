@@ -701,13 +701,13 @@ struct
              val a' = S.symbol a
              val t' = T.CLASS (a',T.NAME (S.symbol b))
              val te' = S.enter (te,S.symbol b,t')
-             val (te'',ve',se',l') = convert te' ve se l
+             val (te'',ve',se',l') = convert te' S.empty S.empty l
 
              val se'' = S.enter (se,a',Env.ClassEntry (te',ve',se',ref []))
 
              val te''' = S.enter (te,a',t')
           in
-             (te''',ve',se'',l')
+             (te''',ve,se'',[A.DCLASS (a',S.symbol b,l',p)])
           end
         | d te ve se (ExnDec (a,x,p)) =
             (* We've already translated this to a datatype in ast-promote-exns *)
@@ -835,7 +835,7 @@ struct
 
              val _ = addInstance class t imp'''
           in
-             (te,ve,se,[])
+             (te,ve,se,[A.DCLASSIMPL (t,class,imp''',p)])
           end
         | d te ve se t = Error.fail ("AstParseTree.d: " ^
                            "ast-parse-tree.k: decl match",(0,""))

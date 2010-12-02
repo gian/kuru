@@ -72,6 +72,11 @@ struct
          s'
       end
 
+   val _ = addUninstS (S.symbol "=") 
+            (I.N (I.IDENT (S.symbol "="),[],
+               T.FN ([T.TUPLE [T.POLY 0,T.POLY 0]],T.t_bool),
+                  [], (0,"_builtin_")))
+
    (* FIXME: check symbol first, then type equality *)
    fun getInst s t =
       List.find (fn (t',s',_, _) => 
@@ -108,7 +113,7 @@ struct
          Error.bug ("Monomorphise.instantiate","SELF: " ^ I.prettyPrint x,p)
      | instantiate e1 (I.N (_,_,T.POLY _,_,p)) = 
          I.N (I.IDENT (addUninst e1), [], I.getType e1, [], p)
-     | instantiate (I.N (I.IDENT s, _, T.FN ([it],ot), m, p)) e2 =
+     | instantiate (e1 as I.N (I.IDENT s, _, T.FN ([it],ot), m, p)) e2 =
     (case S.name s of 
       "::" =>
       let
@@ -154,7 +159,7 @@ struct
             T.FN ([T.TUPLE [T.CONSTR ([T.POLY 0],T.t_list),
                T.CONSTR ([T.POLY 0],T.t_list),T.t_list]],
                      T.CONSTR ([T.POLY 0],T.t_list)), m, p)
-    | _ =>
+    | _ => if(* Polymorphism.isPolyTy (I.getType e1)*) true then
    let
       val t2 = I.getType e2
 
@@ -165,6 +170,9 @@ struct
          case getInst s t2 of
             NONE => 
             let
+               val _ = Debug.print Debug.debug 
+                  ("Monomorphise.instantiate: Polymorphic e1\n")
+
                val f = getUninst s
 
                val _ = Debug.print Debug.debug
@@ -192,7 +200,7 @@ struct
                I.N (I.IDENT s2, [], I.getType i, [], p)
    in
       i
-   end)
+   end else e1)
      | instantiate e1 e2 =
          if Polymorphism.isPolyTy (I.getType e2) then
             I.N (I.IDENT (addUninst e1),[],I.getType e1,[],(0,""))
@@ -315,6 +323,13 @@ struct
 
          val e1'' = instantiate e1' e2'
 
+         
+         val _ = Debug.print Debug.debug
+            ("Monomorphise.mexp: EAPP: " ^ 
+               A.ppe e1 ^ " (" ^ A.ppe e2 ^ ")\n" ^
+             "Instantiated to: " ^ 
+               I.prettyPrint e1'' ^ " (" ^ I.prettyPrint e2' ^ ")\n")
+
          val t' = 
             case I.getType e1'' of
                T.FN (_,ot) => ot
@@ -350,7 +365,13 @@ struct
       end
         | mexp x = Error.bug ("Monomorphise","Not implemented: " ^ A.ppe x,(0,"")) 
 
-      and mstm (A.DVAL (s,e,t,p)) = 
+      and mstm (A.DVAL (s,A.ESTUB (t,p1),_,p2)) =
+         let
+            val _ = addUninstS s (I.N (I.STUB,[],t,[],p1))
+         in
+            I.N (I.BIND s,[],t,[],p2)
+         end
+        | mstm (A.DVAL (s,e,t,p)) = 
          let
             val _ = Debug.print Debug.debug ("Monomorphism.mstm: DVAL " ^ 
                         S.name s ^ " = " ^ A.ppe e ^ "\n")
@@ -373,10 +394,11 @@ struct
                         case m of I.N(I.IDENT s',_,_,_,_) => 
                            (addAlias (
                               I.N (I.ALIAS (s,s',t),[],t,[],p)); 
-                              getUninst s')
+                               getUninst s' 
+                              )
                                 | _ => m
                   in
-                     ignore (addUninstS s m')
+                    ignore (addUninstS s m') 
                   end
                   | _ => ()
          in
@@ -392,12 +414,46 @@ struct
          end
         | mstm (A.DIMPORT (s1,t as T.FN ([it],ot),s2,p)) = 
          let
+            val _ = Debug.print Debug.debug
+               ("Monomorphise.mstm: Adding import instance for "^S.name s1 ^"\n")
             val _ = addInst s2 it (I.N (I.EXTERN s1,[],t,[],p)) 
+            val _ = addUninstS s2 (I.N (I.EXTERN s1,[],t,[],p)) 
          in
             I.N (I.IMPORT (s1,t,s2), [], t, [], p)
          end
         | mstm (A.DSIGNATURE (s,_,p)) =
             I.N (I.BIND s,[],T.UNKNOWN,[],p)
+        | mstm (A.DCLASS (s,_,l,p)) = 
+         let
+            val _ = map mstm l
+         in
+            I.N (I.BIND s,[],T.UNKNOWN,[],p)
+         end
+        | mstm (A.DCLASSIMPL (t,class,impl,p)) =
+         let
+            val keys =
+               map (fn (a,b) => (valOf (S.unhash a),b)) (S.keys impl)
+
+            fun classInst t1 (t2 as T.CLASS (s,t)) = 
+                  if s = class then t1 else t2
+              | classInst t1 (T.FN (a,b)) = T.FN (map (classInst t1) a, 
+                                                   classInst t1 b)
+              | classInst t1 (T.TUPLE t) = T.TUPLE (map (classInst t1) t)
+              | classInst t1 x = x
+
+            val _ = Debug.print Debug.debug
+               ("Monomorphise: DCLASSIMPL: keys:\n" ^ 
+                  String.concatWith "\n"
+                     (map (fn (a,Env.VarEntry(sy,ty)) => 
+                        S.name a ^ " = " ^ 
+                           T.prettyPrint t ^ " " ^ S.name sy) keys) ^ "\n")
+
+            val _ = map (fn (a,Env.VarEntry (sy,ty)) =>
+               addInst a t (I.N (I.IDENT sy, [], 
+                  classInst t (I.getType (getUninst a)), [], p))) keys
+         in
+            I.N (I.BIND (S.symbol "_DUMMY"),[],t,[],p)
+         end
         | mstm x = 
             Error.bug
                ("Monomorphise.mstm", "Unhandled: " ^ A.prettyPrint [x],(0,""))
