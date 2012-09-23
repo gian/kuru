@@ -146,7 +146,7 @@ keyword        <- "val" / "let" / "if" / "then" / "else" / "datatype"
                   "structure" / "struct" / "of" / "case" /
                   "handle" / "raise" / "infixr" / "infix" /
                   "signature" / "sig" / "exception" / "open" / "local" /
-                  "_import" / "as" / "class" / "implements"
+                  "_import" / "as" / "class" / "implements" 
                   .
 
 id             <-  r1: reserved r2: (reserved*) -> 

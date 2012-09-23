@@ -61,7 +61,7 @@ struct
                   val s' = fresh ()
                   val _ = inst := (!inst) @ [(t,s,s',i)]
                in
-                  s'
+                  s
                end
              | SOME (_,_,s,_) => s
 
@@ -321,7 +321,7 @@ struct
              "Mapped to: " ^ 
                I.prettyPrint e1' ^ " (" ^ I.prettyPrint e2' ^ ")\n")
 
-         val e1'' = instantiate e1' e2'
+         (* val e1'' = instantiate e1' e2' 
 
          
          val _ = Debug.print Debug.debug
@@ -329,14 +329,15 @@ struct
                A.ppe e1 ^ " (" ^ A.ppe e2 ^ ")\n" ^
              "Instantiated to: " ^ 
                I.prettyPrint e1'' ^ " (" ^ I.prettyPrint e2' ^ ")\n")
+         *)
 
          val t' = 
-            case I.getType e1'' of
+            case I.getType e1' of
                T.FN (_,ot) => ot
              | _ => Error.bug ("Monomorphise","Invalid non-FN type in APP: " ^
-                        I.prettyPrint e1'',p)
+                        I.prettyPrint e1',p)
       in
-         I.N (I.APP, [e1'', e2'], t', [], p)
+         I.N (I.APP, [e1', e2'], t', [], p)
       end
         | mexp (A.ERAISE (e,p)) =
       let
@@ -422,6 +423,15 @@ struct
          in
             I.N (I.IMPORT (s1,t,s2), [], t, [], p)
          end
+        | mstm (A.DIMPORT (s1,t,s2,p)) =
+         let
+            val _ = Debug.print Debug.debug
+               ("Monomorphise.mstm: Adding import instance for "^S.name s1 ^"\n")
+            val _ = addInst s2 t (I.N (I.EXTERN s1,[],t,[],p)) 
+            val _ = addUninstS s2 (I.N (I.EXTERN s1,[],t,[],p)) 
+         in
+            I.N (I.IMPORT (s1,t,s2), [], t, [], p)
+         end
         | mstm (A.DSIGNATURE (s,_,p)) =
             I.N (I.BIND s,[],T.UNKNOWN,[],p)
         | mstm (A.DCLASS (s,_,l,p)) = 
@@ -462,14 +472,14 @@ struct
       val prog' = map mstm prog
 
       (* FIXME: This is a hack. All this poly stuff should be gone. *)
-      val prog'' =
-         List.filter (fn x => not (Polymorphism.isPolyTy (I.getType x))) prog'
+      (* val prog'' =
+         List.filter (fn x => not (Polymorphism.isPolyTy (I.getType x))) prog' *)
 
       val frags = map 
          (fn (t1,s1,s2,i) => I.N (I.BIND s2, [i], I.getType i, [], (0,""))) 
             (!inst)
    in
-      I.N (I.PROGRAM, frags @ prog'', T.UNKNOWN, [], (0,""))
+      I.N (I.PROGRAM, frags @ prog', T.UNKNOWN, [], (0,""))
    end
 end
 

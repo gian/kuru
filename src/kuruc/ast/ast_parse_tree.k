@@ -481,22 +481,24 @@ struct
           in
              (te,ve',se,[A.DVAL (n',A.ESTUB (e,p),e,p)])
           end
-        | d te ve se (TypeBind ([],TyName (Ident(a,_),_),b,p)) =  
+        | d te ve se (TypeBind (l,TyName (Ident(a,_),_),b,p)) =  
           let
              val _ = Debug.print Debug.internal 
                ("Type binding: " ^ a ^ " = " ^ prettyPrint b ^ "\n")
 
              val b' = t te ve se b
-             
-             val _ = Debug.print Debug.internal 
-               ("Type binding resolved to: " ^ a ^ " = " ^ T.prettyPrint b' ^ "\n")
+             val b'' = case l of
+                 [] => b'
+               | l  => T.CONSTR (map (t te ve se) l, b')
 
-             val te' = Symbol.enter (te,S.symbol a,b')
+             val _ = Debug.print Debug.internal 
+               ("Type binding resolved to: " ^ a ^
+                  " = " ^ T.prettyPrint b'' ^ "\n")
+
+             val te' = Symbol.enter (te,S.symbol a,b'')
           in
              (te',ve,se,[])
           end
-        | d te ve se (TypeBind (l,a,b,p)) =
-            raise Fail "ast-parse-tree: TypeBind not fully implemented"
         | d te ve se (TypeDescBind ([],a,p)) =  
           let
              val a' = case (t te ve se a) of T.NAME n => n

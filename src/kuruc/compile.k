@@ -173,16 +173,18 @@ struct
 
          (* Stage 4 - Optimisation *)
 
-         val optfl = Optimise.optimise flmono
+         (* val optfl = Optimise.optimise flmono *)
 
          (* Stage 5 - Closure conversion *)
 
-         val _ = Debug.startStage 1 "ClosureConversion"
+         
+         (* val _ = Debug.startStage 1 "ClosureConversion"
 			val fcc = ClosureConvert.convert flmono 
          val _ = Debug.print Debug.internal ("Closure converted program:\n")
          val _ = Debug.print Debug.internal 
             ("\n" ^ Intermediate.prettyPrint (fcc) ^ "\n")
          val _ = Debug.endStage "ClosureConversion"
+        *)
 
          (* Error Checking State: We proceed no further if errors occurred. *)
          val _ = if Error.getErrorCount () > 0 then 
@@ -191,9 +193,9 @@ struct
 
       in
          if Config.getBackend () = "llvm" then
-            compileLLVM (fcc)
+            compileLLVM (flmono)
          else if Config.getBackend () = "c" then
-            compileC (fcc)
+            compileC (flmono)
          else 
             Error.fail ("Invalid compiler backend selected.", (0,""))
       end
@@ -240,24 +242,28 @@ struct
          val _ = Debug.print Debug.verbose 
             "C code generator backend selected\n"
 
-         val _ = Debug.startStage 1 "CTranslate"
-         val (seg,d') = CTranslate.translate fcc
-         val _ = Debug.endStage "CTranslate"
+         val _ = Debug.startStage 1 "JSTranslate"
+         val (seg,d') = JSTranslate.translate fcc
+         val _ = Debug.endStage "JSTranslate"
          
          val _ = Debug.startStage 1 "CodeGen"
-         val code = CCodeGen.codegen (seg, d')
+         val code = JSCodeGen.codegen (seg, d')
          val _ = Debug.print Debug.internal ("Generated code:\n" ^ code ^ "\n")
      
          val _ = Debug.startStage 2 "Emit"
-         val codeLocation = CCodeGen.emit code
+         val codeLocation = JSCodeGen.emit code
          val _ = Debug.endStage "Emit"
 
          val _ = Debug.endStage "CodeGen"
          
          (* Stage 7 - GCC invocation *)
-         val _ = Debug.startStage 1 "GCC"
+         (*val _ = Debug.startStage 1 "GCC"
          val _ = GCCOperations.compile (codeLocation,Config.getOutputFile ())
-         val _ = Debug.endStage "GCC"
+         val _ = Debug.endStage "GCC"*)
+
+         (* Stage 7 - ClosureCompiler invocation *)
+         val _ = Debug.startStage 1 "ClosureCompiler"
+         val _ = Debug.endStage "ClosureCompiler"
 
          val _ = Debug.endStage "Compile"
       in

@@ -560,6 +560,14 @@ struct
       in
          []
       end
+     | tr_stm (I.N (I.IMPORT (ename, t, iname), _, _, _, _)) =
+      let
+         val b = A.BUILTIN (S.name ename, tr_ty t)
+         val _ = addEnv iname b
+         val _ = addData (A.DECLARE (tr_ty t, S.name ename, tr_ty t))
+      in
+         []
+      end
      | tr_stm 
          (I.N(I.FUNDEC s,[I.N(I.IDENT s',_,_,_,_),e],t as T.FN ([it],ot), _, p)) =
       let

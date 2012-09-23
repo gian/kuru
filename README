@@ -20,3 +20,9 @@ doc/ - Main documentation tree
 
 Running 'make' in the top level will attempt to build everything.
 
+To get kuruc running, you need to set:
+
+export KURU_LIBRARY_PATH=/Users/gdpe/Documents/kuru/src/lib/:/Users/gdpe/Documents/kuru/src/runtime/:/Users/gdpe/Documents/kuru/lib/
+
+Or something similar.
+
