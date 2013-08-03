@@ -23,30 +23,30 @@ structure Main =
 struct
    val args = CommandLine.arguments ()
 
-	fun printUsage () =
-		print ("Usage: kuruc [options] [-o outputFile] file1.k ... fileN.k\n" ^
-		       "   Global Options:\n" ^
+   fun printUsage () =
+      print ("Usage: kuruc [options] [-o outputFile] file1.k ... fileN.k\n" ^
+             "   Global Options:\n" ^
              "\t-o file\t\tSpecify the output file.\n" ^
-				 "\t-h\t\tDisplay this help information and exit.\n" ^
-				 "\t-V\t\tOutput version information and exit.\n" ^
+             "\t-h\t\tDisplay this help information and exit.\n" ^
+             "\t-V\t\tOutput version information and exit.\n" ^
              "\n   Optimisation:\n"^
              "\t-O0\t\tDisable all optimisations.\n" ^ 
              "\t-O1\t\tEnable basic optimisations.\n" ^ 
              "\t-O2\t\t(Default) Enable most optimisations.\n" ^ 
              "\t-O3\t\tEnable all optimisations.\n" ^
              "\n   Verbosity:\n" ^ 
-				 "\t-q\t\tQuiet mode - show only fatal errors.\n" ^
-				 "\t-qq\t\tSilent mode - don't even show errors.\n" ^
-				 "\t-v\t\tVerbose mode.\n" ^
-				 "\t-vv\t\tBe more verbose.\n" ^
-				 "\t-d\t\tEnable debugging output.\n" ^
-				 "\t-dd\t\tEnable noisy debugging mode.\n" ^
+             "\t-q\t\tQuiet mode - show only fatal errors.\n" ^
+             "\t-qq\t\tSilent mode - don't even show errors.\n" ^
+             "\t-v\t\tVerbose mode.\n" ^
+             "\t-vv\t\tBe more verbose.\n" ^
+             "\t-d\t\tEnable debugging output.\n" ^
+             "\t-dd\t\tEnable noisy debugging mode.\n" ^
              "\n   Compilation:\n" ^
              "\t-backend {c|llvm}\tSelect the backend to use.\n" ^
              "\t-keep-llvm\tKeep intermediate LLVM bitcode files.\n" ^
-				 "\t-m16\t\tSet machine word size to 16 bits.\n" ^
-				 "\t-m32\t\t(Default) Set machine word size to 32 bits.\n" ^
-				 "\t-m64\t\tSet machine word size to 64 bits.\n" ^
+             "\t-m16\t\tSet machine word size to 16 bits.\n" ^
+             "\t-m32\t\t(Default) Set machine word size to 32 bits.\n" ^
+             "\t-m64\t\tSet machine word size to 64 bits.\n" ^
              "\n   C Backend Options:\n" ^
              "\t-cc-args <args>\tPass these arguments to the C compiler.\n" ^
              "\n   Libraries:\n" ^
@@ -56,31 +56,31 @@ struct
              "\t-no-basis\tDo not import the basis library.\n")
              
 
-	fun printVersion () =
-		print ("kuruc version " ^ Version.major ^ "." ^ Version.minor ^
-				 " build " ^ Version.build ^ " (" ^ Version.date ^ ") on " ^ 
-				 Version.hostname ^ "\n" ^
-		       "Copyright (C) 2010 Gian Perrone\n" ^ 
-				 "http://www.kuru-lang.org\n")
+   fun printVersion () =
+      print ("kuruc version " ^ Version.major ^ "." ^ Version.minor ^
+             " build " ^ Version.build ^ " (" ^ Version.date ^ ") on " ^ 
+             Version.hostname ^ "\n" ^
+             "Copyright (C) 2010-2013 Gian Perrone\n" ^ 
+             "http://www.kuru-lang.org\n")
 
    fun parseArgs [] = []
-	  | parseArgs ("-v"::t) = (Debug.setDebugLevel Debug.verbose;
+     | parseArgs ("-v"::t) = (Debug.setDebugLevel Debug.verbose;
                               parseArgs t)
-	  | parseArgs ("-vv"::t) = (Debug.setDebugLevel Debug.internal;
+     | parseArgs ("-vv"::t) = (Debug.setDebugLevel Debug.internal;
                               parseArgs t)
-	  | parseArgs ("-d"::t) = (Debug.setDebugLevel Debug.debug;
+     | parseArgs ("-d"::t) = (Debug.setDebugLevel Debug.debug;
                               parseArgs t)
-	  | parseArgs ("-dd"::t) = (KuruParser.debugVerbose := true;
-	  									Debug.setDebugLevel Debug.debugmore;
+     | parseArgs ("-dd"::t) = (KuruParser.debugVerbose := true;
+                               Debug.setDebugLevel Debug.debugmore;
+                               parseArgs t)
+     | parseArgs ("-q"::t) = (KuruParser.debugVerbose := false;
+                              Debug.setDebugLevel Debug.error;
                               parseArgs t)
-	  | parseArgs ("-q"::t) = (KuruParser.debugVerbose := false;
-	  									Debug.setDebugLevel Debug.error;
-                              parseArgs t)
-	  | parseArgs ("-qq"::t) = (KuruParser.debugVerbose := false;
-	  									Debug.setDebugLevel Debug.silent;
-                              parseArgs t)
-	  | parseArgs ("-V"::t) = (printVersion (); Unix.exit 0w0; raise Fail "")
-	  | parseArgs ("-h"::t) = (printUsage (); Unix.exit 0w0; raise Fail "")
+     | parseArgs ("-qq"::t) = (KuruParser.debugVerbose := false;
+                               Debug.setDebugLevel Debug.silent;
+                               parseArgs t)
+     | parseArgs ("-V"::t) = (printVersion (); Unix.exit 0w0; raise Fail "")
+     | parseArgs ("-h"::t) = (printUsage (); Unix.exit 0w0; raise Fail "")
      | parseArgs ("-O0"::t) = (Config.setOptimiser 0; parseArgs t)
      | parseArgs ("-O1"::t) = (Config.setOptimiser 1; parseArgs t)
      | parseArgs ("-O2"::t) = (Config.setOptimiser 2; parseArgs t)
@@ -104,9 +104,9 @@ struct
 
       val _ = if length args' < 1 then (printUsage (); 
             raise Fail "Missing filename") else ()
-	
-	in
-		Compile.compile args'
+   
+   in
+      Compile.compile args'
    end
 end   
    

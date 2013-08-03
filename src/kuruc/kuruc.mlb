@@ -40,8 +40,8 @@ semant/typeclass.sml
 codegen/temp.sml
 codegen/asm.sml
 codegen/translate.sml
-codegen/js_translate.sml
-codegen/js_codegen.sml
+codegen/java_translate.sml
+codegen/java_codegen.sml
 codegen/codegen_decs.sml
 codegen/codegen.sml
 codegen/llvm_operations.sml

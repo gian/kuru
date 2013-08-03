@@ -16,9 +16,9 @@
 *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *******************************************************************************
 *  This file:
-*    C code generator backend that generates C code from Kuru IR.
+*    Java code generator backend that generates Java code from Kuru IR.
 ******************************************************************************)
-structure JSTranslate =
+structure JavaTranslate =
 struct
    structure S = Symbol
    structure T = Type
@@ -27,7 +27,6 @@ struct
    val j = String.concat
    val jc = String.concatWith ", "
    val jnl = String.concatWith "\n"
-   val jeol = String.concatWith ";\n"
    val jsp = String.concatWith " "
 
    val toplev = ref [] : string list list ref
@@ -40,7 +39,7 @@ struct
    fun fresh () = "tmp" ^ (Int.toString (frs := !frs + 1; !frs))
 
    val frt = ref 0
-   fun freshTy () = "ty" ^ (Int.toString (frt := !frt + 1; !frt)) ^ "_t"
+   fun freshTy () = "KuruTy" ^ (Int.toString (frt := !frt + 1; !frt))
 
    val aliases = ref S.empty : string S.table ref
    fun addAlias (k,s) = aliases := S.enter (!aliases,k,s)
@@ -55,17 +54,16 @@ struct
 
    fun tr_ty (T.NAME s) = 
       (case S.name s of
-         "int" => "int"
-       | "string" => "kuru_string_t *"
-       | "char" => "char"
-       | "real" => "float"
-       | "unit" => "kuru_unit_t"
-       | "bool" => "kuru_bool_t"
-       | "cvoid" => "void"
-       | "list" => "kuru_list_t *"
-       | n => "constr_t *")
-     | tr_ty (T.TUPLE t) =
-      let
+         "int" => "Integer"
+       | "string" => "String"
+       | "char" => "Char"
+       | "real" => "Double"
+       | "unit" => "Kuru.Unit"
+       | "bool" => "Boolean"
+       | "cvoid" => "Kuru.Unit"
+       | n => "Object")
+     | tr_ty (T.TUPLE t) = "Kuru.Tuple"
+     (* let
          val tn = freshTy ()
 
          val ixi = ref 0
@@ -78,25 +76,32 @@ struct
             end
 
          val b = 
-               (map (fn x => "   " ^ tr_ty x ^ " " ^ (ix ()) ^ ";") t)
+               (map (fn x => "   public " ^ tr_ty x ^ " " ^ (ix ()) ^ ";") t)
+
+         val d = ["class " ^ tn ^ " implements Kuru.Tuple {"] @
+                  b @
+                 ["}",""]
+
+         val _ = addType d
       in
-         tn ^ " *" 
-      end
+         tn
+      end *)
      | tr_ty (T.CONSTR ([t1],t2)) = tr_ty t2 (* FIXME *) 
-     | tr_ty (T.FN ([t1],t2)) = "closure_t *"
-     | tr_ty (T.POLY _) = "void *"
-     | tr_ty (T.UNKNOWN) = "void *"
+     | tr_ty (T.FN ([t1],t2)) = "Kuru.Function<" ^ tr_ty t1 ^ ", " ^ tr_ty t2 ^ ">"
+     | tr_ty (T.POLY _) = "Object"
+     | tr_ty (T.UNKNOWN) = "Object"
      | tr_ty t =
       Error.bug ("CTranslate.tr_ty", "Not implemented: " ^ T.prettyPrint t, (0,""))
 
    fun tr_pat ex (I.N (I.INT i,_,_,_,_)) = (ex ^ " == " ^ Int.toString i,[])
      | tr_pat ex (I.N (I.CHAR c,_,_,_,_)) = (ex ^ " == '" ^ String.str c ^ "'",[])
-     | tr_pat ex (I.N (I.STRING s,_,_,_,_)) = (ex ^ " == \"" ^ String.toCString s ^ "\"",[])
+     | tr_pat ex (I.N (I.STRING s,_,_,_,_)) = 
+         (ex ^ ".equals(,\"" ^ String.toCString s ^ "\")",[])
      | tr_pat ex (I.N (I.BOOL b,_,_,_,_)) = 
          (ex ^ " == " ^ (if b then "true" else "false"),[])
      | tr_pat ex (I.N (I.UNIT,_,_,_,_)) = ("true",[])
      | tr_pat ex (I.N (I.IDENT s,_,t,_,_)) = 
-         ("true",["var " ^ S.name s ^ " = " ^ ex ^ ";"])
+         ("true",[tr_ty t ^ " " ^ S.name s ^ " = " ^ ex ^ ";"])
      | tr_pat ex (I.N (I.TUPLE, v, T.TUPLE t, _, _)) =
       let
          val rt = fresh ()
@@ -112,23 +117,24 @@ struct
                "f" ^ Int.toString i
             end
 
-         val v' = ["if(false) { }\n"] @ 
+         val v' =
          List.concat (
             List.map
             (fn p => 
                let
                   val i = ix ()
-                  val (p',pi) = tr_pat (j [ex,"->",i]) p
+                  val (p',pi) = tr_pat (j [ex,".",i]) p
                in
                   pi @
-                 [j ["else if ((",p',")) {"],
-                  j ["   ", rt," = true;"],
+                 [j ["else if (!(",p',")) {"],
+                  j ["   ", rt," = false;"],
+                  j [" //  goto ", endLabel,";"],
                  "}"]
                end) v)
 
       in
          (rt,
-         [j ["var ",rt," = false;"]] @ v' @ [endLabel ^ ":"] @ [";"]) 
+         [j ["bool ",rt," = true; if (false) {} "]] @ v' @ ["// " ^ endLabel ^ ":"] @ [";"]) 
       end
      | tr_pat ex (I.N(I.PWILD,_,_,_,_)) = ("true",[])
      | tr_pat ex (I.N(I.NIL,_,_,_,_)) =
@@ -144,9 +150,9 @@ struct
 
          val (b',bi) = 
             case b of [] => ("true",[])
-                    | [e] => tr_pat (ex ^ ".data") e
+                    | [e] => tr_pat ("(("^t'^") " ^ ex ^ ".data)") e
                     | _ => 
-                    Error.bug ("JSTranslate.tr_pat","Invalid CON",p)
+                    Error.bug ("CTranslate.tr_pat","Invalid CON",p)
       in
          (j ["(",c1," && ",b',")"], bi)
       end
@@ -156,19 +162,20 @@ struct
             let
                val failLabel = fresh()
                val (a',ai) = 
-                  tr_pat (ex^"[0]") a
+                  tr_pat (ex^".data") a
                val (b',bi) =
-                  tr_pat (ex^".slice(1)") b
+                  tr_pat (ex^".next") b
             in
                ("("^ex^" != null)",
-               [j ["if (",ex," != null) {"]] @
+               [j ["if (",ex," == null) // goto ", failLabel, ";"]] @
                ai @
                bi @
-               ["}"])
+               [j [failLabel,":"]] @
+               [";"])
             end
           | n => Error.fail ("Unrecognised infix pattern '"^n^"'",p))
      | tr_pat ex (x as I.N (_,_,_,_,p)) =
-         Error.bug ("JSTranslate.tr_pat", "Invalid pattern: " ^ I.prettyPrint x, p)
+         Error.bug ("Translate.tr_pat", "Invalid pattern: " ^ I.prettyPrint x, p)
 
    and tr_exp (I.N (I.INT i,_,_,_,_)) = (Int.toString i,[])
      | tr_exp (I.N (I.CHAR c,_,_,_,_)) = ("'" ^ String.str c ^ "'",[])
@@ -176,18 +183,18 @@ struct
          ("\"" ^ String.toCString s ^ "\"",[])
      | tr_exp (I.N (I.REAL r,_,_,_,_)) = (Real.toString r,[])
      | tr_exp (I.N (I.BOOL b,_,_,_,_)) = (if b then "true" else "false",[])
-     | tr_exp (I.N (I.UNIT,_,_,_,_)) = ("null",[])
+     | tr_exp (I.N (I.UNIT,_,_,_,_)) = ("Kuru.Unit.instance()",[])
      | tr_exp (I.N (I.IDENT s,_,_,_,_)) = 
-        (case lookupFn s of NONE => (S.name s,[])
+        (case lookupFn s of NONE => ("" ^ S.name s,[])
                           | SOME s' => (s',[]))
-     | tr_exp (I.N (I.EXTERN s,_,_,_,_)) = (S.name s,[])
-     | tr_exp (I.N (I.ENV (i,s),_,_,_,_)) = ("function () { /* Closure " ^ S.name s ^ " */ }",[])
-     | tr_exp (I.N (I.SELF s, _, _, _, _)) = ("SELF",[])
+     | tr_exp (I.N (I.EXTERN s,_,_,_,_)) = ("Kuru.Compiler.Internal." ^ S.name s,[])
+     | tr_exp (I.N (I.ENV (i,s),_,_,_,_)) = 
+         ("" ^ S.name s^ ".d"^ Int.toString (i+1),[])
+     | tr_exp (I.N (I.SELF s, _, _, _, _)) = ("this",[])
      | tr_exp (I.N (I.TUPLE, v, t, _, _)) =
       let
          val rt = fresh ()
          val t' = tr_ty t
-         val t'' = String.substring (t',0,size t' - 2)
          val v' = map tr_exp v
 
          val ind = ref 0
@@ -199,11 +206,11 @@ struct
                   val _ = ind := !ind + 1
                in
                   i @
-                  [j [rt,".f",ix," = ",r,";"]]
+                  [j [rt,".elements[",ix,"] = ",r,";"]]
                end) v')
       in
          (rt,
-          [j ["var ",rt," = {};"]] @
+          [j [t'," ",rt," = new ", t',"(",Int.toString (length v),");"]] @
           v'')
       end
      | tr_exp (I.N (I.IF,[a,b,c],t,_,_)) =
@@ -215,7 +222,7 @@ struct
          val (c',ci) = tr_exp c
       in
          (rt,
-         [j ["var ",rt,";"]] @
+         [j [t'," ",rt,";"]] @
           ai @
          [j ["if (",a',") {"]] @
           (map (fn x => "   " ^ x) bi) @
@@ -243,10 +250,11 @@ struct
                   in
                      pats @
                      pati @
-                    [j ["else if (", pat', ") {"]] @
+                    [j ["if (", pat', ") {"]] @
                      (map (fn x => "   " ^ x) expi) @
                     [j ["   ",rt, " = ", exp', ";"]] @
-                     ["}"]
+                    [j ["   goto ", endLabel, ";"],
+                     "}"]
                   end
                 | (I.N (_, _, _, _, p),_) =>
                      Error.bug ("CTranslate.tr_exp", "Invalid non-match", p))
@@ -254,11 +262,11 @@ struct
 
       in
          (rt,
-         [j ["var ", rt, ";"]] @ 
+         [j [t', " ", rt, ";"]] @ 
           ei @
-         ["if(false) { }\n"] @
           pats @
-         ["else { RAISE (\"Match\"); }"])
+         ["throw new IllegalArgumentException(\"Match\");",
+          endLabel ^ ":",";"])
       end
      | tr_exp (I.N (I.APP, [I.N (I.CONS,_,_,_,_),I.N(I.TUPLE,[a,b],_,_,_)],t,_,_))=
       let
@@ -266,18 +274,21 @@ struct
          val (b',bi) = tr_exp b
 
          val rt = fresh ()
+         val t' = "kuru_list_t" 
       in
          (rt,
           ai @
           bi @
-         [j ["var ",rt," = ",b',".unshift(",a',");"]])
+         [j [t'," *",rt," = (",t',"*) KMALLOC(sizeof(",t',"));"],
+          j [rt,"->data = (void *)",a',";"],
+          j [rt,"->next = ",b',";"]])
       end
      | tr_exp (I.N (I.APP, [I.N (I.EQ,_,_,_,_),I.N(I.TUPLE,[a,b],_,_,_)],t,_,_))=
       let
          val (a',ai) = tr_exp a
          val (b',bi) = tr_exp b
       in
-         ("("^a'^ " == " ^ b' ^ ")",
+         ("("^a'^ ".equals(" ^ b' ^ "))",
           ai @
           bi) 
       end
@@ -285,7 +296,17 @@ struct
       let
          val t' = tr_ty t
 
-         val (a',ai) = tr_exp a
+         val aeq = 
+          case a of I.N (I.IDENT s, t, u, v, w) =>
+                      if S.name s = "=" 
+                        then I.N (I.IDENT (S.symbol "Kuru.polyEquals"), t, u, v, w) 
+                      else if S.name s = "internal_print"
+                        then I.N (I.IDENT (S.symbol "Kuru.Compiler.Internal.k_io_print"), t, u, v, w)
+                      else a
+                 | _ => a
+           
+
+         val (a',ai) = tr_exp aeq
          val (b',bi) = tr_exp b
 
          fun detuple (n as I.N (_,c,T.TUPLE t, _, p)) =
@@ -306,13 +327,13 @@ struct
 
          val (a'',b'') = 
             if getAlias (S.symbol a') then (a',detuple b)
-            else (a', b')
+            else (a' ^ ".apply", b')
 
          val rt = fresh()
 
          val rtl = 
             if t' = "void" then "" else 
-               (j ["var ",rt, " = "])
+               (j [t'," ",rt, " = "])
       in
          (rt,
           ai @
@@ -324,7 +345,7 @@ struct
          val (e',ei) = tr_exp e
       in
          ("null", ei @
-          [j ["RAISE(",e',");"]])
+          [j ["throw new (",e',");"]])
       end
      | tr_exp (I.N (I.SEQ, c, t, _, p)) =
       let
@@ -367,9 +388,25 @@ struct
       in
          (rt,
          bi @
-         [j ["var ", rt, " = {};"],
+         [j ["Kuru.Constructor ", rt, " = new Kuru.Constructor();"],
           j [rt,".i = ",Int.toString i,";"],
           j [rt,".data = ", b', ";"]])
+      end
+     | tr_exp (I.N (I.FN, [I.N (I.IDENT s, _, _, _, _),body], T.FN ([it],ot), _, p)) =
+      let
+         val rt = fresh ()
+         val it' = tr_ty it
+         val ot' = tr_ty ot
+         val s' = S.name s
+         val (f, body') = tr_exp body
+      in
+         (rt,
+         [j ["Kuru.Function<", it', ", ", ot', "> ", rt, " = new Kuru.Function<", it', ", ", ot', ">() {"]] @
+         [j ["   public ", ot', " apply(final ", it', " ", s', ") {"]] @
+         body' @
+         ["       return " ^ f ^ ";"] @
+         ["   }"] @
+         ["};"])
       end
      | tr_exp (I.N (I.CLOSURE, f::env, T.FN ([it],ot), _, p)) =
       let
@@ -386,6 +423,13 @@ struct
             end
 
          val types = map (tr_ty o I.getType) env
+         val td = 
+            ["class KClosure "^f'^" {",
+             j["   public Function<",tr_ty it,", ",tr_ty ot,"> func;"]] @
+              (map (fn t => "   " ^ t ^ " " ^ (ix()) ^ ";") types) @
+            ["}"]
+
+
          val _ = ixi := 1
 
          val body =
@@ -397,24 +441,24 @@ struct
                   ei @ 
                   [j [rt,".",ix()," = ",e',";"]]
                end) env)
+
+         val _ = if getAlias (S.symbol ("KClosure"^f')) then () else
+                (addType td;
+                 addAlias (S.symbol ("KClosure"^f'),""))
       in
          (rt,
-         [j["var ",rt," = ",f',";"]])
+         [j["KClosure"^f'," ",rt,
+            " = new KClosure"^f'^"();"],
+          j[rt,".func = ",f',";"]] @
+          body)
       end
-     | tr_exp (I.N (I.NIL, _, _, _, _)) = ("[]",[])
-     | tr_exp (I.N (I.FN, [i,body], _, _, _)) =
-        let
-            val (s,_) = tr_exp i
-            val (body',bt) = tr_exp body
-        in
-            ("(function (" ^ s ^ ") {" ^ jeol bt ^ ";\nreturn " ^ body' ^ ";\n})",[])
-        end
+     | tr_exp (I.N (I.NIL, _, _, _, _)) = ("null",[])
      | tr_exp (x as I.N (_,_,_,_,p)) = 
       Error.bug ("CTranslate.tr_exp", "Not implemented: " ^ I.prettyPrint x,p)
 
    and tr_stm (I.N (I.BIND k, [I.N (I.IDENT s,_,_,_,_)], t, _, p)) =
       let
-         val _ = addFnLk (k,S.name s)
+         val _ = addFnLk (k,"" ^ S.name s)
       in
          []
       end
@@ -423,7 +467,7 @@ struct
          val (e',ei) = tr_exp e
       in
          ei @
-         [j ["var ", S.name s, " = ", e', ";"]]
+         [j ["final ", tr_ty t, " ", S.name s, " = ", e', ";"]]
       end
      | tr_stm (I.N (I.BIND s, [], _, _, _)) = []
      | tr_stm (I.N (I.MUTUAL, v, _, _, p)) = 
@@ -442,7 +486,7 @@ struct
          val (e',ei) = tr_exp e
          val f' = S.name s
 
-         val _ = if getAlias (S.symbol ("closure"^f'^"_t")) then () else
+         val _ = if getAlias (S.symbol ("KClosure"^f')) then () else
                let
                   val ixi = ref 1 (* Field names in closures start from d1 *)
                   fun ix () =
@@ -454,31 +498,41 @@ struct
                   end
                   val env = ClosureConvert.getEnv s
                   val types = map (tr_ty o I.getType) env
+                  val td = 
+                     ["class KClosure"^f'^" {"] @
+                     [j["public Kuru.Function<",tr_ty it,", ",tr_ty ot,"> func;"]] @
+                     (map (fn t => "   " ^ t ^ " " ^ (ix()) ^ ";") types) @
+                     ["}"]
                in
-                    () 
-	            end
+                   (addType td;
+                    addAlias (S.symbol ("KClosure"^f'),""))
+               end
 
          val _ = addData
-           ([j ["var ",
+           ([j [tr_ty ot,
+                " ",
                 S.name s,
-                " = function (",S.name s',") {"]] @
-             	(map (fn x => "   " ^ x) ei) @
-            	[j ["   return ", e', ";"],
-             	"}"])
+                "(",
+                tr_ty it," ",S.name s',
+                ") {"]] @
+            [j ["   System.out.println(\"",S.name s,"\\n\");"]] @
+             (map (fn x => "   " ^ x) ei) @
+            [j ["   return ", e', ";"],
+             "}"])
       in
          []
       end
      | tr_stm (I.N (I.ALIAS (k,s,t),_,_,_,_)) =
       let
+         val _ = addType ["#define " ^ S.name k ^ " " ^ S.name s]
          val _ = addAlias (k, S.name s)
       in
          []
       end
-     | tr_stm (I.N (I.IMPORT _, _, _, _, _)) = []
      | tr_stm (I.N (I.PROGRAM, v, _, _, p)) =
          List.concat (map tr_stm v)
      | tr_stm (s as I.N (_,_,_,_,p)) = 
-         Error.bug ("JSTranslate.tr_stm", "Unhandled: " ^ I.prettyPrint s, p)
+         Error.bug ("Translate.tr_stm", "Unhandled: " ^ I.prettyPrint s, p)
    
    fun translate prog =
       let

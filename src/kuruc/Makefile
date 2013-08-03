@@ -15,7 +15,7 @@ SMLDEPS= \
 	intermediate/monomorphise.sml semant/polymorphism.sml ast/ast_infix_pattern.sml \
 	intermediate/closure_convert.sml semant/typeclass.sml codegen/asm.sml \
 	optimise/optimise.sml codegen/temp.sml intermediate/intermediate.sml \
-	optimise/constant_fold.sml codegen/js_translate.sml codegen/js_codegen.sml \
+	optimise/constant_fold.sml codegen/java_translate.sml codegen/java_codegen.sml \
 	codegen/translate.sml codegen/codegen.sml codegen/codegen_decs.sml \
 	codegen/builtins.sml codegen/llvm_operations.sml semant/exceptions.sml \
 	codegen/gcc_operations.sml \

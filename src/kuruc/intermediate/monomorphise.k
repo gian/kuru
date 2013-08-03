@@ -321,7 +321,7 @@ struct
              "Mapped to: " ^ 
                I.prettyPrint e1' ^ " (" ^ I.prettyPrint e2' ^ ")\n")
 
-         (* val e1'' = instantiate e1' e2' 
+         val e1'' = instantiate e1' e2' 
 
          
          val _ = Debug.print Debug.debug
@@ -329,10 +329,8 @@ struct
                A.ppe e1 ^ " (" ^ A.ppe e2 ^ ")\n" ^
              "Instantiated to: " ^ 
                I.prettyPrint e1'' ^ " (" ^ I.prettyPrint e2' ^ ")\n")
-         *)
-
          val t' = 
-            case I.getType e1' of
+            case I.getType e1'' of
                T.FN (_,ot) => ot
              | _ => Error.bug ("Monomorphise","Invalid non-FN type in APP: " ^
                         I.prettyPrint e1',p)

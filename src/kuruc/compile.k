@@ -63,7 +63,7 @@ struct
                                                OS.Path.mkCanonical filename)))
               else ()
       val _ = Debug.endStage ("parsing " ^ filename)
-	in
+   in
       map ParseTree.sanitise parseResult
    end
 
@@ -154,7 +154,7 @@ struct
 
          val _ = Debug.endStage "ParseTreeTransform"
 
-			(* Stage 3 - Type inference/checking *)
+         (* Stage 3 - Type inference/checking *)
          val _ = Debug.startStage 1 "TypeInference"
          val fl''' = List.concat (map TypeCheck.check fl'')        
          val _ = Debug.endStage "TypeInference"
@@ -164,10 +164,10 @@ struct
             ("\n" ^ TypedAST.prettyPrint fl''' ^ "\n")
 
          val _ = Debug.startStage 1 "Monomorphisation"
-			val flmono = Monomorphise.monomorphise fl'''
+         val flmono = Monomorphise.monomorphise fl'''
          val _ = Debug.endStage "Monomorphisation"
 
-	      val _ = Debug.print Debug.internal ("Monomorphic program:\n")
+         val _ = Debug.print Debug.internal ("Monomorphic program:\n")
          val _ = Debug.print Debug.internal 
             ("\n" ^ Intermediate.prettyPrint flmono ^ "\n")
 
@@ -179,7 +179,7 @@ struct
 
          
          (* val _ = Debug.startStage 1 "ClosureConversion"
-			val fcc = ClosureConvert.convert flmono 
+         val fcc = ClosureConvert.convert flmono 
          val _ = Debug.print Debug.internal ("Closure converted program:\n")
          val _ = Debug.print Debug.internal 
             ("\n" ^ Intermediate.prettyPrint (fcc) ^ "\n")
@@ -243,15 +243,15 @@ struct
             "C code generator backend selected\n"
 
          val _ = Debug.startStage 1 "JSTranslate"
-         val (seg,d') = JSTranslate.translate fcc
+         val (seg,d') = JavaTranslate.translate fcc
          val _ = Debug.endStage "JSTranslate"
          
          val _ = Debug.startStage 1 "CodeGen"
-         val code = JSCodeGen.codegen (seg, d')
+         val code = JavaCodeGen.codegen (seg, d')
          val _ = Debug.print Debug.internal ("Generated code:\n" ^ code ^ "\n")
      
          val _ = Debug.startStage 2 "Emit"
-         val codeLocation = JSCodeGen.emit code
+         val codeLocation = JavaCodeGen.emit code
          val _ = Debug.endStage "Emit"
 
          val _ = Debug.endStage "CodeGen"
@@ -261,9 +261,9 @@ struct
          val _ = GCCOperations.compile (codeLocation,Config.getOutputFile ())
          val _ = Debug.endStage "GCC"*)
 
-         (* Stage 7 - ClosureCompiler invocation *)
-         val _ = Debug.startStage 1 "ClosureCompiler"
-         val _ = Debug.endStage "ClosureCompiler"
+         (* Stage 7 - Java Compiler invocation *)
+         val _ = Debug.startStage 1 "javac"
+         val _ = Debug.endStage "javac"
 
          val _ = Debug.endStage "Compile"
       in

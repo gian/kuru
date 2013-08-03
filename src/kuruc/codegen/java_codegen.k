@@ -16,9 +16,9 @@
 *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *******************************************************************************
 *  This file:
-*    C backend code generator.
+*    Java backend code generator.
 ******************************************************************************)
-structure JSCodeGen =
+structure JavaCodeGen =
 struct
    val j = String.concat
    val jsp = String.concatWith " "
@@ -33,16 +33,15 @@ struct
 
    fun codegen (pre, stms) =
       jnl [
+         "package kuru;",
+         "import kuru.Kuru;",
          jnl (map jnl pre),
-         "$(document).ready(function () {\n",
-         "   io_init ();",
-         "   int_init ();",
-         "   string_init ();",
-         jnl (map (ind 1) stms),
-         "   io_done ();",
-         "   int_done ();",
-         "   string_done ();",
-         "\n});\n"
+         "public class KuruProg {\n",
+         "   public static void main(String args[]) {",
+         jnl (map (ind 2) stms),
+         "   }",
+         "}",
+         ""
       ]
 
    fun emit code =
@@ -68,7 +67,7 @@ struct
          val _ = TextIO.output (fp, code)
          val _ = TextIO.closeOut (fp)
 
-         val _ = Debug.print Debug.verbose ("Output JS file: " ^ 
+         val _ = Debug.print Debug.verbose ("Output Java file: " ^ 
                                              Config.getOutputFile())
 
       in
