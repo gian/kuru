@@ -5,17 +5,39 @@ public class Kuru {
     public abstract T apply(S input);
   }
 
-  public static class Constructor {
-    int i;
-    Object data;
+  public static class Constructor<T> {
+    public int i;
+    public T data;
   }
 
-  public static class Tuple {
-    public Object[] elements;
+  public static class Tuple1<T0> {
+    public T0 element0;
+  }
 
-    public Tuple(int n) {
-      elements = new Object[n];
-    }
+  public static class Tuple2<T0,T1> {
+    public T0 element0;
+    public T1 element1;
+  }
+
+  public static class Tuple3<T0,T1,T2> {
+    public T0 element0;
+    public T1 element1;
+    public T2 element2;
+  }
+
+  public static class Tuple4<T0,T1,T2,T3> {
+    public T0 element0;
+    public T1 element1;
+    public T2 element2;
+    public T3 element3;
+  }
+
+  public static class Tuple5<T0,T1,T2,T3,T4> {
+    public T0 element0;
+    public T1 element1;
+    public T2 element2;
+    public T3 element3;
+    public T4 element4;
   }
 
   public static class Unit {
@@ -26,64 +48,57 @@ public class Kuru {
     }
   }
 
-  public static class PolyEquals extends Function<Tuple,Boolean> {
-    public Boolean apply(Tuple t) {
-      Object operand1 = t.elements[0];
-      Object operand2 = t.elements[1];
+  public static class PolyEquals extends Function<Tuple2,Boolean> {
+    public Boolean apply(Tuple2 t) {
+      Object operand1 = t.element0;
+      Object operand2 = t.element1;
       return operand1.equals(operand2);
     }
   }
 
-  public static Function<Tuple,Boolean> polyEquals = new PolyEquals();
+  public static Function<Tuple2,Boolean> polyEquals = new PolyEquals();
 
   public static class Compiler {
     public static class Internal {
-      public static Function<Tuple, Integer> intAdd = new Function<Tuple,Integer>() {
-        public Integer apply(Tuple t) {
-          Integer operand1 = (Integer) t.elements[0];
-          Integer operand2 = (Integer) t.elements[1];
-          return operand1 + operand2;
+      public static Function<Tuple2<Integer,Integer>, Integer> intAdd = new Function<Tuple2<Integer,Integer>,Integer>() {
+        public Integer apply(Tuple2<Integer,Integer> t) {
+          return t.element0 + t.element1; 
         }
       };
 
-      public static Function<Tuple, Integer> intSub = new Function<Tuple,Integer>() {
-        public Integer apply(Tuple t) {
-          Integer operand1 = (Integer) t.elements[0];
-          Integer operand2 = (Integer) t.elements[1];
-          return operand1 - operand2;
+      public static Function<Tuple2<Integer,Integer>, Integer> intSub = new Function<Tuple2<Integer,Integer>,Integer>() {
+        public Integer apply(Tuple2<Integer,Integer> t) {
+          return t.element0 - t.element1; 
         }
       };
 
-      public static Function<Tuple, Integer> intMul = new Function<Tuple,Integer>() {
-        public Integer apply(Tuple t) {
-          Integer operand1 = (Integer) t.elements[0];
-          Integer operand2 = (Integer) t.elements[1];
-          return operand1 * operand2;
+      public static Function<Tuple2<Integer,Integer>, Integer> intMul = new Function<Tuple2<Integer,Integer>,Integer>() {
+        public Integer apply(Tuple2<Integer,Integer> t) {
+          return t.element0 * t.element1; 
         }
       };
 
-      public static Function<Tuple, Boolean> intLeq = new Function<Tuple,Boolean>() {
-        public Boolean apply(Tuple t) {
-          Integer operand1 = (Integer) t.elements[0];
-          Integer operand2 = (Integer) t.elements[1];
-          return operand1 <= operand2;
+
+      public static Function<Tuple2<Integer,Integer>, Boolean> intLeq = new Function<Tuple2<Integer,Integer>,Boolean>() {
+        public Boolean apply(Tuple2<Integer,Integer> t) {
+          return t.element0 <= t.element1; 
         }
       };
 
-      public static Function<Object, Object> refNewref = new Function<Object, Object>() {
-        public Object apply(Object t) {
+      public static Function<Object, Constructor> refNewref = new Function<Object, Constructor>() {
+        public Constructor apply(Object t) {
           return null;
         }
       };
 
-      public static Function<Tuple, Unit> refAssign = new Function<Tuple, Unit>() {
-        public Unit apply(Tuple t) {
+      public static Function<Tuple2<Constructor,Object>, Unit> refAssign = new Function<Tuple2<Constructor,Object>, Unit>() {
+        public Unit apply(Tuple2<Constructor,Object> t) {
           return Unit.instance();
         }
       };
 
-      public static Function<Tuple, Object> listCons = new Function<Tuple, Object>() {
-        public Object apply(Tuple t) {
+      public static Function<Tuple2<Object,Constructor>, Constructor> listCons = new Function<Tuple2<Object,Constructor>, Constructor>() {
+        public Constructor apply(Tuple2<Object,Constructor> t) {
           return null;
         }
       };

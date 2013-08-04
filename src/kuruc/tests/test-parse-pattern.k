@@ -9,3 +9,6 @@ fun pp (REAL (b,s1,FOO s2)) = s2
 
 fun substinty (NAME s) th (NAME t) = if true then th else NAME t
 
+val _ = print (pp (REAL (34, "Hello, world", FOO "This is a test\n")))
+
+

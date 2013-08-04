@@ -61,31 +61,9 @@ struct
        | "unit" => "Kuru.Unit"
        | "bool" => "Boolean"
        | "cvoid" => "Kuru.Unit"
-       | n => "Object")
-     | tr_ty (T.TUPLE t) = "Kuru.Tuple"
-     (* let
-         val tn = freshTy ()
-
-         val ixi = ref 0
-         fun ix () = 
-            let
-               val i = !ixi
-               val _ = ixi := !ixi + 1
-            in
-               "f" ^ Int.toString i
-            end
-
-         val b = 
-               (map (fn x => "   public " ^ tr_ty x ^ " " ^ (ix ()) ^ ";") t)
-
-         val d = ["class " ^ tn ^ " implements Kuru.Tuple {"] @
-                  b @
-                 ["}",""]
-
-         val _ = addType d
-      in
-         tn
-      end *)
+       | n => "Kuru.Constructor")
+     | tr_ty (T.TUPLE t) = j ["Kuru.Tuple", Int.toString (length t), "<", 
+        String.concatWith "," (map tr_ty t), ">"]
      | tr_ty (T.CONSTR ([t1],t2)) = tr_ty t2 (* FIXME *) 
      | tr_ty (T.FN ([t1],t2)) = "Kuru.Function<" ^ tr_ty t1 ^ ", " ^ tr_ty t2 ^ ">"
      | tr_ty (T.POLY _) = "Object"
@@ -114,27 +92,26 @@ struct
                val i = !ixi
                val _ = ixi := !ixi + 1
             in
-               "f" ^ Int.toString i
+               "element" ^ Int.toString i
             end
 
          val v' =
-         List.concat (
             List.map
-            (fn p => 
+            (fn (p,t) => 
                let
                   val i = ix ()
+                  val t' = tr_ty t
+                  val rt' = fresh ()
                   val (p',pi) = tr_pat (j [ex,".",i]) p
                in
-                  pi @
-                 [j ["else if (!(",p',")) {"],
-                  j ["   ", rt," = false;"],
-                  j [" //  goto ", endLabel,";"],
-                 "}"]
-               end) v)
-
+                  (rt', pi @ [j ["Boolean ", rt', " = ", p', ";"]])
+               end) (ListPair.zip (v,t))
+          
+         val (pResults, pBody) = ListPair.unzip v'
+         val cond = String.concatWith " && " pResults
+         val body = List.concat pBody
       in
-         (rt,
-         [j ["bool ",rt," = true; if (false) {} "]] @ v' @ ["// " ^ endLabel ^ ":"] @ [";"]) 
+         (cond,body) 
       end
      | tr_pat ex (I.N(I.PWILD,_,_,_,_)) = ("true",[])
      | tr_pat ex (I.N(I.NIL,_,_,_,_)) =
@@ -146,11 +123,11 @@ struct
 
          val t' = tr_ty t
 
-         val c1 = ex ^ ".i == " ^ Int.toString i
+         val c1 = j [ex, ".i == ", Int.toString i]
 
          val (b',bi) = 
             case b of [] => ("true",[])
-                    | [e] => tr_pat ("(("^t'^") " ^ ex ^ ".data)") e
+                    | [e] => tr_pat ("((" ^ t' ^ ")" ^ ex ^ ".data)") e
                     | _ => 
                     Error.bug ("CTranslate.tr_pat","Invalid CON",p)
       in
@@ -167,11 +144,8 @@ struct
                   tr_pat (ex^".next") b
             in
                ("("^ex^" != null)",
-               [j ["if (",ex," == null) // goto ", failLabel, ";"]] @
                ai @
-               bi @
-               [j [failLabel,":"]] @
-               [";"])
+               bi) 
             end
           | n => Error.fail ("Unrecognised infix pattern '"^n^"'",p))
      | tr_pat ex (x as I.N (_,_,_,_,p)) =
@@ -193,6 +167,10 @@ struct
      | tr_exp (I.N (I.SELF s, _, _, _, _)) = ("this",[])
      | tr_exp (I.N (I.TUPLE, v, t, _, _)) =
       let
+         val tlTy = freshTy ()
+         
+
+
          val rt = fresh ()
          val t' = tr_ty t
          val v' = map tr_exp v
@@ -206,11 +184,11 @@ struct
                   val _ = ind := !ind + 1
                in
                   i @
-                  [j [rt,".elements[",ix,"] = ",r,";"]]
+                  [j [rt,".element",ix," = ",r,";"]]
                end) v')
       in
          (rt,
-          [j [t'," ",rt," = new ", t',"(",Int.toString (length v),");"]] @
+          [j [t'," ",rt," = new ", t',"();"]] @
           v'')
       end
      | tr_exp (I.N (I.IF,[a,b,c],t,_,_)) =
@@ -250,11 +228,10 @@ struct
                   in
                      pats @
                      pati @
-                    [j ["if (", pat', ") {"]] @
+                    [j ["if (",rt," == null && ", pat', ") {"]] @
                      (map (fn x => "   " ^ x) expi) @
                     [j ["   ",rt, " = ", exp', ";"]] @
-                    [j ["   goto ", endLabel, ";"],
-                     "}"]
+                    ["}"]
                   end
                 | (I.N (_, _, _, _, p),_) =>
                      Error.bug ("CTranslate.tr_exp", "Invalid non-match", p))
@@ -262,11 +239,10 @@ struct
 
       in
          (rt,
-         [j [t', " ", rt, ";"]] @ 
+         [j [t', " ", rt, " = null;"]] @
           ei @
           pats @
-         ["throw new IllegalArgumentException(\"Match\");",
-          endLabel ^ ":",";"])
+         [j ["if (",rt," == null) throw new IllegalArgumentException(\"Match\");"]])
       end
      | tr_exp (I.N (I.APP, [I.N (I.CONS,_,_,_,_),I.N(I.TUPLE,[a,b],_,_,_)],t,_,_))=
       let
@@ -317,11 +293,11 @@ struct
                val i = !ixi
                val _ = ixi := !ixi + 1
             in
-               ".f" ^ Int.toString i
+               ".elements[" ^ Int.toString i ^ "]"
             end
          in
             String.concatWith ", " 
-               (map (fn x => b' ^ ix()) c)
+               (map (fn x => "(" ^ tr_ty x ^ ")(((Kuru.Tuple)" ^ b' ^ ")" ^ ix() ^ ")") t)
          end
            | detuple _ = b'
 
@@ -379,6 +355,12 @@ struct
       let
          val rt = fresh ()
          val t' = tr_ty t
+
+         val t'' = 
+          case c of [] => "Object"
+                  | [I.N (_, _, t, _, _)] => tr_ty t
+                  | _ => Error.bug ("Translate.tr_exp",
+                              "Invalid constructor", p)
 
          val (b',bi) = 
             case c of [] => ("null",[])
