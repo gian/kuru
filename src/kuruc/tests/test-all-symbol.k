@@ -42,3 +42,11 @@ struct
 
 end
 
+val s = ("foo", 42)
+val p = Symbol.name s
+val q = Symbol.hash s
+
+val _ = print ("Symbol is:\n")
+val _ = print p
+val _ = print "\n"
+

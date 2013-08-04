@@ -58,7 +58,7 @@ structure T = Type
                  | ESEQ of texp vector * T.ty * pos
                  | ELET of tast vector * texp * T.ty * pos
                  | EANN of texp * T.ty * pos
-					  | ECON of int * (texp * T.ty) option * T.ty * pos
+                 | ECON of int * (texp * T.ty) option * T.ty * pos
                  | EINST of texp * T.ty * T.ty
                  | ESTUB of T.ty * pos
                  | ECLOSURE of S.symbol * (S.symbol * T.ty) list * T.ty * pos
@@ -82,7 +82,7 @@ structure T = Type
      | getTypeExp (EID (_,t,_)) = t
      | getTypeExp (ELID (_,t,_)) = t
      | getTypeExp (ELIST (_,t,_)) = t
-	  | getTypeExp (ENIL _) = T.CONSTR ([T.fresh()], T.t_list)
+     | getTypeExp (ENIL _) = T.CONSTR ([T.fresh()], T.t_list)
      | getTypeExp (ETUPLE (_,t,_)) = t 
      | getTypeExp (EIF (_,_,_,t,_)) = t
      | getTypeExp (EWHILE (_,_,t,_)) = t
@@ -100,22 +100,22 @@ structure T = Type
      | getTypeExp (ESTUB (t,_)) = t
      | getTypeExp (ECLOSURE (_,_,t,_)) = t
 
-	fun getType (DVAL (_,_,t,_)) = t
-	  | getType (DVALREC (_,t,_)) = t
-	  | getType (DNULL _) = T.UNKNOWN
-	  | getType (DSTRUCTURE _) = T.UNKNOWN
-	  | getType (DMUTUAL _) = T.UNKNOWN
+   fun getType (DVAL (_,_,t,_)) = t
+     | getType (DVALREC (_,t,_)) = t
+     | getType (DNULL _) = T.UNKNOWN
+     | getType (DSTRUCTURE _) = T.UNKNOWN
+     | getType (DMUTUAL _) = T.UNKNOWN
      | getType (DSTRUCTASSIGN _) = T.UNKNOWN
      | getType (DOPEN _) = T.UNKNOWN
      | getType (DIMPORT (_,t,_,_)) = t
      | getType (DCLASS _) = T.UNKNOWN
      | getType (DCLASSIMPL _) = T.UNKNOWN
-	  | getType _ = raise Fail "Can't getType for non DVAL or DVALREC"
+     | getType _ = raise Fail "Can't getType for non DVAL or DVALREC"
 
-	fun setType (DVAL (a,b,_,c)) t = DVAL (a,b,t,c)
-	  | setType (DVALREC (a,_,b)) t = DVALREC (a,t,b)
-	  | setType (DNULL p) t = DNULL p
-	  | setType x t = x
+   fun setType (DVAL (a,b,_,c)) t = DVAL (a,b,t,c)
+     | setType (DVALREC (a,_,b)) t = DVALREC (a,t,b)
+     | setType (DNULL p) t = DNULL p
+     | setType x t = x
 
    fun subst_ty_pat tn th (PCONST (e,t,p)) = 
             PCONST (subst_ty_exp tn th e, T.substinty tn th t, p)
@@ -129,7 +129,7 @@ structure T = Type
             PCONSTR (s, 
                      (case b of NONE => NONE
                               | SOME (b',t1) => SOME (subst_ty_pat tn th b',
-																		T.substinty tn th t1)),
+                                                      T.substinty tn th t1)),
                      T.substinty tn th t,
                      p)
      | subst_ty_pat tn th (PID (s,t,p)) =
@@ -141,8 +141,8 @@ structure T = Type
                     T.substinty tn th t,
                     p)
      | subst_ty_pat tn th (PWILD p) = PWILD p
-	  | subst_ty_pat tn th (PNIL p) = PNIL p
-	  | subst_ty_pat tn th _ = raise Fail "subst_ty_pat: not implemented"
+     | subst_ty_pat tn th (PNIL p) = PNIL p
+     | subst_ty_pat tn th _ = raise Fail "subst_ty_pat: not implemented"
 
    and subst_ty_exp tn th (ELIT (tv,t,p)) =
             ELIT (tv, T.substinty tn th t, p)
@@ -209,11 +209,11 @@ structure T = Type
             EANN (subst_ty_exp tn th e,
                   T.substinty tn th t,
                   p)
-	  | subst_ty_exp tn th (ECON (i,NONE,t,p)) =
-	  			ECON (i,NONE,T.substinty tn th t,p)
-	  | subst_ty_exp tn th (ECON (i,SOME (e,t1),t2,p)) =
-	  			ECON (i,SOME (subst_ty_exp tn th e,T.substinty tn th t1),
-						T.substinty tn th t2, p)
+     | subst_ty_exp tn th (ECON (i,NONE,t,p)) =
+              ECON (i,NONE,T.substinty tn th t,p)
+     | subst_ty_exp tn th (ECON (i,SOME (e,t1),t2,p)) =
+              ECON (i,SOME (subst_ty_exp tn th e,T.substinty tn th t1),
+                  T.substinty tn th t2, p)
      | subst_ty_exp tn th (ENIL p) = ENIL p
      | subst_ty_exp tn th (ESTUB (t,p)) = ESTUB (T.substinty tn th t,p)
      | subst_ty_exp tn th (ECLOSURE (f,l,t,p)) =
@@ -254,20 +254,20 @@ structure T = Type
      | ppp (PCONSTR(s,SOME cp,ty,p)) = "???constr???"
      | ppp (PID(s,t,p)) = S.name s  
      | ppp (PINFIX (a,b,c,t,p)) = "(" ^ ppp a ^ S.name b ^ ppp c ^ ")"
-	  | ppp (PWILD p) = "_"
-	  | ppp (PNIL _) = "nil"
+     | ppp (PWILD p) = "_"
+     | ppp (PNIL _) = "nil"
      | ppp (PUNIT _) = "()"
 
    and ppe (ELIT(tv,ty,p)) =  
                              ppv tv 
      | ppe (EID(s,ty,p)) = S.name s ^ " : " ^ ppty ty 
-	  | ppe (ELID(s,ty,p)) = String.concatWith "." (map Symbol.name s)
+     | ppe (ELID(s,ty,p)) = String.concatWith "." (map Symbol.name s)
      | ppe (ELIST(v,ty,p)) = "[" ^ (String.concatWith "," (map ppe (vtol v))) ^ "]"
      | ppe (ENIL p) = "nil"
-	  | ppe (ETUPLE(v,ty,p)) = "(" ^ (String.concatWith "," (map ppe (vtol v))) ^ ")"
+     | ppe (ETUPLE(v,ty,p)) = "(" ^ (String.concatWith "," (map ppe (vtol v))) ^ ")"
      | ppe (EIF(e1,e2,e3,t,p)) = "if " ^ ppe e1 ^ " then " ^ ppe e2 ^ " else " ^ 
-	  											ppe e3
-	  | ppe (EFN(s,e,ty,p)) = "fn " ^ (String.concatWith "," (map S.name s)) ^  
+                                      ppe e3
+     | ppe (EFN(s,e,ty,p)) = "fn " ^ (String.concatWith "," (map S.name s)) ^  
                              " => (" ^ ppe e ^ ") : " ^ ppty ty
      | ppe (ECASE(e1,m,ty,p)) = "case " ^ ppe e1 ^ " of [\n" ^
                                 (String.concatWith "\n" (map
@@ -278,12 +278,12 @@ structure T = Type
      | ppe (ELET (v,e,t,p)) = "let\n   " ^ prettyPrint (vtol v) ^ 
                               "in\n   " ^ ppe e ^ 
                               "\nend\n"
-	  | ppe (ERAISE (e,p)) = "raise " ^ ppe e
-	  | ppe (ECON (i,NONE,t,p)) = "_con ("^ Int.toString i ^", " ^ ppty t ^ ")"
-	  | ppe (ECON (i,SOME (e,t1),t2,p)) = "_con ("^ ppty t2 ^ " " ^ Int.toString i ^
-	  										   ", " ^ ppty t1 ^ 
-	  											" of " ^
-	  											ppe e ^ ")"
+     | ppe (ERAISE (e,p)) = "raise " ^ ppe e
+     | ppe (ECON (i,NONE,t,p)) = "_con ("^ Int.toString i ^", " ^ ppty t ^ ")"
+     | ppe (ECON (i,SOME (e,t1),t2,p)) = "_con ("^ ppty t2 ^ " " ^ Int.toString i ^
+                                      ", " ^ ppty t1 ^ 
+                                      " of " ^
+                                      ppe e ^ ")"
      | ppe (ESEQ (l,t,p)) = "(" ^ String.concatWith "; " 
                                  (map ppe (vtol l)) ^ ") : " ^
                                  ppty t
@@ -308,21 +308,21 @@ structure T = Type
      | prettyPrint ((DMUTUAL(v,p))::t) = "DMUTUAL [\n" ^ 
                                           prettyPrint (vtol v) ^ "]\n" ^ 
                                           prettyPrint t
-	  | prettyPrint ((DSTRUCTURE (s,NONE,l,p))::t) = 
+     | prettyPrint ((DSTRUCTURE (s,NONE,l,p))::t) = 
          "DSTRUCTURE " ^ S.name s ^ " [\n" ^
-	  	   prettyPrint (vtol l)  ^ "]\n" ^
-		   prettyPrint t
+           prettyPrint (vtol l)  ^ "]\n" ^
+         prettyPrint t
      | prettyPrint ((DSTRUCTURE (s,SOME c,l,p))::t) = 
          "DSTRUCTURE " ^ S.name s ^ " : " ^ S.name c ^ " [\n" ^
-	  	   prettyPrint (vtol l)  ^ "]\n" ^
-		   prettyPrint t
-	  | prettyPrint ((DSTRUCTASSIGN (a,b,p))::t) = "DSTRUCTASSIGN " ^ S.name a ^ 
-	  															  " = " ^ ppe b ^ "\n" ^ 
-																  prettyPrint t
- 	  | prettyPrint ((DSIGNATURE (s,l,p))::t) = 
+           prettyPrint (vtol l)  ^ "]\n" ^
+         prettyPrint t
+     | prettyPrint ((DSTRUCTASSIGN (a,b,p))::t) = "DSTRUCTASSIGN " ^ S.name a ^ 
+                                                    " = " ^ ppe b ^ "\n" ^ 
+                                                  prettyPrint t
+      | prettyPrint ((DSIGNATURE (s,l,p))::t) = 
                "DSIGNATURE " ^ S.name s ^ " [\n" ^
-	  				     prettyPrint (vtol l)  ^ "]\n" ^
-							prettyPrint t                  
+                      prettyPrint (vtol l)  ^ "]\n" ^
+                     prettyPrint t                  
      | prettyPrint ((DOPEN (e,l))::t) = "DOPEN [" ^ ppe e ^ "]\n" ^ 
                                           prettyPrint t
      | prettyPrint ((DIMPORT (i1,t,i2,p))::r) = 

@@ -21,20 +21,20 @@
 structure Type =
 struct
 
-	datatype ty = NAME of Symbol.symbol
+   datatype ty = NAME of Symbol.symbol
                | LNAME of Symbol.symbol list
-	            | FN of ty list * ty
-					| TUPLE of ty list
-					| CONSTR of ty list * ty
-					| CLASS of Symbol.symbol * ty
-					| QUANT of ty * ty * ty
-					| META of int
-					| VAR of Symbol.symbol
-					| POLY of int
+               | FN of ty list * ty
+               | TUPLE of ty list
+               | CONSTR of ty list * ty
+               | CLASS of Symbol.symbol * ty
+               | QUANT of ty * ty * ty
+               | META of int
+               | VAR of Symbol.symbol
+               | POLY of int
                | UNION of Symbol.symbol * ty list
                | CON of int * ty option * ty
                | CLOSURE of  ty list
-					| UNKNOWN
+               | UNKNOWN
 
    fun freevars (NAME s) = Set.empty
      | freevars (FN (l,t)) =
@@ -76,34 +76,34 @@ struct
      | equal (LNAME l1) (LNAME l2) = (List.all (op =) (ListPair.zip(l1,l2)))
      | equal _ _ = false
 
-	fun occursin (META tyX) tyT =
-		let
-			fun oc tyT = (case tyT of
-				 FN(tyT1,tyT2) => (List.all oc tyT1) orelse oc tyT2
-			  | TUPLE tyT1 => List.all oc tyT1
-			  | CONSTR (tyT1,t2) => List.all oc tyT1 orelse oc t2
-			  | META x => (x = tyX)
-			  | _ => false)
+   fun occursin (META tyX) tyT =
+      let
+         fun oc tyT = (case tyT of
+             FN(tyT1,tyT2) => (List.all oc tyT1) orelse oc tyT2
+           | TUPLE tyT1 => List.all oc tyT1
+           | CONSTR (tyT1,t2) => List.all oc tyT1 orelse oc t2
+           | META x => (x = tyX)
+           | _ => false)
      in
         oc tyT
      end
-	  | occursin _ _ = raise Fail "Non-UVar argument to occursin"
+     | occursin _ _ = raise Fail "Non-UVar argument to occursin"
 
-	fun pp (NAME s) = Symbol.name s
+   fun pp (NAME s) = Symbol.name s
      | pp (LNAME s) = String.concatWith "." (map Symbol.name s)
      | pp (FN (f as [FN _],t2)) = "(" ^ pp (hd f) ^ ") -> " ^ pp t2
-	  | pp (FN ([t1],t2)) = pp t1 ^ " -> " ^ pp t2
-	  | pp (FN (l,t2)) = "("^(String.concatWith "," (map pp l)) ^ ") -> " ^ pp t2
-	  | pp (TUPLE l) = String.concatWith " * " (map pp l)
-	  | pp (CONSTR ([],t2)) = pp t2
-	  | pp (CONSTR ([t1],t2)) = pp t1 ^ " " ^ pp t2
-	  | pp (CONSTR (t1,t2)) = 
-	  			"(" ^ (String.concatWith "," (map pp t1)) ^ ") " ^ pp t2
-	  | pp (CLASS (a,b)) = Symbol.name a ^ " of " ^ pp b
-	  | pp (QUANT (t1,t2,t3)) = pp t1 ^ " " ^ pp t2 ^ " => " ^ pp t3
-	  | pp (VAR s) = Symbol.name s
-	  | pp (META i) = "?X" ^ Int.toString i 
-	  | pp (POLY i) = "'" ^ (String.str (Char.chr (i + (Char.ord #"a"))))
+     | pp (FN ([t1],t2)) = pp t1 ^ " -> " ^ pp t2
+     | pp (FN (l,t2)) = "("^(String.concatWith "," (map pp l)) ^ ") -> " ^ pp t2
+     | pp (TUPLE l) = String.concatWith " * " (map pp l)
+     | pp (CONSTR ([],t2)) = pp t2
+     | pp (CONSTR ([t1],t2)) = pp t1 ^ " " ^ pp t2
+     | pp (CONSTR (t1,t2)) = 
+              "(" ^ (String.concatWith "," (map pp t1)) ^ ") " ^ pp t2
+     | pp (CLASS (a,b)) = Symbol.name a ^ " of " ^ pp b
+     | pp (QUANT (t1,t2,t3)) = pp t1 ^ " " ^ pp t2 ^ " => " ^ pp t3
+     | pp (VAR s) = Symbol.name s
+     | pp (META i) = "?X" ^ Int.toString i 
+     | pp (POLY i) = "'" ^ (String.str (Char.chr (i + (Char.ord #"a"))))
      | pp (UNION (s,l)) = 
          Symbol.name s ^ " {" ^ String.concatWith "," (map pp l) ^ "}"
      | pp (CON (i,NONE,t2)) = " CON : " ^ pp t2 
@@ -111,12 +111,14 @@ struct
      | pp (CLOSURE l) = "CLOSURE {" ^ String.concatWith "," (map pp l) ^ "}"
      | pp (UNKNOWN) = "T.UNKNOWN"
 
-	val prettyPrint = pp
+   val prettyPrint = pp
 
-	(* Global counter to allow us to generate fresh type variables *)
-	val tvFresh = ref 0
-	fun fresh () = (tvFresh := !tvFresh +1; 
-						 META (!tvFresh))
+   (* Global counter to allow us to generate fresh type variables *)
+   val tvFresh = ref 0
+   fun fresh () = (tvFresh := !tvFresh +1; 
+                   META (!tvFresh))
+        fun freshInt () = (tvFresh := !tvFresh +1; !tvFresh)
+
 
    val t_string = NAME (Symbol.symbol "string")
    val t_int    = NAME (Symbol.symbol "int")
