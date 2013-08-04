@@ -1,0 +1,5 @@
+#!/bin/sh
+
+java -cp $KURU_LIBRARY_PATH/kuru.jar -jar $1
+
+

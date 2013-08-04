@@ -13,7 +13,7 @@ do
 	../../../bin/kuruc -q $i -o $i.out 2> $i.log
 #	../../../bin/kuruc $i -o $i.out -d
 	if [ $? -eq 0 ] ; then
-		OUT=`md5sum $i.out`
+		OUT=`md5 $i.out`
 		EXP=`grep "$i.out" expected.dat`
 		if [ "$OUT" != "$EXP" ]; then
 			echo "	[FAILED (Compiled Output Mismatch)]"

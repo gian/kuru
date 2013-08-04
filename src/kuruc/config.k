@@ -21,7 +21,7 @@
 
 structure Config =
 struct
-   val outputFile = ref "a.out"
+   val outputFile = ref "KuruProg"
    val optimiserLevel = ref 2
    val machineWord = ref 32
    val keepLLVM = ref false
@@ -76,6 +76,14 @@ struct
    fun setCCArgs t = ccargs := t
 
    fun getOutputFile () = !outputFile
+   fun getTemporaryDirectory () =
+    let
+       val tmpDir = OS.FileSys.tmpName () ^ "_kuruc"
+       val _ = OS.FileSys.mkDir tmpDir
+    in
+       tmpDir
+    end
+
    fun getOptimiser () = !optimiserLevel
    fun getMachineWord () = !machineWord
    fun getKeepLLVM () = !keepLLVM

@@ -33,10 +33,9 @@ struct
 
    fun codegen (pre, stms) =
       jnl [
-         "package kuru;",
          "import kuru.Kuru;",
          jnl (map jnl pre),
-         "public class KuruProg {\n",
+         "public class " ^ Config.getOutputFile() ^ " {\n",
          "   public static void main(String args[]) {",
          jnl (map (ind 2) stms),
          "   }",
@@ -46,7 +45,15 @@ struct
 
    fun emit code =
       let
-         val fp = TextIO.openOut (Config.getOutputFile())
+         val codeDir = Config.getTemporaryDirectory ()
+         val srcPath = codeDir ^ "/" ^ Config.getOutputFile () ^ ".java"
+         val fp = TextIO.openOut (srcPath)
+
+         val manifest = TextIO.openOut (codeDir ^ "/manifest.mf")
+
+         val _ = TextIO.output (manifest, "Main-Class: " ^ Config.getOutputFile () ^ "\n")
+
+         val _ = TextIO.closeOut manifest
 
          fun includeLib s = 
             let
@@ -71,7 +78,7 @@ struct
                                              Config.getOutputFile())
 
       in
-         Config.getOutputFile()
+         (codeDir, srcPath)
       end handle OS.SysErr (m,NONE) => raise Fail ("Cannot emit code: " ^ m)
                | OS.SysErr (m,SOME se) => raise Fail ("Cannot emit code: " ^ 
                                                       m ^ ": " ^ OS.errorMsg se)

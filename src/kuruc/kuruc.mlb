@@ -44,8 +44,7 @@ codegen/java_translate.sml
 codegen/java_codegen.sml
 codegen/codegen_decs.sml
 codegen/codegen.sml
-codegen/llvm_operations.sml
-codegen/gcc_operations.sml
+codegen/javac_operations.sml
 compile.sml
 version.sml
 main.sml

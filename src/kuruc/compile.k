@@ -192,78 +192,37 @@ struct
                   else ()
 
       in
-         if Config.getBackend () = "llvm" then
-            compileLLVM (flmono)
-         else if Config.getBackend () = "c" then
-            compileC (flmono)
-         else 
-            Error.fail ("Invalid compiler backend selected.", (0,""))
+         compileJava (flmono)
       end
 
-      and compileLLVM fcc =
+      and compileJava fcc =
       let
          val _ = Debug.print Debug.verbose 
-            "LLVM code generator backend selected\n"
-         
-         (* Stage 6 - Translation to Asm *)
+            "Java code generator backend selected\n"
 
-         val _ = Debug.startStage 1 "AsmTranslate"
-         val (seg,d') = Translate.translate (* te' *) fcc
-         val _ = Debug.endStage "AsmTranslate"
-
-         val _ = Debug.print Debug.internal ("Translated Program:\n")
-         val _ = Debug.print Debug.internal ("\n" ^ 
-                              Asm.prettyPrint d' ^ "\n")
-
-         (* Stage 6 - Code Generation (LLVM) *)
-
-         val _ = Debug.startStage 1 "CodeGen"
-         val code = CodeGen.codegen (seg, d')
-         val _ = Debug.print Debug.internal ("Generated code:\n" ^ code ^ "\n")
-     
-         val _ = Debug.startStage 2 "Emit"
-         val codeLocation = CodeGen.emit code
-         val _ = Debug.endStage "Emit"
-
-         val _ = Debug.endStage "CodeGen"
-
-         (* Stage 7 - LLVM invocation *)
-         val _ = Debug.startStage 1 "LLVM"
-         val _ = LLVMOperations.compile (codeLocation,Config.getOutputFile ())
-         val _ = Debug.endStage "LLVM"
-
-         val _ = Debug.endStage "Compile"
-      in
-         ()
-      end
-
-      and compileC fcc =
-      let
-         val _ = Debug.print Debug.verbose 
-            "C code generator backend selected\n"
-
-         val _ = Debug.startStage 1 "JSTranslate"
+         val _ = Debug.startStage 1 "JavaTranslate"
          val (seg,d') = JavaTranslate.translate fcc
-         val _ = Debug.endStage "JSTranslate"
+         val _ = Debug.endStage "JavaTranslate"
          
          val _ = Debug.startStage 1 "CodeGen"
          val code = JavaCodeGen.codegen (seg, d')
          val _ = Debug.print Debug.internal ("Generated code:\n" ^ code ^ "\n")
      
          val _ = Debug.startStage 2 "Emit"
-         val codeLocation = JavaCodeGen.emit code
+         val (srcPath, codeLocation) = JavaCodeGen.emit code
          val _ = Debug.endStage "Emit"
 
          val _ = Debug.endStage "CodeGen"
          
-         (* Stage 7 - GCC invocation *)
-         (*val _ = Debug.startStage 1 "GCC"
-         val _ = GCCOperations.compile (codeLocation,Config.getOutputFile ())
-         val _ = Debug.endStage "GCC"*)
-
-         (* Stage 7 - Java Compiler invocation *)
+         (* Stage 7 - Javac invocation *)
          val _ = Debug.startStage 1 "javac"
+         val _ = JavacOperations.compile (codeLocation, Config.getOutputFile ())
          val _ = Debug.endStage "javac"
+
+         (* Stage 7 - JAR invocation *)
+         val _ = Debug.startStage 1 "jar"
+         val _ = JavacOperations.jar (srcPath, Config.getOutputFile () ^ ".jar")
+         val _ = Debug.endStage "jar"
 
          val _ = Debug.endStage "Compile"
       in

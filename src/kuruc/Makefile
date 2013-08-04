@@ -17,8 +17,7 @@ SMLDEPS= \
 	optimise/optimise.sml codegen/temp.sml intermediate/intermediate.sml \
 	optimise/constant_fold.sml codegen/java_translate.sml codegen/java_codegen.sml \
 	codegen/translate.sml codegen/codegen.sml codegen/codegen_decs.sml \
-	codegen/builtins.sml codegen/llvm_operations.sml semant/exceptions.sml \
-	codegen/gcc_operations.sml \
+	codegen/builtins.sml codegen/javac_operations.sml semant/exceptions.sml \
 	config.sml debug.sml main.sml compile.sml version.sml
 
 all: $(BIN)/kuruc
