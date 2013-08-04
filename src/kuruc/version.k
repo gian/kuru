@@ -4,6 +4,6 @@ struct
    val major = "0"
    val minor = "1"
    val build = ""
-   val date = "20130803"
+   val date = "20130804"
    val hostname = "square-e29751.local"
 end

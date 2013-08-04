@@ -64,9 +64,9 @@ struct
        | n => "Kuru.Constructor")
      | tr_ty (T.TUPLE t) = j ["Kuru.Tuple", Int.toString (length t), "<", 
         String.concatWith "," (map tr_ty t), ">"]
-     | tr_ty (T.CONSTR ([t1],t2)) = tr_ty t2 (* FIXME *) 
+     | tr_ty (T.CONSTR ([t1],t2)) = tr_ty t2
      | tr_ty (T.FN ([t1],t2)) = "Kuru.Function<" ^ tr_ty t1 ^ ", " ^ tr_ty t2 ^ ">"
-     | tr_ty (T.POLY _) = "Object"
+     | tr_ty (T.POLY _) = "? super Object"
      | tr_ty (T.UNKNOWN) = "Object"
      | tr_ty t =
       Error.bug ("CTranslate.tr_ty", "Not implemented: " ^ T.prettyPrint t, (0,""))
@@ -114,14 +114,17 @@ struct
          (cond,body) 
       end
      | tr_pat ex (I.N(I.PWILD,_,_,_,_)) = ("true",[])
-     | tr_pat ex (I.N(I.NIL,_,_,_,_)) =
-         (j [ex," == null"], [])
+     | tr_pat ex (I.N(I.NIL,_, t, m, p)) =
+          tr_pat ex (I.N (I.CON 0, [], t, m, p))
      | tr_pat ex (I.N(I.CON i,b,t,_,p)) =
       let
          val _ = Debug.print Debug.debug 
             ("tr_pat CON ty: " ^ T.prettyPrint t ^ "\n")
 
-         val t' = tr_ty t
+         val t' = case b of
+              [] => ""
+            | [I.N (_, _, t, _, _)] => tr_ty t
+            | _ => Error.bug ("Translate.tr_pat", "Invalid type for constructor", p)
 
          val c1 = j [ex, ".i == ", Int.toString i]
 
@@ -134,19 +137,18 @@ struct
          (j ["(",c1," && ",b',")"], bi)
       end
      | tr_pat ex (I.N (I.PINFIX s,[a,b],t,m,p)) =
-         (case S.name s of
-            "::" =>
-            let
-               val failLabel = fresh()
-               val (a',ai) = 
-                  tr_pat (ex^".data") a
-               val (b',bi) =
-                  tr_pat (ex^".next") b
-            in
-               ("("^ex^" != null)",
-               ai @
-               bi) 
-            end
+      (case S.name s of
+        "::" => 
+           let
+              val t' = 
+                 (case t of (T.CONSTR ([x],y)) => x
+                          | _ => Error.bug ("Translate.tr_pat", 
+                                    "non-list uses :: in pattern", p))
+
+              val t'' = T.TUPLE [t',t]
+           in
+              tr_pat ex (I.N (I.CON 1, [I.N (I.TUPLE, [a,b], t'', m, p)], t, m, p))
+           end
           | n => Error.fail ("Unrecognised infix pattern '"^n^"'",p))
      | tr_pat ex (x as I.N (_,_,_,_,p)) =
          Error.bug ("Translate.tr_pat", "Invalid pattern: " ^ I.prettyPrint x, p)
@@ -268,16 +270,30 @@ struct
           ai @
           bi) 
       end
-     | tr_exp self (I.N (I.APP, [a, b], t, _, p)) =
+     | tr_exp self (I.N (I.APP, [a, b as I.N (_, _, t'', _, _)], t, _, p)) =
       let
          val t' = tr_ty t
+            
 
          val aeq = 
-          case a of I.N (I.IDENT s, t, u, v, w) =>
+          case a of I.N (I.IDENT s, u, t, v, w) =>
                       if S.name s = "=" 
-                        then I.N (I.IDENT (S.symbol "Kuru.polyEquals"), t, u, v, w) 
+                        then I.N (I.IDENT (S.symbol "Kuru.polyEquals"), u, t, v, w)
+                      else if S.name s = "::" 
+                        then 
+                           let
+                              val t''' = 
+                                 case t'' of T.TUPLE [x,y] => x 
+                                           | _ => Error.bug ("Translate.tr_exp", 
+                                                             "Invalid type for ::, " ^ 
+                                                              T.prettyPrint t'', p)
+                           in
+                              I.N (I.IDENT (S.symbol 
+                                 ("new Kuru.Compiler.Internal.ListCons<" ^ tr_ty t''' ^
+                                    ">()")), u, t, v, w)
+                           end
                       else if S.name s = "internal_print"
-                        then I.N (I.IDENT (S.symbol "Kuru.Compiler.Internal.k_io_print"), t, u, v, w)
+                        then I.N (I.IDENT (S.symbol "Kuru.Compiler.Internal.k_io_print"), u, t, v, w)
                       else a
                  | _ => a
            
@@ -435,7 +451,7 @@ struct
           j[rt,".func = ",f',";"]] @
           body)
       end
-     | tr_exp self (I.N (I.NIL, _, _, _, _)) = ("null",[])
+     | tr_exp self (I.N (I.NIL, _, _, _, _)) = ("new Kuru.Constructor(0, null)",[])
      | tr_exp self (x as I.N (_,_,_,_,p)) = 
       Error.bug ("CTranslate.tr_exp", "Not implemented: " ^ I.prettyPrint x,p)
 

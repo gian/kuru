@@ -1,13 +1,26 @@
 package kuru;
 
+import java.util.List;
+import java.util.LinkedList;
+
 public class Kuru {
   public static abstract class Function<S,T> {
     public abstract T apply(S input);
   }
 
-  public static class Constructor<T> {
+  public static class Constructor {
     public int i;
-    public T data;
+    public Object data;
+
+    public Constructor() {
+      i = 0;
+      data = null;
+    }
+
+    public Constructor(int i, Object data) {
+      this.i = i;
+      this.data = data;
+    }
   }
 
   public static class Tuple1<T0> {
@@ -97,11 +110,13 @@ public class Kuru {
         }
       };
 
-      public static Function<Tuple2<Object,Constructor>, Constructor> listCons = new Function<Tuple2<Object,Constructor>, Constructor>() {
-        public Constructor apply(Tuple2<Object,Constructor> t) {
-          return null;
+      public static class ListCons<S> extends Function<Tuple2<S,Constructor>,Constructor> {
+        public Constructor apply(Tuple2<S,Constructor> t) {
+          return new Constructor(1, t);
         }
-      };
+      }
+
+      public static ListCons listCons = new ListCons();
 
       public static Function<String, Integer> stringStrlen = new Function<String, Integer>() {
         public Integer apply(String t) {
