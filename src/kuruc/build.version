@@ -1,0 +1,8 @@
+#!/bin/sh
+
+BUILDFILE=.build_version
+
+COUNTER=$[$(cat $BUILDFILE) + 1]
+echo $COUNTER > $BUILDFILE
+echo $COUNTER
+

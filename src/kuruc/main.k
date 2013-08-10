@@ -1,19 +1,29 @@
-(*******************************************************************************
-*  The Kuru Programming Language Compiler Toolset (http://www.kuru-lang.org)
-*  Copyright (C) 2010  Gian Perrone
+(******************************************************************************
+* The Kuruc Compiler (http://www.kuru-lang.org)
+* Copyright (c) 2010-2013, Gian Perrone
+* All rights reserved.
 *
-*  This program is free software: you can redistribute it and/or modify
-*  it under the terms of the GNU General Public License as published by
-*  the Free Software Foundation, either version 3 of the License, or
-*  (at your option) any later version.
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are met:
+* 
+* - Redistributions of source code must retain the above copyright notice, this
+*   list of conditions and the following disclaimer.
 *
-*  This program is distributed in the hope that it will be useful,
-*  but WITHOUT ANY WARRANTY; without even the implied warranty of
-*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*  GNU General Public License for more details.
+* - Redistributions in binary form must reproduce the above copyright notice,
+*   this list of conditions and the following disclaimer in the documentation
+*   and/or other materials provided with the distribution.
 *
-*  You should have received a copy of the GNU General Public License
-*  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+* ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+* POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************
 *  This file:
 *    Kuru Compiler (kuruc) program entry point and command line parser. 
@@ -42,23 +52,20 @@ struct
              "\t-d\t\tEnable debugging output.\n" ^
              "\t-dd\t\tEnable noisy debugging mode.\n" ^
              "\n   Compilation:\n" ^
-             "\t-backend {c|llvm}\tSelect the backend to use.\n" ^
-             "\t-keep-llvm\tKeep intermediate LLVM bitcode files.\n" ^
-             "\t-m16\t\tSet machine word size to 16 bits.\n" ^
-             "\t-m32\t\t(Default) Set machine word size to 32 bits.\n" ^
-             "\t-m64\t\tSet machine word size to 64 bits.\n" ^
-             "\n   C Backend Options:\n" ^
-             "\t-cc-args <args>\tPass these arguments to the C compiler.\n" ^
+             "\t-backend {java}\tSelect the backend to use.\n" ^
+             "\n   Javac Backend Options:\n" ^
+             "\t-javac-args <args>\tPass these arguments to the javac compiler.\n" ^
              "\n   Libraries:\n" ^
-             "\t-L [path]\tSet the library search path (colon-separated)\n" ^
+             "\t-cp [path]\tSet the class path (colon-separated)\n" ^
              "\t-max-errors n\tReport no more than n errors.\n" ^
              "\t-safe\t\tImport only the Safe module, for sandbox environments\n"^
              "\t-no-basis\tDo not import the basis library.\n")
              
 
    fun printVersion () =
-      print ("kuruc version " ^ Version.major ^ "." ^ Version.minor ^
-             " build " ^ Version.build ^ " (" ^ Version.date ^ ") on " ^ 
+      print ("kuruc version " ^ 
+         Version.major ^ "." ^ Version.minor ^ "." ^ Version.build ^ "\n" ^
+             "build " ^ Version.gitId ^ " (" ^ Version.date ^ ") on " ^ 
              Version.hostname ^ "\n" ^
              "Copyright (C) 2010-2013 Gian Perrone\n" ^ 
              "http://www.kuru-lang.org\n")
@@ -70,7 +77,7 @@ struct
                               parseArgs t)
      | parseArgs ("-d"::t) = (Debug.setDebugLevel Debug.debug;
                               parseArgs t)
-     | parseArgs ("-dd"::t) = (KuruParser.debugVerbose := true;
+(*     | parseArgs ("-dd"::t) = (KuruParser.debugVerbose := true;
                                Debug.setDebugLevel Debug.debugmore;
                                parseArgs t)
      | parseArgs ("-q"::t) = (KuruParser.debugVerbose := false;
@@ -78,24 +85,20 @@ struct
                               parseArgs t)
      | parseArgs ("-qq"::t) = (KuruParser.debugVerbose := false;
                                Debug.setDebugLevel Debug.silent;
-                               parseArgs t)
+                               parseArgs t) *)
      | parseArgs ("-V"::t) = (printVersion (); Unix.exit 0w0; raise Fail "")
      | parseArgs ("-h"::t) = (printUsage (); Unix.exit 0w0; raise Fail "")
      | parseArgs ("-O0"::t) = (Config.setOptimiser 0; parseArgs t)
      | parseArgs ("-O1"::t) = (Config.setOptimiser 1; parseArgs t)
      | parseArgs ("-O2"::t) = (Config.setOptimiser 2; parseArgs t)
      | parseArgs ("-O3"::t) = (Config.setOptimiser 3; parseArgs t)
-     | parseArgs ("-m16"::t) = (Config.setMachineWord 16; parseArgs t)
-     | parseArgs ("-m32"::t) = (Config.setMachineWord 32; parseArgs t)
-     | parseArgs ("-m64"::t) = (Config.setMachineWord 64; parseArgs t)
-     | parseArgs ("-keep-llvm"::t) = (Config.setKeepLLVM true; parseArgs t)
      | parseArgs ("-max-errors"::m::t) = (Config.setMaxErrors m; parseArgs t)
      | parseArgs ("-safe"::t) = (Config.setSafe true; parseArgs t)
      | parseArgs ("-no-basis"::t) = (Config.setBasis false; parseArgs t)
      | parseArgs ("-o"::f::t) = (Config.setOutputFile f; parseArgs t)
-     | parseArgs ("-L"::f::t) = (Config.setLibPath f; parseArgs t)
+     | parseArgs ("-cp"::f::t) = (Config.setLibPath f; parseArgs t)
      | parseArgs ("-backend"::f::t) = (Config.setBackend f; parseArgs t)
-     | parseArgs ("-cc-args"::f::t) = (Config.setCCArgs f; parseArgs t)
+     | parseArgs ("-javac-args"::f::t) = (Config.setCCArgs f; parseArgs t)
      | parseArgs (h::t) = h :: parseArgs t
   
    fun main () =

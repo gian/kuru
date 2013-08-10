@@ -1,8 +1,9 @@
 #!/bin/bash
 
 MAJOR="0"
-MINOR="1"
-BUILD=`git describe`
+MINOR="2"
+BUILD=`./build.version`
+GITID=`git log | grep commit | head -n 1 | cut -d " " -f 2`
 DATE=`date +%Y%m%d`
 HOST=`hostname`
 
@@ -12,8 +13,10 @@ echo "struct"
 echo "   val major = \"${MAJOR}\""
 echo "   val minor = \"${MINOR}\""
 echo "   val build = \"${BUILD}\""
+echo "   val gitId = \"${GITID}\""
 echo "   val date = \"${DATE}\""
 echo "   val hostname = \"${HOST}\""
+echo "   fun getVersionString() = major ^ \".\" ^ minor ^ \".\" ^ build"
 echo "end"
 
 
