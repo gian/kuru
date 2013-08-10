@@ -1,5 +1,7 @@
 *.o
 *.class
-kuruc
+bin/kuruc
 *.out
+*.swp
+*.swo
 

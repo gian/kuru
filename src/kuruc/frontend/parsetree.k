@@ -1,22 +1,35 @@
-(*******************************************************************************
-*  The Kuru Programming Language Compiler Toolset (http://www.kuru-lang.org)
-*  Copyright (C) 2010  Gian Perrone
+(******************************************************************************
+* The Kuruc Compiler (http://www.kuru-lang.org)
+* Copyright (c) 2010-2013, Gian Perrone
+* All rights reserved.
 *
-*  This program is free software: you can redistribute it and/or modify
-*  it under the terms of the GNU General Public License as published by
-*  the Free Software Foundation, either version 3 of the License, or
-*  (at your option) any later version.
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are met:
 *
-*  This program is distributed in the hope that it will be useful,
-*  but WITHOUT ANY WARRANTY; without even the implied warranty of
-*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*  GNU General Public License for more details.
+* - Redistributions of source code must retain the above copyright notice, this
+*   list of conditions and the following disclaimer.
 *
-*  You should have received a copy of the GNU General Public License
-*  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+* - Redistributions in binary form must reproduce the above copyright notice,
+*   this list of conditions and the following disclaimer in the documentation
+*   and/or other materials provided with the distribution.
+*
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+* ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+* POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************
-*  This file:
-*    Abstract Parse tree definition and pretty printer. 
+* This file:
+*    Concrete parse tree definition and pretty printer. 
+* It is to this representation that various front-end transformations get
+* applied, such as handling of infix operators (and their precedence).
+* Eventually this gets marshalled into a proper TypedAST.t
 ******************************************************************************)
 
 structure ParseTree =
@@ -31,8 +44,8 @@ struct
    and pt =
       Int of bool * string * pos
     | Real of bool * string * string * (bool * string) option * pos
-    | Char of string * pos
-    | String of string * pos
+    | Char of int * pos
+    | String of int list * pos
     | Ident of string * pos
     | LongId of pt * pt * pos
 	 | TyId of pt * pos
@@ -67,6 +80,7 @@ struct
     | TuplePat of pt list * pos
     | ListPat of pt list * pos
     | NilPat of pos
+    | ImplicitPat of (pt * pt) list * pos
     | ConPat of pt * pos
     | ConstrPat of pt * pt option * pos
     | TyAnnPat of pt * pt * pos
@@ -102,9 +116,12 @@ struct
     | Signature of pt list * pos
     | SigDec of pt list * pos
     | ClassDec of pt list * pos
-    | ClassBind of pt * pt * pt * pos
+    | ClassBind of pt * pt * pos
     | ClassImpl of pt * pt * pt * pos
     | Import of pt * pt * pt * pos
+
+   fun istr [] = ""
+     | istr (h::t) = String.str (Char.chr h) ^ istr t
 
    fun pp (Int (b,s,_)) = "Int [" ^ (if b then "~" else "") ^ s ^ "]" 
      | pp (Real (b,s1,s2,NONE,_)) = 
@@ -112,8 +129,8 @@ struct
      | pp (Real (b,s1,s2,SOME (b2,s3),_)) = 
       "Real [" ^ (if b then "~" else "") ^ s1 ^ "." ^ s2 ^
          "e" ^ (if b2 then "~" else "") ^ s3 ^ "]"
-     | pp (Char (s,_)) = "Char [#\"" ^ s ^ "\"]"
-     | pp (String (s,_)) = "String [\"" ^ s ^ "\"]"
+     | pp (Char (s,_)) = "Char [#\"" ^ String.str (Char.chr s) ^ "\"]"
+     | pp (String (s,_)) = "String [\"" ^ istr s ^ "\"]"
      | pp (Ident (s,_)) = "Ident [" ^ s ^ "]"
      | pp (Var (p,_)) = "Var [" ^ pp p ^ "]"
      | pp (TyId (p,_)) = "TyId [" ^ pp p ^ "]"
@@ -147,6 +164,9 @@ struct
      | pp (InfixPat (p1,p2,p3,_)) = "InfixPat [" ^ pp p1 ^ " " ^ pp p2 ^ 
                                      " " ^ pp p3 ^ "]"
      | pp (WildcardPat _) = "WildcardPat []"
+     | pp (ImplicitPat (l, _)) = "[Implicit " ^ 
+            String.concatWith ", " (map (fn (a,b) => pp a ^ " : " ^ pp b) l) ^
+            "]"
      | pp (NilPat _) = "NilPat"
      | pp (TuplePat (l,_)) = "TuplePat [" ^ 
             (String.concatWith ", " (map pp l)) ^ "]"
@@ -211,9 +231,8 @@ struct
          "SigBind " ^ pp i ^ " = " ^ pp s ^ "\n"
      | pp (ClassDec (s,_)) = 
          "ClassDec [" ^ String.concatWith "\n  " (map pp s) ^ "]\n"
-     | pp (ClassBind (i,t,s,_)) = 
-         "ClassBind " ^ pp i ^ " of " ^ pp t ^ 
-            " = " ^ pp s ^ "\n"
+     | pp (ClassBind (i,t,_)) = 
+         "ClassBind " ^ pp i ^ " to " ^ pp t ^ "\n" 
      | pp (Signature (d,_)) = "sig\n" ^ 
                         (String.concatWith "\n    " (map pp d)) ^ 
                         "\nend\n"
@@ -240,7 +259,84 @@ struct
 
    fun prettyPrint p = pp p
   
-   fun prettyPrintAll l = String.concatWith "\n" (map prettyPrint l)
+   fun prettyPrintAll l = String.concatWith "\n\n" (map prettyPrint l)
+
+   fun getPos (Int (_, _, pos)) = pos
+     | getPos (Real (_, _, _, _, pos)) = pos
+     | getPos (Char (_, pos)) = pos
+     | getPos (String (_, pos)) = pos
+     | getPos (Ident (_, pos)) = pos
+     | getPos (LongId (_, _, pos)) = pos
+	  | getPos (TyId (_, pos)) = pos
+     | getPos (Var (_, pos)) = pos
+     | getPos (Raise (_, pos)) = pos
+     | getPos (AndAlso (_, _, pos)) = pos
+     | getPos (OrElse (_, _, pos)) = pos
+     | getPos (Seq (_, _, pos)) = pos
+     | getPos (Infix (_, _, _, pos)) = pos
+     | getPos (OpExp (_, pos)) = pos
+     | getPos (App (_, _, pos)) = pos
+     | getPos (AppList (_, pos)) = pos
+     | getPos (TyAnn (_, _, pos)) = pos
+     | getPos (TupleExp (_, pos)) = pos
+     | getPos (UnitExp pos) = pos
+     | getPos (SeqExp (_, pos)) = pos
+     | getPos (ListExp (_, pos)) = pos
+     | getPos (NilExp pos) = pos
+     | getPos (LetExp (_, _, pos)) = pos
+     | getPos (IfExp (_, _, _, pos)) = pos
+     | getPos (WhileExp (_, _, pos)) = pos
+     | getPos (CaseExp (_, _, pos)) = pos
+     | getPos (FnExp (_, pos)) = pos
+     | getPos (HandleExp (_, _, pos)) = pos
+     | getPos (ExnDec (_, _, pos)) = pos
+     | getPos (OpenDec (_, pos)) = pos
+     | getPos (Match (_, _, pos)) = pos
+     | getPos (AsPat (_, _, pos)) = pos
+     | getPos (UnitPat pos) = pos
+     | getPos (InfixPat (_, _, _, pos)) = pos
+     | getPos (WildcardPat pos) = pos
+     | getPos (TuplePat (_, pos)) = pos
+     | getPos (ListPat (_, pos)) = pos
+     | getPos (NilPat pos) = pos
+     | getPos (ConPat (_, pos)) = pos
+     | getPos (ConstrPat (_, _, pos)) = pos
+     | getPos (TyAnnPat (_, _, pos)) = pos
+     | getPos (IdPat (_, pos)) = pos
+     | getPos (TyArrow (_, _, pos)) = pos
+     | getPos (TyPair (_, pos)) = pos
+     | getPos (TyCon (_, _, pos)) = pos
+     | getPos (TyName (_, pos)) = pos
+     | getPos (TyClass (_, _, _, pos)) = pos
+     | getPos (ValDec (_, pos)) = pos
+     | getPos (TypeDec (_, pos)) = pos
+     | getPos (InfixrDec (_, _, pos)) = pos 
+     | getPos (InfixDec (_, _, pos)) = pos
+     | getPos (DatatypeAssign (_, _, pos)) = pos
+     | getPos (DatatypeDec (_, pos)) = pos
+     | getPos (FunDec (_, pos)) = pos
+     | getPos (ValBind (_, _, pos)) = pos
+	  | getPos (ValRec (_, pos)) = pos
+     | getPos (TypeBind (_, _, _, pos)) = pos
+     | getPos (FunMatch (_, _, _, _, pos)) = pos
+     | getPos (DataBind (_, _, _, pos)) = pos
+     | getPos (ConBind (_, _, pos)) = pos
+     | getPos (StructDec (_, pos)) = pos
+     | getPos (StructBind (_, _, _, pos)) = pos
+     | getPos (Structure (_, pos)) = pos
+     | getPos (ValDesc (_, pos)) = pos
+     | getPos (TypeDesc (_, pos)) = pos
+     | getPos (StructDesc (_, pos)) = pos
+     | getPos (ValDescBind (_, _, pos)) = pos 
+     | getPos (TypeDescBind (_, _, pos)) = pos 
+     | getPos (StructDescBind (_, _, pos)) = pos
+     | getPos (SigBind (_, _, pos)) = pos
+     | getPos (Signature (_, pos)) = pos
+     | getPos (SigDec (_, pos)) = pos
+     | getPos (ClassDec (_, pos)) = pos
+     | getPos (ClassBind (_, _, pos)) = pos
+     | getPos (ClassImpl (_, _, _, pos)) = pos
+     | getPos (Import (_, _, _, pos)) = pos
 
    fun sanitise x = x
 end

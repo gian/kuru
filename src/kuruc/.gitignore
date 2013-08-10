@@ -1,0 +1,3 @@
+version.k
+tests/*.log
+tests/*.out

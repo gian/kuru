@@ -1,19 +1,29 @@
-(*******************************************************************************
-*  The Kuru Programming Language Compiler Toolset (http://www.kuru-lang.org)
-*  Copyright (C) 2010  Gian Perrone
+(******************************************************************************
+* The Kuruc Compiler (http://www.kuru-lang.org)
+* Copyright (c) 2010-2013, Gian Perrone
+* All rights reserved.
 *
-*  This program is free software: you can redistribute it and/or modify
-*  it under the terms of the GNU General Public License as published by
-*  the Free Software Foundation, either version 3 of the License, or
-*  (at your option) any later version.
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are met:
 *
-*  This program is distributed in the hope that it will be useful,
-*  but WITHOUT ANY WARRANTY; without even the implied warranty of
-*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*  GNU General Public License for more details.
+* - Redistributions of source code must retain the above copyright notice, this
+*   list of conditions and the following disclaimer.
 *
-*  You should have received a copy of the GNU General Public License
-*  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+* - Redistributions in binary form must reproduce the above copyright notice,
+*   this list of conditions and the following disclaimer in the documentation
+*   and/or other materials provided with the distribution.
+*
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+* ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+* POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************
 *  This file:
 *    Primary Kuru PEG grammar. 
@@ -39,7 +49,7 @@ structure P = ParseTree
 %nonterm negat of bool
 %nonterm charconst of P.pt
 %nonterm string of P.pt
-%nonterm stringcont of string
+%nonterm stringcont of int list
 %nonterm con of P.pt
 %nonterm reserved of string
 %nonterm nonid of string
@@ -58,6 +68,7 @@ structure P = ParseTree
 %nonterm patel of P.pt
 %nonterm patlist of P.pt list
 %nonterm patapp of P.pt list
+%nonterm implicit of (P.pt * P.pt) list
 %nonterm typ of P.pt
 %nonterm typel of P.pt
 %nonterm tyannopt of P.pt option
@@ -82,7 +93,6 @@ structure P = ParseTree
 %nonterm valdesc of P.pt list
 %nonterm typedesc of P.pt list
 %nonterm sigbind of P.pt list
-%nonterm classbind of P.pt list
 %nonterm strdesc of P.pt list
 %nonterm programel of P.pt
 %nonterm program of P.pt list
@@ -91,12 +101,21 @@ val srcFileLineNum = ref 1
 
 val kuruFile = ref "__UNKNOWN__"
 
-fun escape "n" = "\n"
-  | escape "\\" = "\\"
-  | escape "0" = String.str (Char.chr 0)
-  | escape "t" = "\t"
-  | escape "\"" = "\\\""
-  | escape x = x
+fun escape 110 = [92, 110] (* "\n" *)
+  | escape 92 = [92] (* "\\" *)
+  | escape 48 = [0] (* "0" *)
+  | escape 116 = [92, 116] (* "\t" *)
+  | escape 34 = [92, 34] (* "\"" *)
+  | escape x = [x]
+
+fun unescape [92, x] = x
+  | unescape [x] = x
+  | unescape _ = raise Fail ("Invalid escape sequence")
+
+fun strOrd x =
+   case String.explode x of
+      [c] => Char.ord c
+     | _ => raise Fail ("Invalid character sequence")
 
 %%
 
@@ -121,13 +140,13 @@ real           <- n1: negat d1: num "." d2: num "e" n2: negat d3: num ->
 negat          <- "~" -> (true)
                 /     -> (false).
 
-charconst      <- "#" "\"" c: stringcont "\"" -> (P.Char ($c,(!pos,!kuruFile))).
+charconst      <- "#" "\"" c: stringcont "\"" -> (P.Char (unescape ($c),(!pos,!kuruFile))).
 
 string         <- "\"" s: stringcont "\"" _ -> (P.String ($s,(!pos,!kuruFile))).
 
-stringcont     <- !"\\" !"\"" c: char s: stringcont -> ($c ^ $s)
-                / b: "\\" c: char s: stringcont -> ((escape ($c)) ^ $s)
-                / -> ("").
+stringcont     <- !"\\" !"\"" c: char s: stringcont -> ((strOrd ($c)) :: $s)
+                / b: "\\" c: char s: stringcont -> ((escape (strOrd ($c))) @ $s)
+                / -> ([]).
 
 con            <- real / int / charconst / string.
 
@@ -139,15 +158,14 @@ reserved       <- "!" / "%" / "&" / "$" / "+" / "-" /  "/"
                 / "^" / "*".
 
 nonid          <- "(" / ")" / "[" / "]" / "." / ";" / "," / "|" /
-                  "~" / "#" / ":" / "=>" / "=". 
+                  "~" / "#" / ":" / "=>" / "=" / "{" / "}". 
 
-keyword        <- "val" / "let" / "if" / "then" / "else" / "datatype"
-                / "type" / "fn" / "fun" / "and" / "end" / "in" /
+keyword        <- "val" / "let" / "if" / "then" / "else" / "datatype" / "withtype"
+                / "eqtype" / "type" / "fn" / "fun" / "and" / "end" / "in" /
                   "structure" / "struct" / "of" / "case" /
                   "handle" / "raise" / "infixr" / "infix" /
                   "signature" / "sig" / "exception" / "open" / "local" /
-                  "_import" / "as" / "class" / "implements" 
-                  .
+                  "_import" / "as" / "bind" / "to" / "op".
 
 id             <-  r1: reserved r2: (reserved*) -> 
                   (P.Ident(String.concat($r1 :: $r2),(!pos,!kuruFile)))
@@ -180,7 +198,7 @@ exp            <- _ "raise" _ e: exp -> (P.Raise ($e,(!pos,!kuruFile)))
                   (P.Infix (P.AppList ($e1,(!pos,!kuruFile)),P.Ident ("=",(!pos,!kuruFile)),$e2,(!pos,!kuruFile)))
                 / _ e1: expapp -> (P.AppList ($e1,(!pos,!kuruFile))).
                 
-expel          <- "op" _ l: longid -> (P.OpExp ($l,(!pos,!kuruFile)))
+expel          <- "op" sp _ l: longid -> (P.OpExp ($l,(!pos,!kuruFile)))
                 / "let"_ d: declist _"in"_ 
                      e1: exp _ ";"_ e2: expseq _ "end" ->
                         (P.LetExp($d,P.SeqExp($e1 :: $e2,(!pos,!kuruFile)),(!pos,!kuruFile)))
@@ -241,6 +259,8 @@ patel          <- "_" -> (P.WildcardPat ((!pos,!kuruFile)))
                 / "()" -> (P.UnitPat ((!pos,!kuruFile)))
                 / "[" _ p: patlist _ "]" -> (P.ListPat ($p,(!pos,!kuruFile)))
                 / "[" _ "]" -> (P.ListPat ([],(!pos,!kuruFile)))
+                / _ "{"_ i: implicit _ "}" -> 
+                  (P.ImplicitPat ($i,(!pos,!kuruFile)))
                 .
 
 patlist        <- _ p1: pat _ "," _ p2: patlist -> ($p1 :: $p2)
@@ -248,6 +268,11 @@ patlist        <- _ p1: pat _ "," _ p2: patlist -> ($p1 :: $p2)
 
 patapp         <- _ p1: patel _ p2: patapp -> ($p1 :: $p2)
                 / _ p1: patel -> ([$p1]).
+
+implicit       <-  i: longid _":"_ class: typ _","_ r: implicit ->
+                  (($i, $class) :: $r)
+                /  i: longid _":"_ class: typ ->
+                  ([($i, $class)]).
 
 % Types
 
@@ -280,9 +305,8 @@ declist        <- dec*.
 sdeclist        <- sdec*.
 
 dec            <- _ "val" _ v: valbind -> (P.ValDec($v,(!pos,!kuruFile)))
-                / _ "type" _ i1: typ _ "implements" _ i2: longid _"in"_
-                     i3: longid ->
-                        (P.ClassImpl($i1,$i2,$i3,(!pos,!kuruFile)))
+                / _ "bind" _ i1: longid _ "to" _ i2: longid ->
+                        (P.ClassBind($i1,$i2,(!pos,!kuruFile)))
                 / _ "type" _ v: typebind -> (P.TypeDec($v,(!pos,!kuruFile)))
                 / _ "datatype" _ i: id _"="_ "datatype"_ l: longid
                   -> (P.DatatypeAssign ($i,$l,(!pos,!kuruFile)))
@@ -303,6 +327,7 @@ dec            <- _ "val" _ v: valbind -> (P.ValDec($v,(!pos,!kuruFile)))
                 .
 
 sdec           <- _"val" _ v: valdesc -> (P.ValDesc($v,(!pos,!kuruFile)))
+                / _ "eqtype" _ v: typedesc -> (P.TypeDesc($v,(!pos,!kuruFile)))
                 / _ "type" _ v: typedesc -> (P.TypeDesc($v,(!pos,!kuruFile)))
                 / _ "datatype" _ i: id _"="_ "datatype"_ l: longid
                   -> (P.DatatypeAssign ($i,$l,(!pos,!kuruFile)))
@@ -365,6 +390,8 @@ funmatch       <- "op" _ i: id _ l: patapp _ t: tyannopt _"="_
 
 databind       <- _ tv: tyvars _ i: id _ "=" _ c: conbind _ "and" d: databind
                   -> (P.DataBind($tv,$i,$c,(!pos,!kuruFile)) :: $d)
+                /  _ tv: tyvars _ i: id _ "=" _ c: conbind _ "withtype" t: typebind
+                  -> (P.DataBind($tv,$i,$c,(!pos,!kuruFile)) :: $t)
                 / _ tv: tyvars _ i: id _ "=" _ c: conbind
                   -> ([P.DataBind($tv,$i,$c,(!pos,!kuruFile))]).
 
@@ -391,11 +418,6 @@ sigbind        <- _ i: id _ "=" _ s: sign _ "and" _ st: sigbind ->
                 / _ i: id _ "=" _ s: sign ->
                   ([P.SigBind($i,$s,(!pos,!kuruFile))]).
 
-classbind      <- _ i: id _ "of" _ t:id _"=" _ s: sign _ "and" _ st: sigbind ->
-                  (P.ClassBind($i,$t,$s,(!pos,!kuruFile)) :: $st)
-                / _ i: id _ "of" _ t:id _"=" _ s: sign ->
-                  ([P.ClassBind($i,$t,$s,(!pos,!kuruFile))]).
-
 str            <- _ "struct" _ d: declist _ "end"
                   -> (P.Structure($d,(!pos,!kuruFile)))
                 / longid.
@@ -406,8 +428,7 @@ sign           <- _ "sig" _ d: sdeclist _ "end"
                 .
 
 programel      <- _ dec
-                / _"signature" _ s: sigbind -> (P.SigDec ($s,(!pos,!kuruFile)))
-                / _"class" _ s: classbind -> (P.ClassDec ($s,(!pos,!kuruFile))).
+                / _"signature" _ s: sigbind -> (P.SigDec ($s,(!pos,!kuruFile))).
 
 program        <- p1: programel _ ";" _ p2: program -> ($p1 :: $p2)
                 / p1: programel _ p2: program -> ($p1 :: $p2)
