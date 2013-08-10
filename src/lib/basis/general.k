@@ -37,6 +37,9 @@ fun valOf NONE = raise Match
 
 type 'a ref = opaque
 
+fun a + b = 0
+(* fun {A : ADDABLE 'a} + (= add (a, b) *)
+
 _import intAdd : (int * int) -> int as +
 _import intSub  : (int * int) -> int as -
 _import intMul : (int * int) -> int as *

@@ -3,22 +3,13 @@ COMPILER=mlton
 KUPEG=$(BIN)/kupeg
 
 SMLDEPS= \
-	lib/set.sml lib/table.sml lib/symbol.sml \
-	semant/unify.sml semant/constrain.sml semant/env.sml \
-	frontend/kuru.kpg.sml frontend/parsetree.sml frontend/error.sml \
- 	ast/typed_ast.sml ast/ast_parse_tree.sml ast/ast_app_apply.sml \
-	ast/type.sml ast/ast_datatype_unfold.sml ast/ast_infix_apply.sml \
-	ast/ast_typedec_eval.sml ast/ast_fun_curry.sml \
-	ast/ast_infix_unflatten.sml ast/ast_list_cons.sml \
-	ast/ast_match_compile.sml ast/convert_parse_tree.sml \
-	semant/typecheck.sml semant/tyconstraints.sml ast/ast_promote_exns.sml \
-	intermediate/monomorphise.sml semant/polymorphism.sml ast/ast_infix_pattern.sml \
-	intermediate/closure_convert.sml semant/typeclass.sml codegen/asm.sml \
-	optimise/optimise.sml codegen/temp.sml intermediate/intermediate.sml \
-	optimise/constant_fold.sml codegen/java_translate.sml codegen/java_codegen.sml \
-	codegen/translate.sml codegen/codegen.sml codegen/codegen_decs.sml \
-	codegen/builtins.sml codegen/javac_operations.sml semant/exceptions.sml \
-	config.sml debug.sml main.sml compile.sml version.sml
+	config.sml debug.sml main.sml version.sml compile.sml position.sml \
+	frontend/error.sml frontend/parsetree.sml frontend/kuru.kpg.sml \
+	frontend/parsetree_app_apply.sml frontend/parsetree_transformer.sml \
+	frontend/parsetree_infix_pattern.sml frontend/parsetree_list_cons.sml \
+	frontend/parsetree_promote_exns.sml frontend/parsetree_infix_apply.sml \
+	frontend/parsetree_infix_unflatten.sml ast/parsetree_ast_converter.sml \
+	ast/typed_ast.sml ast/symbol.sml ast/symbol.sig
 
 all: $(BIN)/kuruc
 
@@ -33,6 +24,9 @@ frontend/kuru.kpg.k: frontend/kuru.kpg
 	$(MAKE) -C frontend kuru.kpg.k
 
 %.sml: %.k
+	ln -sf $(notdir $<) $@
+
+%.sig: %.ks
 	ln -sf $(notdir $<) $@
 
 version.k: version.sh
@@ -57,7 +51,7 @@ codegen:
 	$(MAKE) -C codegen
 
 clean:
-	rm -f $(BIN)/kuruc config.sml main.sml compile.sml debug.sml version.sml 
+	rm -f $(BIN)/kuruc config.sml main.sml compile.sml debug.sml version.sml position.sml 
 	$(MAKE) -C frontend clean
 	$(MAKE) -C lib clean
 	$(MAKE) -C ast clean

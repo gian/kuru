@@ -1,339 +1,245 @@
-(*******************************************************************************
-*  The Kuru Programming Language Compiler Toolset (http://www.kuru-lang.org)
-*  Copyright (C) 2010  Gian Perrone
+(******************************************************************************
+* The Kuruc Compiler (http://www.kuru-lang.org)
+* Copyright (c) 2010-2013, Gian Perrone
+* All rights reserved.
 *
-*  This program is free software: you can redistribute it and/or modify
-*  it under the terms of the GNU General Public License as published by
-*  the Free Software Foundation, either version 3 of the License, or
-*  (at your option) any later version.
+* Redistribution and use in source and binary forms, with or without
+* modification, are permitted provided that the following conditions are met:
+* 
+* - Redistributions of source code must retain the above copyright notice, this
+*   list of conditions and the following disclaimer.
 *
-*  This program is distributed in the hope that it will be useful,
-*  but WITHOUT ANY WARRANTY; without even the implied warranty of
-*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*  GNU General Public License for more details.
+* - Redistributions in binary form must reproduce the above copyright notice,
+*   this list of conditions and the following disclaimer in the documentation
+*   and/or other materials provided with the distribution.
 *
-*  You should have received a copy of the GNU General Public License
-*  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+* AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+* IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+* ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+* LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+* INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+* POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************
 *  This file:
-*    A typed AST into which ParseTree trees are transformed.
+*    A typed Abstract Syntax Tree
 ******************************************************************************)
-structure TypedAST =
+
+structure TypedAst =
 struct
-structure T = Type
    structure S = Symbol
 
-   type pos = ParseTree.pos
+   type symbol = S.t
+   type pos = Position.t 
 
-   datatype tval = LINT of int * pos
-                 | LREAL of real * pos
-                 | LCHAR of char * pos
-                 | LSTRING of string * pos
-                 | LUNIT of pos
+   datatype ty =
+      TySimple of symbol
+    | TyApp of ty * ty (* Follows application order, i.e. int list is ("list","int") *)
+    | TyVar of symbol
+    | TyTuple of ty list
+    | TyArrow of ty * ty
+    | TyMeta of int
+    | TySeq of ty list
+    | TyUnion of ty * constructor list
+   withtype constructor = symbol * ty option
 
-   datatype tpat = PCONST of texp * T.ty * pos
-                 | PLIST of tpat vector * T.ty * pos
-                 | PTUPLE of tpat vector * T.ty * pos
-                 | PCONSTR of int * (tpat * T.ty) option * T.ty * pos
-                 | PID of S.symbol * T.ty * pos 
-                 | PINFIX of tpat * S.symbol * tpat * T.ty * pos
-                 | PWILD of pos
-                 | PNIL of pos
-                 | PUNIT of pos
+   fun ppty (TySimple s) = S.toString s
+     | ppty (TyApp (t1, t2)) = ppty t2 ^ " " ^ ppty t1
+     | ppty (TyMeta i) = "?x" ^ Int.toString i
+     | ppty (TyTuple l) = String.concatWith " * " (map ppty l)
+     | ppty (TyArrow (t1, t2)) = ppty t1 ^ " -> " ^ ppty t2
+     | ppty (TyVar s) = "'" ^ S.toString s
+     | ppty (TySeq [x]) = ppty x
+     | ppty (TySeq l) = "(" ^ String.concatWith "," (map ppty l) ^ ")"
+     | ppty (TyUnion (t, c)) = String.concatWith " | "
+         (map (fn (s, NONE) => S.toString s
+               | (s, SOME a) => S.toString s ^ " of " ^ ppty a) c)
 
-   and texp = ELIT of tval * T.ty * pos
-                 | EID of S.symbol * T.ty * pos
-                 | ELID of S.symbol list * T.ty * pos
-                 | ELIST of texp vector * T.ty * pos
-                 | ENIL of pos
-                 | ETUPLE of texp vector * T.ty * pos
-                 | EIF of texp * texp * texp * T.ty * pos
-                 | EWHILE of texp * texp * T.ty * pos
-                 | EFN of S.symbol list * texp * T.ty * pos
-                 | ECASE of texp * (tpat * texp) vector * T.ty * pos
-                 | EAPP of texp * texp * T.ty * pos
-                 | EAPPMULT of texp * texp list * T.ty * pos
-                 | ERAISE of texp * pos
-                 | EHANDLE of tpat * texp * T.ty * pos
-                 | ESEQ of texp vector * T.ty * pos
-                 | ELET of tast vector * texp * T.ty * pos
-                 | EANN of texp * T.ty * pos
-                 | ECON of int * (texp * T.ty) option * T.ty * pos
-                 | EINST of texp * T.ty * T.ty
-                 | ESTUB of T.ty * pos
-                 | ECLOSURE of S.symbol * (S.symbol * T.ty) list * T.ty * pos
-                 
-   and      tast = DVAL of S.symbol * texp * T.ty * pos
-                 | DVALREC of tast * T.ty * pos
-                 | DMUTUAL of tast vector * pos
-                 | DSTRUCTURE of S.symbol * S.symbol option * tast vector * pos
-                 | DSTRUCTASSIGN of S.symbol * texp * pos
-                 | DSIGNATURE of S.symbol * tast vector * pos
-                 | DOPEN of texp * pos
-                 | DIMPORT of S.symbol * T.ty * S.symbol * pos
-                 | DCLASSIMPL of T.ty * S.symbol * Env.enventry S.table * pos
-                 | DCLASS of S.symbol * S.symbol * tast list * pos
-                 | DNULL of pos (* For things we've removed *)
+   type constructor_tag = int
 
-   val ppty = T.pp
-   fun vtol f = Vector.foldr (fn (a,b) => a::b) [] f
+   datatype ascription =
+      Opaque
+    | Transparent
 
-   fun getTypeExp (ELIT (_,t,_)) = t
-     | getTypeExp (EID (_,t,_)) = t
-     | getTypeExp (ELID (_,t,_)) = t
-     | getTypeExp (ELIST (_,t,_)) = t
-     | getTypeExp (ENIL _) = T.CONSTR ([T.fresh()], T.t_list)
-     | getTypeExp (ETUPLE (_,t,_)) = t 
-     | getTypeExp (EIF (_,_,_,t,_)) = t
-     | getTypeExp (EWHILE (_,_,t,_)) = t
-     | getTypeExp (EFN (_,_,t,_)) = t
-     | getTypeExp (ECASE (_,_,t,_)) = t
-     | getTypeExp (EAPP (_,_,t,_)) = t
-     | getTypeExp (EAPPMULT (_,_,t,_)) = t
-     | getTypeExp (ERAISE _) = T.fresh ()
-     | getTypeExp (EHANDLE (_,_,t,_)) = t 
-     | getTypeExp (ESEQ (_,t,p)) = t
-     | getTypeExp (ELET (_,_,t,_)) = t
-     | getTypeExp (EANN (_,t,_)) = t
-     | getTypeExp (ECON (_,_,t,_)) = t
-     | getTypeExp (EINST (_,_,t)) = t
-     | getTypeExp (ESTUB (t,_)) = t
-     | getTypeExp (ECLOSURE (_,_,t,_)) = t
+   datatype literal =
+      Int of IntInf.int
+    | Real of string
+    | Char of int
+    | String of int vector
+    | Unit
 
-   fun getType (DVAL (_,_,t,_)) = t
-     | getType (DVALREC (_,t,_)) = t
-     | getType (DNULL _) = T.UNKNOWN
-     | getType (DSTRUCTURE _) = T.UNKNOWN
-     | getType (DMUTUAL _) = T.UNKNOWN
-     | getType (DSTRUCTASSIGN _) = T.UNKNOWN
-     | getType (DOPEN _) = T.UNKNOWN
-     | getType (DIMPORT (_,t,_,_)) = t
-     | getType (DCLASS _) = T.UNKNOWN
-     | getType (DCLASSIMPL _) = T.UNKNOWN
-     | getType _ = raise Fail "Can't getType for non DVAL or DVALREC"
+   (* A note on desugaring patterns:
+    *
+    * Wildcards (_) get desugared to a fresh IdentifierPattern
+    * Infix patterns (h::t) get turned into constructor patterns.
+    * List patterns ([1,2,3,4]) get turned into constructor patterns.
+    * Nil (nil, []) gets turned into a constructor pattern.
+    *)
+   datatype pattern =
+      LiteralPattern of literal * pos
+    | TuplePattern of pattern list * ty * pos
+    | ConstructorPattern of symbol * pattern option * ty * pos
+    | IdentifierPattern of symbol * ty * pos
+    | AsPattern of pattern * pattern * ty * pos
+    | CurriedPattern of pattern list * ty * pos
+    | AnnotationPattern of pattern * ty * pos
+    | UnitPattern of pos
 
-   fun setType (DVAL (a,b,_,c)) t = DVAL (a,b,t,c)
-     | setType (DVALREC (a,_,b)) t = DVALREC (a,t,b)
-     | setType (DNULL p) t = DNULL p
-     | setType x t = x
+   datatype expression =
+      LiteralExpr of literal * pos
+    | IdentifierExpr of symbol * ty * pos  (* Long and short identifiers. *)
+    | TupleExpr of expression list * ty * pos
+    | IfExpr of expression * expression * expression * ty * pos
+    | WhileExpr of expression * expression * ty * pos
+    | FnExpr of clause list * ty * pos
+    | CaseExpr of expression * clause list * ty * pos
+    | ApplyExpr of expression * expression * ty * pos
+    | RaiseExpr of expression * pos
+    | HandleExpr of expression * clause list * ty * pos
+    | SeqExpr of expression list * ty * pos
+    | LetExpr of declaration list * expression * ty * pos
+    | AnnotationExpr of expression * ty * pos
+    | ConstructorExpr of symbol * expression option * ty * pos
 
-   fun subst_ty_pat tn th (PCONST (e,t,p)) = 
-            PCONST (subst_ty_exp tn th e, T.substinty tn th t, p)
-     | subst_ty_pat tn th (PLIST (v,t,p)) =
-            PLIST (Vector.map (subst_ty_pat tn th) v,
-                   T.substinty tn th t, p)
-     | subst_ty_pat tn th (PTUPLE (v,t,p)) =
-            PTUPLE (Vector.map (subst_ty_pat tn th) v,
-                   T.substinty tn th t, p)
-     | subst_ty_pat tn th (PCONSTR (s,b,t,p)) = 
-            PCONSTR (s, 
-                     (case b of NONE => NONE
-                              | SOME (b',t1) => SOME (subst_ty_pat tn th b',
-                                                      T.substinty tn th t1)),
-                     T.substinty tn th t,
-                     p)
-     | subst_ty_pat tn th (PID (s,t,p)) =
-            PID (s, T.substinty tn th t, p)
-     | subst_ty_pat tn th (PINFIX (a,opr,b,t,p)) =
-            PINFIX (subst_ty_pat tn th a,
-                    opr,
-                    subst_ty_pat tn th b,
-                    T.substinty tn th t,
-                    p)
-     | subst_ty_pat tn th (PWILD p) = PWILD p
-     | subst_ty_pat tn th (PNIL p) = PNIL p
-     | subst_ty_pat tn th _ = raise Fail "subst_ty_pat: not implemented"
+   and declaration =
+      ValDec of clause * pos
+    | ValRecDec of clause * pos
+    | FunDec of symbol * clause list * pos
+    | MutualDec of declaration list * pos
+    | OpenDec of symbol * pos
+    | BindDec of symbol * declaration * pos
+    | TypeDec of ty * ty * pos
+    | ValDef of symbol * ty * pos
+    | TypeDef of ty * pos
+    | StructureMod of symbol * declaration option * declaration * pos
+    | SignatureMod of symbol * declaration * pos
+    | StructureAssignMod of symbol * symbol * pos
+    | StructMod of declaration list * pos
+    | SigMod of declaration list * pos
+    | RefMod of symbol * pos
+    | FunctorMod of symbol * functor_clause list * declaration * pos
 
-   and subst_ty_exp tn th (ELIT (tv,t,p)) =
-            ELIT (tv, T.substinty tn th t, p)
-     | subst_ty_exp tn th (EID (s,t,p)) =
-            EID (s, T.substinty tn th t, p)
-     | subst_ty_exp tn th (ELID (s,t,p)) =
-            ELID (s, T.substinty tn th t, p)
-     | subst_ty_exp tn th (ELIST (v,t,p)) =
-            ELIST (Vector.map (subst_ty_exp tn th) v,
-                   T.substinty tn th t, p)
-     | subst_ty_exp tn th (ETUPLE (v,t,p)) =
-            ETUPLE (Vector.map (subst_ty_exp tn th) v,
-                   T.substinty tn th t, p)
-     | subst_ty_exp tn th (EIF (e1,e2,e3,t,p)) =
-            EIF    (subst_ty_exp tn th e1,
-                    subst_ty_exp tn th e2,
-                    subst_ty_exp tn th e3,
-                    T.substinty tn th t,
-                    p)
-     | subst_ty_exp tn th (EWHILE (e1,e2,t,p)) =
-            EWHILE (subst_ty_exp tn th e1,
-                    subst_ty_exp tn th e2,
-                    T.substinty tn th t,
-                    p)
-     | subst_ty_exp tn th (EFN (s,e,t,p)) =
-            EFN (s,
-                 subst_ty_exp tn th e,
-                 T.substinty tn th t,
-                 p)
-     | subst_ty_exp tn th (ECASE (e,m,t,p)) =
-            ECASE (subst_ty_exp tn th e,
-                   Vector.map
-                         (fn (a,b) => 
-                             (subst_ty_pat tn th a,
-                              subst_ty_exp tn th b))
-                         m
-                   ,
-                   T.substinty tn th t,
-                   p)
-     | subst_ty_exp tn th (EAPP (e1,e2,t,p)) =
-            EAPP (subst_ty_exp tn th e1,
-                  subst_ty_exp tn th e2,
-                  T.substinty tn th t,
-                  p)
-     | subst_ty_exp tn th (ERAISE (e,p)) =
-            ERAISE (subst_ty_exp tn th e, p)
-     | subst_ty_exp tn th (EHANDLE (pat,e,t,p)) =
-            EHANDLE (subst_ty_pat tn th pat,
-                     subst_ty_exp tn th e,
-                     T.substinty tn th t,
-                     p)
-     | subst_ty_exp tn th (ESEQ (v,t,p)) =
-            ESEQ (
-               Vector.map (subst_ty_exp tn th) v,
-               T.substinty tn th t,
-               p)
-     | subst_ty_exp tn th (ELET (l,e,t,p)) =
-            ELET (
-        Vector.map (subst_ty_dec tn th) l,
-                    subst_ty_exp tn th e,
-                    T.substinty tn th t,
-                    p)
-     | subst_ty_exp tn th (EANN (e,t,p)) =
-            EANN (subst_ty_exp tn th e,
-                  T.substinty tn th t,
-                  p)
-     | subst_ty_exp tn th (ECON (i,NONE,t,p)) =
-              ECON (i,NONE,T.substinty tn th t,p)
-     | subst_ty_exp tn th (ECON (i,SOME (e,t1),t2,p)) =
-              ECON (i,SOME (subst_ty_exp tn th e,T.substinty tn th t1),
-                  T.substinty tn th t2, p)
-     | subst_ty_exp tn th (ENIL p) = ENIL p
-     | subst_ty_exp tn th (ESTUB (t,p)) = ESTUB (T.substinty tn th t,p)
-     | subst_ty_exp tn th (ECLOSURE (f,l,t,p)) =
-            ECLOSURE (f, map (fn (e,t) => (e,T.substinty tn th t)) l, 
-               T.substinty tn th t, p)
-     | subst_ty_exp tn th x = 
-      Error.bug ("TypedAST.subst_ty_exp","Unexpected exp",(0,""))
-   and subst_ty_dec tn th (DVAL (s,e,t,p)) =
-            DVAL (s,
-                  subst_ty_exp tn th e,
-                  T.substinty tn th t,
-                  p)
-     | subst_ty_dec tn th (DVALREC (d,t,p)) =
-            DVALREC (subst_ty_dec tn th d,
-                     T.substinty tn th t,
-                     p)
-     | subst_ty_dec tn th (DMUTUAL (v,p)) =
-            DMUTUAL (Vector.map (subst_ty_dec tn th) v, p)
-     | subst_ty_dec tn th (DSTRUCTURE (s,c,v,p)) =
-            DSTRUCTURE (s,c,
-                        Vector.map (subst_ty_dec tn th) v,
-                        p)
-     | subst_ty_dec tn th d = d 
+   withtype clause = pattern * expression
+        and functor_clause = declaration * declaration
 
-   fun subst_ty tn th l = 
-      map (subst_ty_dec tn th) l
+   type program = declaration list
 
-   fun ppv (LINT(i,p)) = Int.toString i
-     | ppv (LREAL(r,p)) = Real.toString r
-     | ppv (LCHAR(c,p)) = "#\"" ^ String.str (c) ^ "\""
-     | ppv (LSTRING(s,p)) = "\"" ^ s ^ "\""
-     | ppv (LUNIT _) = "()"
+   fun indent 0 = ""
+     | indent n = "   " ^ indent (n - 1)
 
-   fun ppp (PCONST(e,t,p)) = ppe e
-     | ppp (PLIST(v,ty,p)) = "[" ^ (String.concatWith "," (map ppp (vtol v))) ^ "]"
-     | ppp (PTUPLE(v,ty,p)) = "(" ^ (String.concatWith "," (map ppp (vtol v))) ^ ")"
-     | ppp (PCONSTR(s,NONE,ty,p)) = "???constr???"
-     | ppp (PCONSTR(s,SOME cp,ty,p)) = "???constr???"
-     | ppp (PID(s,t,p)) = S.name s  
-     | ppp (PINFIX (a,b,c,t,p)) = "(" ^ ppp a ^ S.name b ^ ppp c ^ ")"
-     | ppp (PWILD p) = "_"
-     | ppp (PNIL _) = "nil"
-     | ppp (PUNIT _) = "()"
+   fun pplit (Int i) = IntInf.toString i
+     | pplit (Real s) = s
+     | pplit (Char i) = "#\"" ^ String.str (Char.chr i) ^ "\""
+     | pplit (String s) = "\"" ^ (Vector.map Char.chr s) ^ "\""
+     | pplit Unit = "()"
 
-   and ppe (ELIT(tv,ty,p)) =  
-                             ppv tv 
-     | ppe (EID(s,ty,p)) = S.name s ^ " : " ^ ppty ty 
-     | ppe (ELID(s,ty,p)) = String.concatWith "." (map Symbol.name s)
-     | ppe (ELIST(v,ty,p)) = "[" ^ (String.concatWith "," (map ppe (vtol v))) ^ "]"
-     | ppe (ENIL p) = "nil"
-     | ppe (ETUPLE(v,ty,p)) = "(" ^ (String.concatWith "," (map ppe (vtol v))) ^ ")"
-     | ppe (EIF(e1,e2,e3,t,p)) = "if " ^ ppe e1 ^ " then " ^ ppe e2 ^ " else " ^ 
-                                      ppe e3
-     | ppe (EFN(s,e,ty,p)) = "fn " ^ (String.concatWith "," (map S.name s)) ^  
-                             " => (" ^ ppe e ^ ") : " ^ ppty ty
-     | ppe (ECASE(e1,m,ty,p)) = "case " ^ ppe e1 ^ " of [\n" ^
-                                (String.concatWith "\n" (map
-                                                         (fn (p,e) => ppp p ^ " => " ^ ppe e) (vtol m)))
-                                ^ "]\n"
-     | ppe (EAPP(e1,e2,ty,p)) =  
-                                ppe e1 ^ " (" ^ ppe e2 ^ ")" 
-     | ppe (ELET (v,e,t,p)) = "let\n   " ^ prettyPrint (vtol v) ^ 
-                              "in\n   " ^ ppe e ^ 
-                              "\nend\n"
-     | ppe (ERAISE (e,p)) = "raise " ^ ppe e
-     | ppe (ECON (i,NONE,t,p)) = "_con ("^ Int.toString i ^", " ^ ppty t ^ ")"
-     | ppe (ECON (i,SOME (e,t1),t2,p)) = "_con ("^ ppty t2 ^ " " ^ Int.toString i ^
-                                      ", " ^ ppty t1 ^ 
-                                      " of " ^
-                                      ppe e ^ ")"
-     | ppe (ESEQ (l,t,p)) = "(" ^ String.concatWith "; " 
-                                 (map ppe (vtol l)) ^ ") : " ^
-                                 ppty t
-     | ppe (EINST (e,t1,t2)) = "Instantiate (" ^ ppe e ^ " from " ^ ppty  t1 ^ 
-                                 " to " ^ ppty t2 ^ ")"
-     | ppe (ESTUB (t,p)) = "(__dummy : " ^ ppty t ^ ")"
-     | ppe (ECLOSURE (f,l,t,p)) = 
-         "CLOSURE " ^ S.name f ^ " {" ^ 
-            String.concatWith ", " 
-               (map (fn (e,t) => S.name e ^ " : " ^ ppty t) l) ^ "} : " ^ ppty t
-     | ppe _ = "???texp???"
+   fun ppexp ind (LiteralExpr (l,_)) = pplit l
+     | ppexp ind (IdentifierExpr (symbol, _, _)) = S.toString symbol
+     | ppexp ind (TupleExpr (exprs, _, _)) = 
+         "(" ^ String.concatWith ", " (map (ppexp ind) exprs) ^ ")"
+     | ppexp ind (IfExpr (e1, e2, e3, _, _)) =
+         "if " ^ ppexp ind e1 ^ " then " ^
+            ppexp ind e2 ^ " else " ^
+            ppexp ind e3
+     | ppexp ind (WhileExpr (e1, e2, _, _)) =
+         "while " ^ ppexp ind e1 ^ " do " ^
+            ppexp ind e2
+     | ppexp ind (ApplyExpr (e1, e2, _, _)) =
+         ppexp ind e1 ^ " " ^ ppexp ind e2
+     | ppexp ind (LetExpr (decls, exp, _, _)) =
+         "\n" ^ indent ind ^ "let\n" ^
+            String.concatWith "\n" (map (ppdec (ind + 1)) decls) ^ "\n" ^
+         indent ind ^ "in\n" ^
+         indent (ind + 1) ^ ppexp (ind + 1) exp ^ "\n" ^
+         indent ind ^ "end"
+     | ppexp ind (CaseExpr (exp, ((p,b)::clauses), _, _)) =
+         "case " ^ ppexp ind exp ^ " of\n" ^
+            indent (ind + 1) ^ "   " ^ pppat p ^ " => " ^
+               ppexp (ind + 1) b ^ String.concat
+                   (map (fn (p,b) => 
+                     "\n" ^ indent (ind + 1) ^ "  | " ^
+                        pppat p ^ " => " ^ ppexp (ind + 1) b) clauses)
+     | ppexp ind (FnExpr (((p,b)::clauses), _, _)) =
+         "fn " ^ pppat p ^ " => " ^ ppexp ind b
+     | ppexp ind (SeqExpr (exprs, _, _)) = 
+         "(" ^ String.concatWith "; " (map (ppexp ind) exprs) ^ ")"
+     | ppexp ind (HandleExpr (e, (p,b)::clauses, _, _)) =
+         ppexp ind e ^ " handle " ^ pppat p ^ " => " ^ ppexp ind b
+     | ppexp ind (ConstructorExpr (symbol, NONE, _, _)) = S.toString symbol
+     | ppexp ind (ConstructorExpr (symbol, SOME args, _, _)) = 
+         "(" ^ S.toString symbol ^ " " ^ ppexp ind args ^ ")"
+     | ppexp ind (AnnotationExpr (exp, ty, _)) =
+         ppexp ind exp ^ " : " ^ ppty ty
+     | ppexp ind (RaiseExpr (exp, _)) = "raise " ^ ppexp ind exp
+     | ppexp ind p = 
+         Error.bug ("TypedAst.ppexp", "Unknown or invalid AST", (0,""))
 
+   and pppat (LiteralPattern (p, _)) = pplit p
+     | pppat (IdentifierPattern (symbol, ty, pos)) = S.toString symbol
+     | pppat (TuplePattern (pats, _, _)) = 
+         "(" ^ String.concatWith "," (map pppat pats) ^ ")"
+     | pppat (CurriedPattern (pats, _, _)) =
+         String.concatWith " " (map pppat pats)
+     | pppat (AnnotationPattern (pat, ty, pos)) =
+         "(" ^ pppat pat ^ " : " ^ ppty ty ^ ")"
+     | pppat (ConstructorPattern (symbol, NONE, _, _)) = S.toString symbol
+     | pppat (ConstructorPattern (symbol, SOME pat, _, _)) = 
+         "(" ^ S.toString symbol ^ " " ^ pppat pat ^ ")"
+     | pppat (AsPattern (pat1, pat2, _, _)) = 
+         pppat pat1 ^ " as " ^ pppat pat2
+     | pppat _ = "(* pat *)"
 
-   and prettyPrint [] = ""
-     | prettyPrint ((DNULL _)::t) = prettyPrint t
-     | prettyPrint ((DVAL(s,e,ty,p))::t) = "val " ^
-                                        S.name s ^ " : " ^ ppty ty ^ " = " ^ 
-                                        ppe e ^ "\n" ^ prettyPrint t
-     | prettyPrint ((DVALREC(l,ty,p))::t) = "rec " ^ 
-                                            (prettyPrint [l]) ^"\n"
-                                            ^ prettyPrint t
-     | prettyPrint ((DMUTUAL(v,p))::t) = "DMUTUAL [\n" ^ 
-                                          prettyPrint (vtol v) ^ "]\n" ^ 
-                                          prettyPrint t
-     | prettyPrint ((DSTRUCTURE (s,NONE,l,p))::t) = 
-         "DSTRUCTURE " ^ S.name s ^ " [\n" ^
-           prettyPrint (vtol l)  ^ "]\n" ^
-         prettyPrint t
-     | prettyPrint ((DSTRUCTURE (s,SOME c,l,p))::t) = 
-         "DSTRUCTURE " ^ S.name s ^ " : " ^ S.name c ^ " [\n" ^
-           prettyPrint (vtol l)  ^ "]\n" ^
-         prettyPrint t
-     | prettyPrint ((DSTRUCTASSIGN (a,b,p))::t) = "DSTRUCTASSIGN " ^ S.name a ^ 
-                                                    " = " ^ ppe b ^ "\n" ^ 
-                                                  prettyPrint t
-      | prettyPrint ((DSIGNATURE (s,l,p))::t) = 
-               "DSIGNATURE " ^ S.name s ^ " [\n" ^
-                      prettyPrint (vtol l)  ^ "]\n" ^
-                     prettyPrint t                  
-     | prettyPrint ((DOPEN (e,l))::t) = "DOPEN [" ^ ppe e ^ "]\n" ^ 
-                                          prettyPrint t
-     | prettyPrint ((DIMPORT (i1,t,i2,p))::r) = 
-            "DIMPORT [" ^ S.name i1 ^ " : " ^ ppty t ^ " as " ^ S.name i2 ^ "]\n" ^ 
-             prettyPrint r
-     | prettyPrint ((DCLASS (i1,i2,l,p))::r) =
-            "DCLASS " ^ S.name i1 ^ " of " ^ S.name i2 ^ " [\n" ^ 
-               prettyPrint l ^ "\n]\n" ^ prettyPrint r
-     | prettyPrint ((DCLASSIMPL (t,c,tab,p))::r) =
-            "DCLASSIMPL " ^ ppty t ^ " implements " ^ S.name c ^ " in [...]\n" ^ 
-               prettyPrint r
+   and ppdef ind _ = indent ind ^ "(* definition *)"
+
+   and ppclauses ind symb ((pat, exp)::t) =
+      "\n" ^ indent ind ^ "  | " ^
+         S.toString symb ^ " " ^ pppat pat ^ " = " ^ ppexp ind exp ^
+         ppclauses ind symb t
+     | ppclauses ind symb [] = ""
+
+   and ppdec ind (StructureMod (symbol, NONE, str, _)) =
+         indent ind ^ "structure " ^ S.toString symbol ^ " =\n" ^
+            ppdec ind str
+     | ppdec ind (StructureMod (symbol, SOME sg, str, _)) =
+         indent ind ^ "structure " ^ S.toString symbol ^ " :\n" ^
+         ppdec (ind + 1) sg ^ 
+         " =\n" ^
+         ppdec (ind + 1) str
+     | ppdec ind (SignatureMod (symbol, sg, _)) =
+         indent ind ^ "signature " ^ S.toString symbol ^ " =\n" ^
+            ppdec ind sg
+     | ppdec ind (StructMod (decls, _)) =
+         indent ind ^ "struct\n" ^
+            String.concatWith "\n" (map (ppdec (ind + 1)) decls) ^ "\n" ^
+         indent ind ^ "end"
+     | ppdec ind (StructureAssignMod (lhs, rhs, pos)) =
+         indent ind ^ "structure " ^ S.toString lhs ^ " = " ^ S.toString rhs
+     | ppdec ind (SigMod (decls, _)) =
+         indent ind ^ "sig\n" ^
+            String.concatWith "\n" (map (ppdef (ind + 1)) decls) ^ "\n" ^
+         indent ind ^ "end"
+     | ppdec ind (RefMod (symbol, _)) = indent ind ^ S.toString symbol 
+     | ppdec ind (FunctorMod (symbol, fclause, body, _)) = indent ind ^
+         "functor " ^ S.toString symbol ^ " (...) =\n" ^
+            ppdec ind body
+     | ppdec ind (ValDec ((pat, expr), pos)) =
+         indent ind ^ "val " ^ pppat pat ^ " = " ^ ppexp ind expr
+     | ppdec ind (ValRecDec ((pat, expr), pos)) =
+         indent ind ^ "val rec " ^ pppat pat ^ " = " ^ ppexp ind expr
+     | ppdec ind (FunDec (symbol, (pat, expr)::t, pos)) =
+         indent ind ^ "fun " ^ S.toString symbol ^ " " ^ pppat pat ^ " = " ^ 
+            ppexp ind expr ^ ppclauses ind symbol t
+     | ppdec ind (TypeDec (ty1, ty2, pos)) =
+         indent ind ^ "type " ^ ppty ty1 ^ " = " ^ ppty ty2
+     | ppdec ind (MutualDec (decls, pos)) = 
+          String.concatWith 
+             ("\n" ^ indent (ind) ^ "and ") 
+                (map (ppdec ind) decls)
+
+   fun prettyPrint [] = ""
+     | prettyPrint (h::t) = ppdec 0 h ^ "\n\n" ^ prettyPrint t
 end
-
-
