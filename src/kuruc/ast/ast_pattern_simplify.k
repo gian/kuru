@@ -57,10 +57,14 @@
 *      | (a, b, c) => E'
 *
 *    fun f a b c = E
+*      | f x y z = E'
 *
 *    is converted to:
 *
-*    fun f a = fn b => fn c => E
+*    fun f tmp1 = fn tmp2 => fn tmp3 => 
+*     case (tmp1, tmp2, tmp3) of
+         (a, b, c) => E
+       | (x, y, z) => E'
 *
 *
 *    The goal is that all that remains in declarations is patterns of the form:
@@ -123,21 +127,113 @@ struct
       in
          (pat', exp, decls)
       end
-    | simplifyPat pat exp = (pat, exp, [])
+    | simplifyPat pat exp = (pat, simplifyExpr exp, [])
 
    and simplifyPatFully (pat, exp, decls) declsSum =
       if isSimple pat then (pat, exp, declsSum @ decls) else
          simplifyPatFully (simplifyPat pat exp) (declsSum @ decls)
 
-   fun simplifyDecls ((A.ValDec ((pat, exp), pos)) :: t) =
+   and checkClauses [] = ()
+     | checkClauses clauses =
       let
-         val (pat', exp', decls) = simplifyPat pat exp
+         fun chk (A.CurriedPattern (c, _, p),_) (A.CurriedPattern (c', _, p'),_) =
+            if length c = length c' then () else 
+               Error.fail ("Clauses have different numbers of arguments", p')
+           | chk pat (A.CurriedPattern (_,_,p'),_) =
+               Error.fail ("Clauses have different numbers of arguments", p')
+           | chk _ _ = Error.bug ("AstPatternSimplify.checkClauses", "chk",
+                           (0, "unknown"))
+      in
+         (map chk clauses; ())
+      end
+
+   and simplifyClauses pos [(ident as A.IdentifierPattern _, exp)] = 
+         [(ident, simplifyExpr exp)]
+     | simplifyClauses pos [(pat as A.LiteralPattern (A.Unit, _), exp)] = 
+         [(pat, simplifyExpr exp)]
+     | simplifyClauses pos (clauses as ((A.CurriedPattern (pats, _, pos'),exp)::t)) =
+      let
+         val _ = checkClauses clauses
+
+         val tmps = map (fn _ => freshName pos') pats
+         val (pat' :: fnPats) = map 
+            (fn t => A.IdentifierPattern (t, freshTy (), pos)) tmps
+         val caseExp = 
+            if List.all isSimple pats andalso length clauses = 1 then
+               simplifyExpr exp   
+            else A.CaseExpr (
+               A.TupleExpr (
+                  map (fn t => A.IdentifierExpr (t, freshTy(), pos)) tmps,
+                  freshTy (),
+                  pos),
+               map (fn (A.CurriedPattern (pats, _, pos'), exp) =>
+                  (A.TuplePattern (pats, freshTy (), pos'), simplifyExpr exp))
+                     clauses,
+               freshTy (),
+               pos)
+
+         val body = expandPartialApplication pos fnPats caseExp
+      in
+         [(pat', body)] 
+      end
+     | simplifyClauses pos clauses =
+   let
+      val _ = checkClauses clauses
+
+      val tmp = freshName pos
+      val pat' = A.IdentifierPattern (tmp, freshTy (), pos)
+      val exp' = A.IdentifierExpr (tmp, freshTy (), pos)
+      val clauses' = 
+         map (fn (pat, exp) => (pat, simplifyExpr exp)) clauses
+   in
+      [(pat', A.CaseExpr (exp', clauses', freshTy(), pos))]
+   end
+
+   and expandPartialApplication pos pats exp =
+      List.foldl (fn (pat, fns) =>
+         A.FnExpr ([(pat, fns)], freshTy(), pos))
+            exp pats
+   
+   and simplifyExpr (A.TupleExpr (exps, ty, pos)) =
+         A.TupleExpr (map simplifyExpr exps, ty, pos)
+     | simplifyExpr (A.TupleExtractExpr (i, exp, ty, pos)) =
+         A.TupleExtractExpr (i, simplifyExpr exp, ty, pos) 
+     | simplifyExpr (A.IfExpr (e1, e2, e3, ty, pos)) =
+         A.IfExpr (simplifyExpr e1, simplifyExpr e2, simplifyExpr e2, ty, pos)
+     | simplifyExpr (A.WhileExpr (e1, e2, ty, pos)) =
+         A.WhileExpr (simplifyExpr e1, simplifyExpr e2, ty, pos) 
+     | simplifyExpr (A.FnExpr (clauses, ty, pos)) =
+         A.FnExpr (simplifyClauses pos clauses, ty, pos)
+     | simplifyExpr (A.CaseExpr (expression, clauses, ty, pos)) =
+         A.CaseExpr (simplifyExpr expression,
+            map (fn (p,expr) => (p, simplifyExpr expr)) clauses,
+            ty, pos)
+     | simplifyExpr (A.ApplyExpr (e1, e2, ty, pos)) =
+         A.ApplyExpr (simplifyExpr e1, simplifyExpr e2, ty, pos)
+     | simplifyExpr (A.RaiseExpr (exp, pos)) =
+         A.RaiseExpr (simplifyExpr exp, pos)
+     | simplifyExpr (A.HandleExpr (exp, clauses, ty, pos)) =
+         A.HandleExpr (simplifyExpr exp,
+            simplifyClauses pos clauses, ty, pos)
+     | simplifyExpr (A.SeqExpr (exps, ty, pos)) =
+         A.SeqExpr (map simplifyExpr exps, ty, pos)
+     | simplifyExpr (A.LetExpr (decls, exp, ty, pos)) =
+         A.LetExpr (simplifyDecls decls, simplifyExpr exp, ty, pos)
+     | simplifyExpr (A.AnnotationExpr (exp, ty, pos)) =
+         A.AnnotationExpr (simplifyExpr exp, ty, pos)
+     | simplifyExpr (A.ConstructorExpr (symb, SOME exp, ty, pos)) =
+         A.ConstructorExpr (symb, SOME (simplifyExpr exp), ty, pos)
+     | simplifyExpr exp = exp
+
+   and simplifyDecls ((A.ValDec ((pat, exp), pos)) :: t) =
+      let
+         val (pat', exp', decls) = simplifyPat pat (simplifyExpr exp)
       in
          A.ValDec ((pat', exp'), pos) :: decls @ simplifyDecls t
       end
      | simplifyDecls ((A.ValRecDec ((pat, exp), pos)) :: t) =
       let
-         val (pat', exp', decls) = simplifyPat pat exp
+         val (pat', exp', decls) = simplifyPat pat (simplifyExpr exp)
       in
          A.ValRecDec ((pat', exp'), pos) :: decls @ simplifyDecls t
       end
@@ -145,6 +241,10 @@ struct
          A.StructureMod (s, d, hd (simplifyDecls [decl]), pos) :: simplifyDecls t
      | simplifyDecls ((A.StructMod (decls, pos))::t) =
          A.StructMod (simplifyDecls decls, pos) :: simplifyDecls t
+     | simplifyDecls ((A.FunDec (sym, clauses, pos))::t) =
+         A.FunDec (sym, simplifyClauses pos clauses, pos) :: simplifyDecls t
+     | simplifyDecls ((A.MutualDec (decls, pos))::t) =
+         A.MutualDec (simplifyDecls decls, pos) :: simplifyDecls t
      | simplifyDecls (h::t) = h :: simplifyDecls t
      | simplifyDecls [] = []
    
