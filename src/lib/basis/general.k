@@ -37,10 +37,12 @@ fun valOf NONE = raise Match
 
 type 'a ref = opaque
 
-fun a + b = 0
-(* fun {A : ADDABLE 'a} + (= add (a, b) *)
+fun builtin_add {A : 'a Addable} (x : 'a, y : 'a) = A.add (a, b)
 
-_import intAdd : (int * int) -> int as +
+fun + (x, y) = builtin_add (x, y)
+
+fun a before b = a
+
 _import intSub  : (int * int) -> int as -
 _import intMul : (int * int) -> int as *
 _import intLeq : (int * int) -> bool as <=

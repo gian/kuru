@@ -153,10 +153,27 @@ struct
             (map (fn l => String.concatWith "\n" (map ParseTree.prettyPrint l)) fl'') ^ "\n")
          val _ = Debug.endStage "ParseTreeTransform"
 
-         (* Stage 3 - Transform to TypedAST *)
-         val typedAst = ParseTreeAstConverter.convert fl''
+         (* Stage 3 - Transform to an untyped AST *)
+         val _ = Debug.startStage 1 "ParseTreeAstConverter"
+         val untypedAst = ParseTreeAstConverter.convert fl''
+         val _ = Debug.print Debug.debug (Ast.prettyPrint untypedAst)
+         val _ = Debug.endStage "ParseTreeAstConverter"
 
-         val _ = Debug.print Debug.debug (TypedAst.prettyPrint typedAst)
+         (* Stage 4 - Simplifications *)
+         val _ = Debug.startStage 1 "AstPatternSimplify"
+         val untypedAst'= AstPatternSimplify.simplifyPatterns untypedAst
+         val _ = Debug.print Debug.debug (Ast.prettyPrint untypedAst')
+         val _ = Debug.endStage "AstPatternSimplify"
+
+
+         (* Stage 5 - Transform to a typed AST *)
+         val _ = Debug.startStage 1 "ParseTreeAstConverter"
+         val (envs, typedAst) = TypeInference.inferTypes untypedAst'
+         (* val _ = Debug.print Debug.debug (Ast.prettyPrint typedAst) *)
+         val _ = Debug.endStage "ParseTreeAstConverter"
+
+
+
       in
          ()
       end

@@ -26,26 +26,14 @@
 * POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************
 *  This file:
-*    A typed Abstract Syntax Tree
+*    An untyped Abstract Syntax Tree.
+*
+*    In reality, this is just a typed AST with a different pretty printer.
 ******************************************************************************)
 
-structure TypedAst =
+structure Ast =
 struct
-   structure S = Symbol
-
-   type symbol = S.t
-   type pos = Position.t 
-
-   datatype ty =
-      TySimple of symbol
-    | TyApp of ty * ty (* Follows application order, i.e. int list is ("list","int") *)
-    | TyVar of symbol
-    | TyTuple of ty list
-    | TyArrow of ty * ty
-    | TyMeta of int
-    | TySeq of ty list
-    | TyUnion of ty * constructor list
-   withtype constructor = symbol * ty option
+   open TypedAst
 
    fun ppty (TySimple s) = S.toString s
      | ppty (TyApp (t1, t2)) = ppty t2 ^ " " ^ ppty t1
@@ -59,88 +47,15 @@ struct
          (map (fn (s, NONE) => S.toString s
                | (s, SOME a) => S.toString s ^ " of " ^ ppty a) c)
 
-   type constructor_tag = int
-
-   datatype ascription =
-      Opaque
-    | Transparent
-
-   datatype literal =
-      Int of IntInf.int
-    | Real of string
-    | Char of int
-    | String of int vector
-    | Bool of bool
-    | Unit
-
-   (* A note on desugaring patterns:
-    *
-    * Wildcards (_) get desugared to a fresh IdentifierPattern
-    * Infix patterns (h::t) get turned into constructor patterns.
-    * List patterns ([1,2,3,4]) get turned into constructor patterns.
-    * Nil (nil, []) gets turned into a constructor pattern.
-    *)
-   datatype pattern =
-      LiteralPattern of literal * pos
-    | TuplePattern of pattern list * ty * pos
-    | ConstructorPattern of symbol * pattern option * ty * pos
-    | IdentifierPattern of symbol * ty * pos
-    | AsPattern of pattern * pattern * ty * pos
-    | CurriedPattern of pattern list * ty * pos
-    | AnnotationPattern of pattern * ty * pos
-    | ImplicitPattern of (pattern * ty) list * pos
-    | UnitPattern of pos
-
-   datatype expression =
-      LiteralExpr of literal * pos
-    | IdentifierExpr of symbol * ty * pos  (* Long and short identifiers. *)
-    | TupleExpr of expression list * ty * pos
-    | TupleExtractExpr of int * expression * ty * pos
-    | IfExpr of expression * expression * expression * ty * pos
-    | WhileExpr of expression * expression * ty * pos
-    | FnExpr of clause list * ty * pos
-    | CaseExpr of expression * clause list * ty * pos
-    | ApplyExpr of expression * expression * ty * pos
-    | RaiseExpr of expression * pos
-    | HandleExpr of expression * clause list * ty * pos
-    | SeqExpr of expression list * ty * pos
-    | LetExpr of declaration list * expression * ty * pos
-    | AnnotationExpr of expression * ty * pos
-    | ConstructorExpr of symbol * expression option * ty * pos
-
-   and declaration =
-      ValDec of clause * pos
-    | ValRecDec of clause * pos
-    | FunDec of symbol * clause list * pos
-    | MutualDec of declaration list * pos
-    | LocalDec of declaration list * declaration list * pos
-    | OpenDec of symbol * pos
-    | BindDec of symbol * declaration * pos
-    | TypeDec of ty * ty * pos
-    | ValDef of symbol * ty * pos
-    | TypeDef of ty * pos
-    | StructureMod of symbol * declaration option * declaration * pos
-    | SignatureMod of symbol * declaration * pos
-    | StructureAssignMod of symbol * symbol * pos
-    | StructMod of declaration list * pos
-    | SigMod of declaration list * pos
-    | RefMod of symbol * pos
-    | FunctorMod of symbol * functor_clause list * declaration * pos
-
-   withtype clause = pattern * expression
-        and functor_clause = declaration * declaration
-
-   type program = declaration list
-
    fun indent 0 = ""
      | indent n = "   " ^ indent (n - 1)
 
    fun pplit (Int i) = IntInf.toString i
      | pplit (Real s) = s
-     | pplit (Char i) = "#\"" ^ String.str (Char.chr i) ^ "\""
-     | pplit (String s) = "\"" ^ (Vector.map Char.chr s) ^ "\""
      | pplit (Bool true) = "true"
      | pplit (Bool false) = "false"
+     | pplit (Char i) = "#\"" ^ String.str (Char.chr i) ^ "\""
+     | pplit (String s) = "\"" ^ (Vector.map Char.chr s) ^ "\""
      | pplit Unit = "()"
 
    fun ppexp ind (LiteralExpr (l,_)) = pplit l
@@ -184,7 +99,7 @@ struct
          ppexp ind exp ^ " : " ^ ppty ty
      | ppexp ind (RaiseExpr (exp, _)) = "raise " ^ ppexp ind exp
      | ppexp ind p = 
-         Error.bug ("TypedAst.ppexp", "Unknown or invalid AST", (0,""))
+         Error.bug ("Ast.ppexp", "Unknown or invalid AST", (0,""))
 
    and pppat (LiteralPattern (p, _)) = pplit p
      | pppat (IdentifierPattern (symbol, ty, pos)) = S.toString symbol
@@ -259,6 +174,7 @@ struct
          indent ind ^ "in\n" ^
          String.concatWith "\n" (map (ppdec (ind+1)) decls2) ^ "\n" ^
          indent ind ^ "end"
+
 
    fun prettyPrint [] = ""
      | prettyPrint (h::t) = ppdec 0 h ^ "\n\n" ^ prettyPrint t

@@ -26,7 +26,7 @@
 * POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************
 *  This file:
-*    Converts a parse tree to a typed Abstract Syntax Tree
+*    Converts a parse tree to an untyped Abstract Syntax Tree
 ******************************************************************************)
 
 structure ParseTreeAstConverter =
@@ -38,6 +38,11 @@ struct
    val nextTyIndex = ref 0
    fun freshTy () =
          A.TyMeta (nextTyIndex := 1 + !nextTyIndex; !nextTyIndex)
+
+   val nextUnusedIndex = ref 0
+   fun freshUnusedId pos = 
+      (S.fromString ("_unused" ^ Int.toString (!nextUnusedIndex)) pos) before
+         (nextUnusedIndex := 1 + !nextUnusedIndex)
 
    fun toType (P.TyName (ident, pos)) = 
          A.TySimple (S.fromString (idToSymbol ident) pos)
@@ -68,7 +73,13 @@ struct
                | p => Error.fail ("Invalid clause in datatype", P.getPos p)) l)
 
    (** Deals with patterns. *)
-   and toPat (P.IdPat (P.Ident (s, pos), pos')) = 
+   and toPat (P.IdPat (pat, pos')) = 
+         A.IdentifierPattern (
+            S.fromString (idToSymbol pat) pos',
+            freshTy (),
+            pos'
+         )
+     | toPat (P.Ident (s, pos)) = 
          A.IdentifierPattern (
             S.fromString s pos,
             freshTy (),
@@ -113,7 +124,7 @@ struct
          A.LiteralPattern (toLit literal, pos)
      | toPat (P.WildcardPat pos) =
          A.IdentifierPattern (
-            S.fromString "FRESH_ID" pos,
+            freshUnusedId pos,
             freshTy (),
             pos
          )
@@ -128,6 +139,11 @@ struct
             toPat pat1,
             toPat pat2,
             freshTy (),
+            pos
+         )
+     | toPat (P.ImplicitPat (pats, pos)) =
+         A.ImplicitPattern (
+            map (fn (i, ty) => (toPat i, toType ty)) pats,
             pos
          )
      | toPat p = 
@@ -154,6 +170,7 @@ struct
      | toLit (P.Char (i, _)) = A.Char i
      | toLit (P.String (l, _)) = A.String (Vector.fromList l)
      | toLit (P.UnitExp _) = A.Unit
+     | toLit (P.Bool (tf, _)) = A.Bool tf
      | toLit p = Error.bug ("ParseTreeAstConverter",
                               "Malformed literal expression", P.getPos p)
 
@@ -187,6 +204,7 @@ struct
      | toExp (l as (P.Real _)) = A.LiteralExpr (toLit l, P.getPos l)
      | toExp (l as (P.Char _)) = A.LiteralExpr (toLit l, P.getPos l)
      | toExp (l as (P.String _)) = A.LiteralExpr (toLit l, P.getPos l)
+     | toExp (l as (P.Bool _)) = A.LiteralExpr (toLit l, P.getPos l)
      | toExp (P.Var (P.Ident (symbol, pos), pos')) =
          A.IdentifierExpr (
             S.fromString symbol pos,

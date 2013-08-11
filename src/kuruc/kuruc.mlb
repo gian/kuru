@@ -1,4 +1,6 @@
 $(SML_LIB)/basis/basis.mlb
+lib/union-find-imperative.sig
+lib/union-find-imperative.sml
 debug.sml
 version.sml
 config.sml
@@ -16,6 +18,9 @@ frontend/parsetree_transformer.sml
 ast/symbol.sig
 ast/symbol.sml
 ast/typed_ast.sml
+ast/ast.sml
 ast/parsetree_ast_converter.sml
+ast/ast_pattern_simplify.sml
+types/type_inference.sml
 compile.sml
 main.sml

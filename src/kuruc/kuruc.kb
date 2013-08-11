@@ -1,3 +1,5 @@
+lib/union-find-imperative.ks
+lib/union-find-imperative.k
 debug.k
 version.k
 config.k
@@ -15,6 +17,9 @@ frontend/parsetree_transformer.k
 ast/symbol.ks
 ast/symbol.k
 ast/typed_ast.k
+ast/ast.k
 ast/parsetree_ast_converter.k
+ast/ast_pattern_simplify.k
+types/type_inference.k
 compile.k
 main.k

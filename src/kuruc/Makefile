@@ -2,14 +2,15 @@ BIN=../../bin
 COMPILER=mlton 
 KUPEG=$(BIN)/kupeg
 
-SMLDEPS= \
+SMLDEPS= lib/union-find-imperative.sig lib/union-find-imperative.sml \
 	config.sml debug.sml main.sml version.sml compile.sml position.sml \
 	frontend/error.sml frontend/parsetree.sml frontend/kuru.kpg.sml \
 	frontend/parsetree_app_apply.sml frontend/parsetree_transformer.sml \
 	frontend/parsetree_infix_pattern.sml frontend/parsetree_list_cons.sml \
 	frontend/parsetree_promote_exns.sml frontend/parsetree_infix_apply.sml \
 	frontend/parsetree_infix_unflatten.sml ast/parsetree_ast_converter.sml \
-	ast/typed_ast.sml ast/symbol.sml ast/symbol.sig
+	ast/typed_ast.sml ast/symbol.sml ast/symbol.sig ast/ast.sml \
+	ast/ast_pattern_simplify.sml types/type_inference.sml
 
 all: $(BIN)/kuruc
 

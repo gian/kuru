@@ -46,6 +46,7 @@ struct
     | Real of bool * string * string * (bool * string) option * pos
     | Char of int * pos
     | String of int list * pos
+    | Bool of bool * pos
     | Ident of string * pos
     | LongId of pt * pt * pos
 	 | TyId of pt * pos
@@ -131,6 +132,8 @@ struct
          "e" ^ (if b2 then "~" else "") ^ s3 ^ "]"
      | pp (Char (s,_)) = "Char [#\"" ^ String.str (Char.chr s) ^ "\"]"
      | pp (String (s,_)) = "String [\"" ^ istr s ^ "\"]"
+     | pp (Bool (true, _)) = "true"
+     | pp (Bool (false, _)) = "false"
      | pp (Ident (s,_)) = "Ident [" ^ s ^ "]"
      | pp (Var (p,_)) = "Var [" ^ pp p ^ "]"
      | pp (TyId (p,_)) = "TyId [" ^ pp p ^ "]"
@@ -265,6 +268,7 @@ struct
      | getPos (Real (_, _, _, _, pos)) = pos
      | getPos (Char (_, pos)) = pos
      | getPos (String (_, pos)) = pos
+     | getPos (Bool (_, pos)) = pos
      | getPos (Ident (_, pos)) = pos
      | getPos (LongId (_, _, pos)) = pos
 	  | getPos (TyId (_, pos)) = pos
@@ -299,6 +303,7 @@ struct
      | getPos (TuplePat (_, pos)) = pos
      | getPos (ListPat (_, pos)) = pos
      | getPos (NilPat pos) = pos
+     | getPos (ImplicitPat (_, pos)) = pos
      | getPos (ConPat (_, pos)) = pos
      | getPos (ConstrPat (_, _, pos)) = pos
      | getPos (TyAnnPat (_, _, pos)) = pos

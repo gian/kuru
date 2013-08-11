@@ -46,6 +46,7 @@ structure P = ParseTree
 %nonterm numdig of string
 %nonterm int of P.pt
 %nonterm real of P.pt
+%nonterm bool of P.pt
 %nonterm negat of bool
 %nonterm charconst of P.pt
 %nonterm string of P.pt
@@ -137,6 +138,9 @@ real           <- n1: negat d1: num "." d2: num "e" n2: negat d3: num ->
                 / n1: negat d1: num "." d2: num ->
                   (P.Real ($n1,$d1,$d2,NONE,(!pos,!kuruFile))).
 
+bool           <- "true" -> (P.Bool (true, (!pos, !kuruFile)))
+                / "false" -> (P.Bool (false, (!pos, !kuruFile))).
+
 negat          <- "~" -> (true)
                 /     -> (false).
 
@@ -148,7 +152,7 @@ stringcont     <- !"\\" !"\"" c: char s: stringcont -> ((strOrd ($c)) :: $s)
                 / b: "\\" c: char s: stringcont -> ((escape (strOrd ($c))) @ $s)
                 / -> ([]).
 
-con            <- real / int / charconst / string.
+con            <- real / int / charconst / string / bool.
 
 % Identifiers
 
@@ -165,7 +169,7 @@ keyword        <- "val" / "let" / "if" / "then" / "else" / "datatype" / "withtyp
                   "structure" / "struct" / "of" / "case" /
                   "handle" / "raise" / "infixr" / "infix" /
                   "signature" / "sig" / "exception" / "open" / "local" /
-                  "_import" / "as" / "bind" / "to" / "op".
+                  "_import" / "as" / "bind" / "to" / "op" / "true" / "false".
 
 id             <-  r1: reserved r2: (reserved*) -> 
                   (P.Ident(String.concat($r1 :: $r2),(!pos,!kuruFile)))
