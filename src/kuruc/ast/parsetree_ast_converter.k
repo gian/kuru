@@ -269,6 +269,12 @@ struct
             freshTy (),
             pos
          )
+     | toExp (P.Structure (decls, pos)) =
+         A.Struct (
+            toDecl decls, 
+            freshTy (),
+            pos
+         )
      | toExp p = Error.bug ("ParseTreeAstConverter",
                             "Malformed expression: " ^
                             P.prettyPrint p,
@@ -345,19 +351,14 @@ struct
      | toDecl ((P.StructBind (P.Ident (ident, pos), ascr, body, pos'))::t) =
          A.StructureMod (
             Symbol.fromString ident pos,
-            NONE,
-            hd (toDecl [body]),
+            toExp body,
             pos') :: toDecl t
      | toDecl ((P.SigBind (P.Ident (ident, pos), body, pos'))::t) =
          A.SignatureMod (
             Symbol.fromString ident pos,
             hd (toDecl [body]),
             pos') :: toDecl t
-     | toDecl ((P.Structure (decls, pos))::t) =
-         A.StructMod (
-            toDecl decls, 
-            pos
-         ) :: toDecl t
+
      | toDecl ((P.Signature (defs, pos))::t) =
          A.SigMod (
             [], 

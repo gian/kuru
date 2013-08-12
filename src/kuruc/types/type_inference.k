@@ -43,6 +43,22 @@ struct
    datatype closure = CPair of cdecl * (S.t * closure) list
    type environment = (S.t * closure) list
 
+   val tyvarCounter = ref 0
+
+   fun indent 0 = ""
+     | indent i = "   " ^ indent (i - 1)
+
+   fun ppenv ind ((symb, CPair (VDec ty, cl)) :: t) =
+      let
+         val _ = print "hello\n"
+      in
+      indent ind ^ S.toString symb ^ " : " ^ T.ppty ty ^ "\n" ^
+         ppenv (ind+1) cl ^ "\n" ^ ppenv ind t
+      end
+     | ppenv ind [] = ""
+
+   fun prettyPrintEnv e = ppenv 0 e
+
    (* Built-in types *)
    val tyInt = T.TySimple (S.fromString "Int64.int" (0, "__builtin__"))
    val tyReal = T.TySimple (S.fromString "Real64.real" (0, "__builtin__"))
@@ -91,21 +107,23 @@ struct
    else raise Fail ("Non-substitution union called on " ^ A.ppty t1 ^ " and " ^ A.ppty t2)
 
    fun solve D (A.TyMeta x, A.TyMeta y) =
-   UF.union (pickCanon D) (getSet x) (getSet y)
+         UF.union (pickCanon D) (getSet x) (getSet y)
      | solve D (A.TyMeta x, tr) =
-   if occursUF x tr then
-      raise Fail ("Circular type constraints: " ^ A.ppty (A.TyMeta x) ^ " in " ^ A.ppty tr)
-   else UF.union (pickCanon D) (getSet x) (UF.new tr)
+         if occursUF x tr then
+            raise Fail ("Circular type constraints: " ^ 
+               A.ppty (A.TyMeta x) ^ " in " ^ A.ppty tr)
+         else UF.union (pickCanon D) (getSet x) (UF.new tr)
      | solve D (tl, tr as A.TyMeta x) = solve D (tr, tl)
      | solve D (t1 as A.TySimple a, t2 as A.TySimple b) =
-      if T.subt t1 t2 D then () else raise Fail ("Type error: " ^ A.ppty t1 ^ " =/= " ^ A.ppty t2)
+         if T.subt t1 t2 D then () 
+            else raise Fail ("Type error: " ^ A.ppty t1 ^ " =/= " ^ A.ppty t2)
      | solve D (A.TyVar a, A.TyVar b) =
-      if a = b then () else raise Fail ("Polymorphic unification")
+         if a = b then () else raise Fail ("Polymorphic unification")
      | solve D (A.TyApp (t1, c1), A.TyApp (t2, c2)) =
-   (solve D (force t1, force t2);
-    solve D (force c1, force c2))
+         (solve D (force t1, force t2);
+          solve D (force c1, force c2))
      | solve D (A.TyArrow (t1, t2), A.TyArrow (t3, t4)) =
-      (solve D (force t1, force t3); solve D (force t2, force t4))
+         (solve D (force t1, force t3); solve D (force t2, force t4))
      | solve D (t1, t2) = raise Fail ("Type error: " ^ A.ppty t1 ^ " =/= " ^ A.ppty t2)
 
    fun solveList D xs = List.foldl (fn (c, ()) => solve D c) () xs
@@ -131,19 +149,67 @@ struct
      | infLiteral (A.Bool _) = tyBool
      | infLiteral (A.Unit) = tyUnit
 
-   fun infExp env (A.LiteralExpr (l, p)) = infLiteral l
+   fun infExp env (literal as (A.LiteralExpr (l, p))) = 
+      (infLiteral l, literal)
+     | infExp env (A.Struct (decls, _, pos)) =
+      let
+         val (env', decls') = inferTypes env decls
+         val t' = T.TySig () (* TODO: infer sig/kind *)
+      in
+         (t', T.Struct (decls', t', pos))
+      end
+     | infExp env exp = (T.TyArrow (freshTy (), freshTy ()),
+         T.LiteralExpr(T.Unit, (0, "fake")))
 
-   fun infDec env (A.ValDec ((A.IdentifierPattern (symb, _, pos), exp), pos')) =
-   let
-      val _ = ()
-   in
-      ()
-   end
+   and infDec env (A.ValDec ((A.IdentifierPattern (symb, _, pos), exp), pos')) =
+      let 
+         val k = !tyvarCounter
+	      val (t, e') = infExp env exp
+	      val t' = mkPoly k (force t)
+	   in 
+         ((symb, CPair (VDec t', env)) :: env, 
+            T.ValDec (
+               (
+                  A.IdentifierPattern (symb, t', pos), 
+                  e'
+               ), 
+               pos'
+            )
+         )
+	   end
+     | infDec env (A.ValRecDec ((A.IdentifierPattern (symb, _, pos), e), pos')) =
+      let 
+         val k = !tyvarCounter
+	      val t = freshTy ()
+	      val (t', e') = infExp ((symb, CPair (VDec t, env)) :: env) e
+	      val _ = solve env (force t, force t')
+	      val t'' = mkPoly k (force t')
+      in
+         ((symb, CPair (VDec t'', env)) :: env, 
+            T.ValRecDec ((T.IdentifierPattern (symb, t', pos), e'), pos'))
+      end
+     | infDec env (A.StructureMod (symb, body, pos)) =
+      let
+         val (t, e') = infExp env body
+         val t' = t
+         (* TODO: infKind *)
+      in
+         ((symb, CPair (VDec t', env)) :: env, A.StructureMod (symb, e', pos))
+      end
+     | infDec env exp = (env, exp)
 
-   fun inferTypes decls =
+   and inferTypes env decls =
    let
-      val _ = ()
+      val tDecls = 
+         List.foldl (fn (decl, (env, decls)) =>
+            let
+               val _ = Debug.print Debug.debug
+                  ("inferTypes: " ^ T.prettyPrint [decl])
+               val (env', decl') = infDec env decl
+            in
+               (env', decls @ [decl'])
+            end) (env, []) decls
    in
-      ("","")
+      tDecls
    end
 end

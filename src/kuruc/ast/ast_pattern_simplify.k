@@ -223,6 +223,8 @@ struct
          A.AnnotationExpr (simplifyExpr exp, ty, pos)
      | simplifyExpr (A.ConstructorExpr (symb, SOME exp, ty, pos)) =
          A.ConstructorExpr (symb, SOME (simplifyExpr exp), ty, pos)
+     | simplifyExpr (A.Struct (decls, ty, pos)) =
+         A.Struct (simplifyDecls decls, ty, pos) 
      | simplifyExpr exp = exp
 
    and simplifyDecls ((A.ValDec ((pat, exp), pos)) :: t) =
@@ -237,10 +239,8 @@ struct
       in
          A.ValRecDec ((pat', exp'), pos) :: decls @ simplifyDecls t
       end
-     | simplifyDecls ((A.StructureMod (s, d, decl, pos))::t) =
-         A.StructureMod (s, d, hd (simplifyDecls [decl]), pos) :: simplifyDecls t
-     | simplifyDecls ((A.StructMod (decls, pos))::t) =
-         A.StructMod (simplifyDecls decls, pos) :: simplifyDecls t
+     | simplifyDecls ((A.StructureMod (s, body, pos))::t) =
+         A.StructureMod (s, simplifyExpr body, pos) :: simplifyDecls t
      | simplifyDecls ((A.FunDec (sym, clauses, pos))::t) =
          A.FunDec (sym, simplifyClauses pos clauses, pos) :: simplifyDecls t
      | simplifyDecls ((A.MutualDec (decls, pos))::t) =

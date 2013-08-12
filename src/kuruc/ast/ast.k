@@ -78,6 +78,10 @@ struct
      | ppexp ind (AnnotationExpr (exp, ty, _)) =
          ppexp ind exp ^ " : " ^ ppty ty
      | ppexp ind (RaiseExpr (exp, _)) = "raise " ^ ppexp ind exp
+     | ppexp ind (Struct (decls, _, _)) =
+         indent ind ^ "struct\n" ^
+            String.concatWith "\n" (map (ppdec (ind + 1)) decls) ^ "\n" ^
+         indent ind ^ "end"
      | ppexp ind p = 
          Error.bug ("Ast.ppexp", "Unknown or invalid AST", (0,""))
 
@@ -110,21 +114,12 @@ struct
          ppclauses ind symb t
      | ppclauses ind symb [] = ""
 
-   and ppdec ind (StructureMod (symbol, NONE, str, _)) =
+   and ppdec ind (StructureMod (symbol, str, _)) =
          indent ind ^ "structure " ^ S.toString symbol ^ " =\n" ^
-            ppdec ind str
-     | ppdec ind (StructureMod (symbol, SOME sg, str, _)) =
-         indent ind ^ "structure " ^ S.toString symbol ^ " :\n" ^
-         ppdec (ind + 1) sg ^ 
-         " =\n" ^
-         ppdec (ind + 1) str
+            ppexp ind str
      | ppdec ind (SignatureMod (symbol, sg, _)) =
          indent ind ^ "signature " ^ S.toString symbol ^ " =\n" ^
             ppdec ind sg
-     | ppdec ind (StructMod (decls, _)) =
-         indent ind ^ "struct\n" ^
-            String.concatWith "\n" (map (ppdec (ind + 1)) decls) ^ "\n" ^
-         indent ind ^ "end"
      | ppdec ind (StructureAssignMod (lhs, rhs, pos)) =
          indent ind ^ "structure " ^ S.toString lhs ^ " = " ^ S.toString rhs
      | ppdec ind (SigMod (decls, _)) =

@@ -45,6 +45,7 @@ struct
     | TyMeta of int
     | TySeq of ty list
     | TyUnion of ty * constructor list
+    | TySig of unit
    withtype constructor = symbol * ty option
 
    val nextTyIndex = ref 0
@@ -64,6 +65,7 @@ struct
      | ppty (TyUnion (t, c)) = String.concatWith " | "
          (map (fn (s, NONE) => S.toString s
                | (s, SOME a) => S.toString s ^ " of " ^ ppty a) c)
+     | ppty (TySig _) = "(* SIG TYPE TODO *)"
 
    type constructor_tag = int
 
@@ -112,6 +114,7 @@ struct
     | LetExpr of declaration list * expression * ty * pos
     | AnnotationExpr of expression * ty * pos
     | ConstructorExpr of symbol * expression option * ty * pos
+    | Struct of declaration list * ty * pos
 
    and declaration =
       ValDec of clause * pos
@@ -124,10 +127,9 @@ struct
     | TypeDec of ty * ty * pos
     | ValDef of symbol * ty * pos
     | TypeDef of ty * pos
-    | StructureMod of symbol * declaration option * declaration * pos
+    | StructureMod of symbol * expression * pos
     | SignatureMod of symbol * declaration * pos
     | StructureAssignMod of symbol * symbol * pos
-    | StructMod of declaration list * pos
     | SigMod of declaration list * pos
     | RefMod of symbol * pos
     | FunctorMod of symbol * functor_clause list * declaration * pos
@@ -188,8 +190,12 @@ struct
      | ppexp ind (AnnotationExpr (exp, ty, _)) =
          ppexp ind exp ^ " : " ^ ppty ty
      | ppexp ind (RaiseExpr (exp, _)) = "raise " ^ ppexp ind exp
+     | ppexp ind (Struct (decls, _, _)) =
+         indent ind ^ "struct\n" ^
+            String.concatWith "\n" (map (ppdec (ind + 1)) decls) ^ "\n" ^
+         indent ind ^ "end"
      | ppexp ind p = 
-         Error.bug ("TypedAst.ppexp", "Unknown or invalid AST", (0,""))
+         Error.bug ("Ast.ppexp", "Unknown or invalid AST", (0,""))
 
    and pppat (LiteralPattern (p, _)) = pplit p
      | pppat (IdentifierPattern (symbol, ty, pos)) = S.toString symbol
@@ -220,21 +226,12 @@ struct
          ppclauses ind symb t
      | ppclauses ind symb [] = ""
 
-   and ppdec ind (StructureMod (symbol, NONE, str, _)) =
+   and ppdec ind (StructureMod (symbol, str, _)) =
          indent ind ^ "structure " ^ S.toString symbol ^ " =\n" ^
-            ppdec ind str
-     | ppdec ind (StructureMod (symbol, SOME sg, str, _)) =
-         indent ind ^ "structure " ^ S.toString symbol ^ " :\n" ^
-         ppdec (ind + 1) sg ^ 
-         " =\n" ^
-         ppdec (ind + 1) str
+            ppexp ind str
      | ppdec ind (SignatureMod (symbol, sg, _)) =
          indent ind ^ "signature " ^ S.toString symbol ^ " =\n" ^
             ppdec ind sg
-     | ppdec ind (StructMod (decls, _)) =
-         indent ind ^ "struct\n" ^
-            String.concatWith "\n" (map (ppdec (ind + 1)) decls) ^ "\n" ^
-         indent ind ^ "end"
      | ppdec ind (StructureAssignMod (lhs, rhs, pos)) =
          indent ind ^ "structure " ^ S.toString lhs ^ " = " ^ S.toString rhs
      | ppdec ind (SigMod (decls, _)) =
@@ -264,6 +261,7 @@ struct
          indent ind ^ "in\n" ^
          String.concatWith "\n" (map (ppdec (ind+1)) decls2) ^ "\n" ^
          indent ind ^ "end"
+
 
    fun prettyPrint [] = ""
      | prettyPrint (h::t) = ppdec 0 h ^ "\n\n" ^ prettyPrint t
