@@ -201,6 +201,14 @@ struct
       in 
          (tr, T.ApplyExpr (e1', e2', forceAll tr, pos))
       end
+     | infExp (env,par) (A.LetExpr (decls, exp, _, pos)) = 
+      let 
+         val env' : environment ref = ref (M.empty ())
+         val (_, decls') = inferTypes (env',env) decls
+         val (t, exp') = infExp (env',env) exp
+      in
+         (t, A.LetExpr (decls', exp', t, pos))
+      end
      | infExp env exp = (tyUnit, T.LiteralExpr(T.Unit, (0, "fake")))
 
    and mkForwardDec (A.ValDec ((A.IdentifierPattern (symb, _, _), _), _)) = [symb]
