@@ -20,6 +20,7 @@ ast/typed_ast.k
 ast/ast.k
 ast/parsetree_ast_converter.k
 ast/ast_pattern_simplify.k
+lib/symbolmap.k
 types/type_inference.k
 compile.k
 main.k

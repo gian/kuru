@@ -26,66 +26,52 @@
 * POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************
 *  This file:
-*    Symbol library for identifiers and operations on them.
+*    A crude hash map for symbol keys.
 ******************************************************************************)
 
-structure Symbol :> SYMBOL =
+signature SYMBOL_MAP =
+sig
+   type 'a map
+
+   val put : 'a map -> Symbol.t -> 'a -> 'a map
+   val get : 'a map -> Symbol.t -> (Symbol.t * 'a) option
+   val values : 'a map -> (Symbol.t * 'a) list
+   val empty : unit -> 'a map
+end
+
+structure SymbolMap :> SYMBOL_MAP =
 struct
-   type pos = Position.t
+   val buckets = 31
 
-   val symbolId = ref 0
-   fun nextSymbolId () = (symbolId := !symbolId + 1; !symbolId)
+   type 'a map = (Symbol.t * 'a) list vector
 
-   datatype identifier =
-      Short of string * int * pos
-    | Long of string list * int * pos
+   fun empty () = Vector.tabulate (buckets, fn _ => [])
 
-   type t = identifier
+   fun put map key value =
+   let
+      val _ = Debug.print Debug.debug 
+         ("SymbolMap.put: " ^ Symbol.toString key ^ "\n")
+      val index = (Symbol.hash key) mod buckets
+      val bucket = Vector.sub (map, index)
+      val _ = Debug.print Debug.debug ("SymbolMap.put: bucket " ^
+         Int.toString index ^ " of size " ^ Int.toString (length bucket) ^ "\n")
+      val bucket' = (key, value) :: List.filter 
+         (fn (k,v) => not (Symbol.equals (k, key))) bucket
+      val map' = Vector.update (map, index, bucket')
+   in
+      map'
+   end
 
-   fun toString (Short (s,_,_)) = s
-     | toString (Long (l,_,_)) = String.concatWith "." l
+   fun get map key = 
+   let
+      val index = (Symbol.hash key) mod buckets
+   in
+      List.find (fn (s,_) => Symbol.equals(s,key)) (Vector.sub (map, index))
+   end
 
-   fun fromString s pos =
-      case String.fields (fn #"." => true | _ => false) s of
-         [t] => Short (t, nextSymbolId (), pos)
-       | l => Long (l, nextSymbolId(), pos)
-
-   (* This isn't a good hashing strategy.  It's a terrible one. *)
-   fun prime 0 = 11 
-     | prime 1 = 13
-     | prime 2 = 17
-     | prime 3 = 19
-     | prime 4 = 23
-     | prime 5 = 29
-     | prime 6 = 31
-     | prime 7 = 37
-     | prime 8 = 41
-     | prime 9 = 43
-     | prime 10 = 47
-     | prime 11 = 53
-     | prime 12 = 59
-     | prime 13 = 61
-     | prime 14 = 67
-     | prime 15 = 71
-     | prime _ = 131
-
-   fun hash (Short (s, _, _)) =
-      Vector.foldli (fn (i, c, h) => h + prime i * Char.ord c) 0 s
-
-   fun equals (Short (s, _, _), Short (s', _, _)) = s = s'
-     | equals (Long (l, _, _), Long (l', _, _)) = l = l'
-     | equals _ = false
-
-   fun isLong (Long _) = true
-     | isLong _ = false
-
-   fun hd (Long (l, i, p)) = Short (List.hd l, i, p)
-     | hd s = s
-
-   fun tl (Long (h::t, i, p)) = Long (t, i, p)
-     | tl (Long ([h], i, p)) = Short (h, i, p)
-     | tl (Long (_, _, p)) = Error.bug ("Symbol.tl", "Called tl on empty long-id", p)
-     | tl (Short (_, _, p)) = Error.bug ("Symbol.tl", "Called tl on non long-id", p)
+   fun values map = 
+      Vector.foldl (fn (bucket, l) =>
+         l @ bucket) [] map
 
 end
 

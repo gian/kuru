@@ -21,6 +21,7 @@ ast/typed_ast.sml
 ast/ast.sml
 ast/parsetree_ast_converter.sml
 ast/ast_pattern_simplify.sml
+lib/symbolmap.sml
 types/type_inference.sml
 compile.sml
 main.sml

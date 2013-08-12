@@ -36,5 +36,11 @@ sig
    val toString : t -> string
    val fromString : string -> Position.t -> t
 
+   val hash : t -> int
+
+   val equals : t * t -> bool
+   val isLong : t -> bool
+   val hd : t -> t
+   val tl : t -> t
 end
 

@@ -38,26 +38,36 @@ struct
    structure A = Ast
    structure T = TypedAst
    structure P = ParseTree
+   structure M = SymbolMap
 
    datatype cdecl   = VDec of A.ty
-   datatype closure = CPair of cdecl * (S.t * closure) list
-   type environment = (S.t * closure) list
+   datatype closure = 
+      CEnv of cdecl * closure M.map ref * closure M.map ref
+    | CSimp of cdecl
+
+   type environment = closure M.map
 
    val tyvarCounter = ref 0
 
    fun indent 0 = ""
      | indent i = "   " ^ indent (i - 1)
 
-   fun ppenv ind ((symb, CPair (VDec ty, cl)) :: t) =
-      let
-         val _ = print "hello\n"
-      in
-      indent ind ^ S.toString symb ^ " : " ^ T.ppty ty ^ "\n" ^
-         ppenv (ind+1) cl ^ "\n" ^ ppenv ind t
-      end
+   fun ppenv ind ((symb, CEnv (VDec ty, ref cl, _)) :: t) =
+         indent ind ^ S.toString symb ^ " : " ^ T.ppty ty ^ "\n" ^
+            ppenv (ind+1) (M.values cl) ^ "\n" ^ ppenv ind t
+     | ppenv ind ((symb, CSimp (VDec ty)) :: t) =
+         indent ind ^ S.toString symb ^ " : " ^ T.ppty ty ^ "\n" ^
+            ppenv ind t
      | ppenv ind [] = ""
 
-   fun prettyPrintEnv e = ppenv 0 e
+   fun putEnv (env,par) symbol value = 
+   let
+      val _ = env := M.put (!env) symbol value
+   in
+      (env, par)
+   end
+
+   fun prettyPrintEnv e = ppenv 0 (M.values (!e))
 
    (* Built-in types *)
    val tyInt = T.TySimple (S.fromString "Int64.int" (0, "__builtin__"))
@@ -167,7 +177,7 @@ struct
 	      val (t, e') = infExp env exp
 	      val t' = mkPoly k (force t)
 	   in 
-         ((symb, CPair (VDec t', env)) :: env, 
+         (putEnv env symb (CSimp (VDec t')), 
             T.ValDec (
                (
                   A.IdentifierPattern (symb, t', pos), 
@@ -181,30 +191,30 @@ struct
       let 
          val k = !tyvarCounter
 	      val t = freshTy ()
-	      val (t', e') = infExp ((symb, CPair (VDec t, env)) :: env) e
+	      val (t', e') = infExp (putEnv env symb (CSimp (VDec t))) e
 	      val _ = solve env (force t, force t')
 	      val t'' = mkPoly k (force t')
       in
-         ((symb, CPair (VDec t'', env)) :: env, 
+         (putEnv env symb (CSimp (VDec t'')), 
             T.ValRecDec ((T.IdentifierPattern (symb, t', pos), e'), pos'))
       end
-     | infDec env (A.StructureMod (symb, body, pos)) =
+     | infDec (env,par) (A.StructureMod (symb, body, pos)) =
       let
-         val (t, e') = infExp env body
+         val env' : environment ref = ref (M.empty ())
+         val (t, e') = infExp (env',env) body
          val t' = t
+         val _ = putEnv (env,par) symb (CEnv (VDec t', env', env))
          (* TODO: infKind *)
       in
-         ((symb, CPair (VDec t', env)) :: env, A.StructureMod (symb, e', pos))
+         ((env,par), A.StructureMod (symb, e', pos))
       end
      | infDec env exp = (env, exp)
 
-   and inferTypes env decls =
+   and inferTypes (env : environment ref * environment ref) decls =
    let
       val tDecls = 
          List.foldl (fn (decl, (env, decls)) =>
             let
-               val _ = Debug.print Debug.debug
-                  ("inferTypes: " ^ T.prettyPrint [decl])
                val (env', decl') = infDec env decl
             in
                (env', decls @ [decl'])

@@ -3,8 +3,8 @@ structure Version =
 struct
    val major = "0"
    val minor = "2"
-   val build = "406"
-   val gitId = "76542d6506d2bb989914bbbefe125957d412de9d"
+   val build = "464"
+   val gitId = "670def2479cd3a6029dd667cad96234f175b0b96"
    val date = "20130811"
    val hostname = "square-e29751.local"
    fun getVersionString() = major ^ "." ^ minor ^ "." ^ build

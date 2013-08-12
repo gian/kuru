@@ -2,7 +2,7 @@ BIN=../../bin
 COMPILER=mlton 
 KUPEG=$(BIN)/kupeg
 
-SMLDEPS= lib/union-find-imperative.sig lib/union-find-imperative.sml \
+SMLDEPS= lib/union-find-imperative.sig lib/union-find-imperative.sml lib/symbolmap.sml \
 	config.sml debug.sml main.sml version.sml compile.sml position.sml \
 	frontend/error.sml frontend/parsetree.sml frontend/kuru.kpg.sml \
 	frontend/parsetree_app_apply.sml frontend/parsetree_transformer.sml \
