@@ -168,15 +168,52 @@ struct
       in
          (t', T.Struct (decls', t', pos))
       end
-     | infExp env exp = (T.TyArrow (freshTy (), freshTy ()),
-         T.LiteralExpr(T.Unit, (0, "fake")))
+     | infExp env (A.TupleExpr (exps, _, pos)) =
+      let
+         val tyexps' = map (infExp env) exps
+         val (types, exps') = ListPair.unzip tyexps'
+         val t = T.TyTuple types
+      in
+         (t, T.TupleExpr (exps', t, pos))
+      end
+     | infExp env (A.FnExpr ([(T.LiteralPattern (T.Unit, pos), exp)], _, pos')) =
+      let 
+         val t = tyUnit
+         val (t', exp') = infExp env exp
+         val tx = A.TyArrow (t, t')
+      in
+         (tx, A.FnExpr ([(T.LiteralPattern (T.Unit, pos), exp')], tx, pos'))
+      end
+     | infExp env (A.FnExpr ([(A.IdentifierPattern (symb, _, pos), exp)], _, pos')) =
+      let
+         val t = freshTy ()
+         val (t', exp') = infExp (putEnv env symb (CSimp (VDec t))) exp
+         val tx = A.TyArrow (t, t')
+      in 
+         (tx, T.FnExpr ([(T.IdentifierPattern (symb, t, pos), exp')], tx, pos'))
+      end
+     | infExp env (A.ApplyExpr (e1, e2, _, pos)) =
+      let
+         val (t1, e1') = infExp env e1
+         val (t2, e2') = infExp env e2
+         val tr = freshTy ()
+         val _  = solve env (force t1, T.TyArrow (t2, tr))
+      in 
+         (tr, T.ApplyExpr (e1', e2', forceAll tr, pos))
+      end
+     | infExp env exp = (tyUnit, T.LiteralExpr(T.Unit, (0, "fake")))
+
+   and mkForwardDec (A.ValDec ((A.IdentifierPattern (symb, _, _), _), _)) = [symb]
+     | mkForwardDec (A.ValRecDec ((A.IdentifierPattern (symb, _, _), _), _)) = [symb]
+     | mkForwardDec (A.StructureMod (symb, _, _)) = [symb]
+     | mkForwardDec _ = []
 
    and infDec env (A.ValDec ((A.IdentifierPattern (symb, _, pos), exp), pos')) =
       let 
          val k = !tyvarCounter
-	      val (t, e') = infExp env exp
-	      val t' = mkPoly k (force t)
-	   in 
+         val (t, e') = infExp env exp
+         val t' = mkPoly k (force t)
+      in 
          (putEnv env symb (CSimp (VDec t')), 
             T.ValDec (
                (
@@ -186,17 +223,29 @@ struct
                pos'
             )
          )
-	   end
+      end
      | infDec env (A.ValRecDec ((A.IdentifierPattern (symb, _, pos), e), pos')) =
       let 
          val k = !tyvarCounter
-	      val t = freshTy ()
-	      val (t', e') = infExp (putEnv env symb (CSimp (VDec t))) e
-	      val _ = solve env (force t, force t')
-	      val t'' = mkPoly k (force t')
+         val t = freshTy ()
+         val (t', e') = infExp (putEnv env symb (CSimp (VDec t))) e
+         val _ = solve env (force t, force t')
+         val t'' = mkPoly k (force t')
       in
          (putEnv env symb (CSimp (VDec t'')), 
             T.ValRecDec ((T.IdentifierPattern (symb, t', pos), e'), pos'))
+      end
+     | infDec env (A.MutualDec (decls, pos')) =
+      let
+         val symbols = List.concat (map mkForwardDec decls)
+         val types = map (fn _ => freshTy ()) symbols
+         val st = ListPair.zip (symbols, types)
+
+         val _ = List.app (fn (s,t) => ignore (putEnv env s (CSimp (VDec t)))) st
+
+         val (env', decls') = inferTypes env decls
+      in
+         (env', A.MutualDec (decls', pos'))
       end
      | infDec (env,par) (A.StructureMod (symb, body, pos)) =
       let

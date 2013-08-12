@@ -242,7 +242,20 @@ struct
      | simplifyDecls ((A.StructureMod (s, body, pos))::t) =
          A.StructureMod (s, simplifyExpr body, pos) :: simplifyDecls t
      | simplifyDecls ((A.FunDec (sym, clauses, pos))::t) =
-         A.FunDec (sym, simplifyClauses pos clauses, pos) :: simplifyDecls t
+      let
+         (* Get rid of FunDecs entirely here. *)
+         val (pat, exp) = 
+            case simplifyClauses pos clauses of
+               [pe] => pe
+             | _ => 
+               Error.bug ("AstPatternSimplify", "simplifyClauses invalid", pos)
+      in
+         A.ValRecDec (
+            (A.IdentifierPattern (sym, freshTy (), pos), 
+             A.FnExpr ([(pat, exp)], freshTy (), pos)),
+            pos
+         )
+      end :: simplifyDecls t
      | simplifyDecls ((A.MutualDec (decls, pos))::t) =
          A.MutualDec (simplifyDecls decls, pos) :: simplifyDecls t
      | simplifyDecls (h::t) = h :: simplifyDecls t
