@@ -288,11 +288,9 @@ typ            <- _ t1: typel _ "->" _ t2: typ ->
                      (P.TyCon ($t1,$t2,(!pos,!kuruFile)))
                 / _ t: typel -> ($t).
 
-typel          <- v: var -> ($v)
-                / i: longid _ t1: typel _ "=>" _ t2: typ ->
-                  (P.TyClass ($i,$t1,$t2,(!pos,!kuruFile)))
-                / !"*" i: longid -> (P.TyName ($i,(!pos,!kuruFile)))
-                / "(" _ t: typ _ ")" -> ($t).
+typel          <- _ v: var -> ($v)
+                / _ !"*" i: longid -> (P.TyName ($i,(!pos,!kuruFile)))
+                / _ "(" _ t: typ _ ")" -> ($t).
 
 typapp			<- t1: typel _"*"_ t2: typapp ->
                   ($t1 :: $t2)
@@ -359,9 +357,9 @@ valbind        <- "rec" _ v1: valbind ->
                   ([P.ValRec ($v1,(!pos,!kuruFile))])
                 / "rec" _ v: valbind _ ->
                   ([P.ValRec ($v,(!pos,!kuruFile))])
-                / p: patel _"="_ e: exp _ "and" v: valbind ->
+                / p: pat _"="_ e: exp _ "and" v: valbind ->
                   (P.ValBind ($p,$e,(!pos,!kuruFile)) :: $v)
-                / p: patel _"="_ e: exp ->
+                / p: pat _"="_ e: exp ->
                   ([P.ValBind ($p,$e,(!pos,!kuruFile))]).
 
 tyvarlist      <- _ v: var _ "," _ t: tyvarlist -> ($v :: $t)

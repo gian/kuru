@@ -32,12 +32,10 @@
 structure ParseTreeAstConverter =
 struct
    structure S = Symbol
-   structure A = TypedAst
+   structure A = Ast
    structure P = ParseTree
-  
-   val nextTyIndex = ref 0
-   fun freshTy () =
-         A.TyMeta (nextTyIndex := 1 + !nextTyIndex; !nextTyIndex)
+ 
+   val freshTy = A.freshTy
 
    val nextUnusedIndex = ref 0
    fun freshUnusedId pos = 
@@ -55,7 +53,9 @@ struct
      | toType (P.TyCon (t1, t2, pos)) =
          A.TyApp (toType t2, toType t1)
      | toType (P.Var (P.Ident (s, p), pos)) =
-         A.TyVar (S.fromString s pos)
+         A.TyVar (case String.explode s of
+                     [c] => Char.ord(c) - Char.ord(#"a")
+                   | _ => Error.fail ("Invalid type variable", pos))
      | toType p = Error.bug ("ParseTreeAstConverter", 
                      "Unhandled type: " ^ P.prettyPrint p,
                      P.getPos p)

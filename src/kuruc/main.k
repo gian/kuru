@@ -77,7 +77,7 @@ struct
                               parseArgs t)
      | parseArgs ("-d"::t) = (Debug.setDebugLevel Debug.debug;
                               parseArgs t)
-(*     | parseArgs ("-dd"::t) = (KuruParser.debugVerbose := true;
+     | parseArgs ("-dd"::t) = (KuruParser.debugVerbose := true;
                                Debug.setDebugLevel Debug.debugmore;
                                parseArgs t)
      | parseArgs ("-q"::t) = (KuruParser.debugVerbose := false;
@@ -85,7 +85,7 @@ struct
                               parseArgs t)
      | parseArgs ("-qq"::t) = (KuruParser.debugVerbose := false;
                                Debug.setDebugLevel Debug.silent;
-                               parseArgs t) *)
+                               parseArgs t)
      | parseArgs ("-V"::t) = (printVersion (); Unix.exit 0w0; raise Fail "")
      | parseArgs ("-h"::t) = (printUsage (); Unix.exit 0w0; raise Fail "")
      | parseArgs ("-O0"::t) = (Config.setOptimiser 0; parseArgs t)

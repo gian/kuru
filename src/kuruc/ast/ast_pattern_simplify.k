@@ -69,14 +69,14 @@
 *
 *    The goal is that all that remains in declarations is patterns of the form:
 *
-*    IdentifierPattern (_, _, _)
+*    IdentifierPattern (_, _, _) or LiteralPattern (Unit, _)
 *
 ******************************************************************************)
 
 structure AstPatternSimplify =
 struct
    structure S = Symbol
-   structure A = TypedAst
+   structure A = Ast
    structure P = ParseTree
 
    val freshIdx = ref 0
@@ -90,13 +90,13 @@ struct
          (freshIdx := 1 + !freshIdx)
 
    fun isSimple (A.IdentifierPattern _) = true
-     | isSimple (A.UnitPattern _) = true
+     | isSimple (A.LiteralPattern (A.Unit, _)) = true
      | isSimple _ = false
 
    (* Transform single patterns into groups of declarations and
    * a (pattern, expression) tuple. *)
    fun simplifyPat (pat as A.IdentifierPattern (s, t, p)) exp = (pat, exp, [])
-     | simplifyPat (pat as A.UnitPattern _) exp = (pat, exp, [])
+     | simplifyPat (pat as A.LiteralPattern(A.Unit, _)) exp = (pat, exp, [])
      | simplifyPat (A.AnnotationPattern (pat, ty, p)) exp = 
       let
          val (pat', exp', decls) = simplifyPat pat exp

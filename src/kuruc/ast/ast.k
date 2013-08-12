@@ -35,28 +35,8 @@ structure Ast =
 struct
    open TypedAst
 
-   fun ppty (TySimple s) = S.toString s
-     | ppty (TyApp (t1, t2)) = ppty t2 ^ " " ^ ppty t1
-     | ppty (TyMeta i) = "?x" ^ Int.toString i
-     | ppty (TyTuple l) = String.concatWith " * " (map ppty l)
-     | ppty (TyArrow (t1, t2)) = ppty t1 ^ " -> " ^ ppty t2
-     | ppty (TyVar s) = "'" ^ S.toString s
-     | ppty (TySeq [x]) = ppty x
-     | ppty (TySeq l) = "(" ^ String.concatWith "," (map ppty l) ^ ")"
-     | ppty (TyUnion (t, c)) = String.concatWith " | "
-         (map (fn (s, NONE) => S.toString s
-               | (s, SOME a) => S.toString s ^ " of " ^ ppty a) c)
-
    fun indent 0 = ""
      | indent n = "   " ^ indent (n - 1)
-
-   fun pplit (Int i) = IntInf.toString i
-     | pplit (Real s) = s
-     | pplit (Bool true) = "true"
-     | pplit (Bool false) = "false"
-     | pplit (Char i) = "#\"" ^ String.str (Char.chr i) ^ "\""
-     | pplit (String s) = "\"" ^ (Vector.map Char.chr s) ^ "\""
-     | pplit Unit = "()"
 
    fun ppexp ind (LiteralExpr (l,_)) = pplit l
      | ppexp ind (IdentifierExpr (symbol, _, _)) = S.toString symbol

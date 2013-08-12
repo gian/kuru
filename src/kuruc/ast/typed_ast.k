@@ -39,7 +39,7 @@ struct
    datatype ty =
       TySimple of symbol
     | TyApp of ty * ty (* Follows application order, i.e. int list is ("list","int") *)
-    | TyVar of symbol
+    | TyVar of int
     | TyTuple of ty list
     | TyArrow of ty * ty
     | TyMeta of int
@@ -47,12 +47,18 @@ struct
     | TyUnion of ty * constructor list
    withtype constructor = symbol * ty option
 
+   val nextTyIndex = ref 0
+   fun freshTy () =
+         TyMeta (nextTyIndex := 1 + !nextTyIndex; !nextTyIndex)
+
+   fun subt t1 t2 D = false
+
    fun ppty (TySimple s) = S.toString s
      | ppty (TyApp (t1, t2)) = ppty t2 ^ " " ^ ppty t1
      | ppty (TyMeta i) = "?x" ^ Int.toString i
      | ppty (TyTuple l) = String.concatWith " * " (map ppty l)
      | ppty (TyArrow (t1, t2)) = ppty t1 ^ " -> " ^ ppty t2
-     | ppty (TyVar s) = "'" ^ S.toString s
+     | ppty (TyVar i) = "'" ^ (String.str (Char.chr (i + Char.ord(#"a"))))
      | ppty (TySeq [x]) = ppty x
      | ppty (TySeq l) = "(" ^ String.concatWith "," (map ppty l) ^ ")"
      | ppty (TyUnion (t, c)) = String.concatWith " | "
@@ -89,7 +95,6 @@ struct
     | CurriedPattern of pattern list * ty * pos
     | AnnotationPattern of pattern * ty * pos
     | ImplicitPattern of (pattern * ty) list * pos
-    | UnitPattern of pos
 
    datatype expression =
       LiteralExpr of literal * pos

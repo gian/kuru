@@ -165,7 +165,6 @@ struct
          val _ = Debug.print Debug.debug (Ast.prettyPrint untypedAst')
          val _ = Debug.endStage "AstPatternSimplify"
 
-
          (* Stage 5 - Transform to a typed AST *)
          val _ = Debug.startStage 1 "ParseTreeAstConverter"
          val (envs, typedAst) = TypeInference.inferTypes untypedAst'
