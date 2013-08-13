@@ -17,21 +17,90 @@
 kuruFile ::= topLevelElem*
 
 private topLevelElem ::= (decl|COMMENT|WHITE_SPACE)
-decl ::= (pvaldec|pfundec|pstructdec|psigdec|pdtdec|ptypedec)
+decl ::= (pvaldec|pfundec|pstructdec|psigdec|pdtdec|ptypedec|fixdef|importdef|plocaldef|popendef)
 
-private pvaldec ::= VALDEC expr
+pvaldec ::= VALDEC binding AND decl | VALDEC binding
 
-private pfundec ::= FUNDEC expr
+pfundec ::= FUNDEC funclauses AND decl | FUNDEC funclauses
 
-private pstructdec ::= STRUCTDEC expr
+pstructdec ::= STRUCTDEC IDENTIFIER EQ STRUCT topLevelElem* END
+                     | STRUCTDEC IDENTIFIER EQ IDENTIFIER
 
-private psigdec ::= SIGDEC expr
+psigdec ::= SIGDEC IDENTIFIER EQ SIG topLevelElem* END
 
-private pdtdec ::= DTDEC expr
+pdtdec ::= DTDEC IDENTIFIER EQ dtclauses WITHTYPE expr EQ expr AND decl
+                 | DTDEC IDENTIFIER EQ dtclauses WITHTYPE expr EQ expr
+                 | DTDEC IDENTIFIER EQ dtclauses AND decl
+                 | DTDEC IDENTIFIER EQ dtclause
+                 | DTDEC expr EQ dtclauses WITHTYPE expr EQ expr AND decl
+                 | DTDEC expr EQ dtclauses WITHTYPE expr EQ expr
+                 | DTDEC expr EQ dtclauses AND decl
+                 | DTDEC expr EQ dtclauses
 
-private ptypedec ::= TYPEDEC expr
+ptypedec ::= TYPEDEC expr EQ expr AND decl | TYPEDEC expr EQ expr
 
-private expr ::= STRING
+fixdef ::= INFIX IDENTIFIER NUM | INFIXR IDENTIFIER NUM | INFIX IDENTIFIER | INFIXR IDENTIFIER
+
+importdef ::= IMPORT IDENTIFIER COLON expr AS IDENTIFIER
+
+plocaldef ::= LOCAL topLevelElem* IN topLevelElem* END
+
+popendef ::= OPEN IDENTIFIER
+
+expr ::= exprel SEMI expr
+       | exprel COLON expr
+       | exprel EQ expr
+       | exprel HANDLE caseclauses
+       | exprel TARROW expr
+       | exprel expr
+       | exprel
+
+private exprel ::=
+                literals
+              | tuple
+              | LSQ tupleel RSQ
+              | IF expr THEN expr ELSE expr
+              | WHILE expr DO expr
+              | CASE expr OF caseclauses
+              | ORELSE
+              | ANDALSO
+              | LET topLevelElem IN expr END
+              | RAISE expr
+              | FN caseclauses
+              | LSQ RSQ
+              | LPAR RPAR
+              | TYPEVAR
+              | IDENTIFIER
 
 
+binding ::= REC pattern EQ expr
+         | pattern EQ expr
+
+pattern ::= patel COLON expr | patel pattern | patel
+
+private patel ::= literals | WILD | tuplepat | LSQ pattern RSQ | LPAR RPAR | LSQ RSQ | IDENTIFIER | CONS
+
+private tuplepat ::= LPAR tuplepatel RPAR
+
+private tuplepatel ::= pattern COMMA tuplepatel
+                     | pattern
+
+literals ::= LITERAL | STRING
+
+tuple ::= LPAR tupleel RPAR
+
+private tupleel ::= expr COMMA tupleel
+                 | expr
+
+private caseclauses ::= pattern DARROW expr BAR caseclauses
+                     | pattern DARROW expr
+
+private patterns ::= pattern patterns
+                  | pattern
+
+private funclauses ::= IDENTIFIER patterns EQ expr BAR funclauses
+                    | IDENTIFIER patterns EQ expr
+
+private dtclauses ::= IDENTIFIER OF expr BAR dtclauses
+                    | IDENTIFIER OF expr
 
