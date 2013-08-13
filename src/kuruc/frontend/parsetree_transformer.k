@@ -45,9 +45,11 @@ struct
 
    fun convertPass (s,f) tenv venv p =
       let
-         val _ = D.print D.internal ("ParseTree conversion pass: " ^ s ^ "\n")
+         val _ = Debug.startStage 2 s
+         val res = f tenv venv p
+         val _ = Debug.endStage s
       in
-         f tenv venv p
+         res
       end
 
    fun convertPasses tenv venv p =

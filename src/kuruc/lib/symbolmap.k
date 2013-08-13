@@ -49,11 +49,11 @@ struct
 
    fun put map key value =
    let
-      val _ = Debug.print Debug.debug 
+      val _ = Debug.print Debug.debugmore 
          ("SymbolMap.put: " ^ Symbol.toString key ^ "\n")
       val index = (Symbol.hash key) mod buckets
       val bucket = Vector.sub (map, index)
-      val _ = Debug.print Debug.debug ("SymbolMap.put: bucket " ^
+      val _ = Debug.print Debug.debugmore ("SymbolMap.put: bucket " ^
          Int.toString index ^ " of size " ^ Int.toString (length bucket) ^ "\n")
       val bucket' = (key, value) :: List.filter 
          (fn (k,v) => not (Symbol.equals (k, key))) bucket

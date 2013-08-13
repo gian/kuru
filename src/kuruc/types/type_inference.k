@@ -245,6 +245,7 @@ struct
       end
      | infDec env (A.MutualDec (decls, pos')) =
       let
+         val k = !tyVarCounter
          val symbols = List.concat (map mkForwardDec decls)
          val types = map (fn _ => freshTy ()) symbols
          val st = ListPair.zip (symbols, types)
@@ -252,6 +253,13 @@ struct
          val _ = List.app (fn (s,t) => ignore (putEnv env s (CSimp (VDec t)))) st
 
          val (env', decls') = inferTypes env decls
+
+         val stdecls = ListPair.zip (st, decls')
+
+         val _ = List.app (fn ((s,t), decl) => 
+                     solve env' (force t, force (T.getDecType decl))) stdecls
+
+         val stdecls' = map (fn ((s,t), decl) =>
       in
          (env', A.MutualDec (decls', pos'))
       end

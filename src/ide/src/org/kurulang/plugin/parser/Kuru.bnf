@@ -1,0 +1,37 @@
+{
+  parserClass="org.kurulang.plugin.parser.KuruParser"
+  stubParserClass="org.kurulang.plugin.parser.GeneratedParserUtilBase"
+
+  extends="com.intellij.extapi.psi.ASTWrapperPsiElement"
+
+  psiClassPrefix="Kuru"
+  psiImplClassSuffix="Impl"
+  psiPackage="org.kurulang.plugin.psi"
+  psiImplPackage="org.kurulang.plugin.psi.impl"
+
+  elementTypeHolderClass="org.kurulang.plugin.psi.KuruTypes"
+  elementTypeClass="org.kurulang.plugin.psi.KuruElementType"
+  tokenTypeClass="org.kurulang.plugin.psi.KuruTokenType"
+}
+
+kuruFile ::= topLevelElem*
+
+private topLevelElem ::= (decl|COMMENT|WHITE_SPACE)
+decl ::= (pvaldec|pfundec|pstructdec|psigdec|pdtdec|ptypedec)
+
+private pvaldec ::= VALDEC expr
+
+private pfundec ::= FUNDEC expr
+
+private pstructdec ::= STRUCTDEC expr
+
+private psigdec ::= SIGDEC expr
+
+private pdtdec ::= DTDEC expr
+
+private ptypedec ::= TYPEDEC expr
+
+private expr ::= STRING
+
+
+
