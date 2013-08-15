@@ -38,5 +38,7 @@
   <extensions defaultExtensionNs="com.intellij">
     <fileTypeFactory implementation="org.kurulang.plugin.KuruFileTypeFactory"/>
     <lang.parserDefinition language="Kuru" implementationClass="org.kurulang.plugin.KuruParserDefinition"/>
+    <lang.syntaxHighlighterFactory key="Kuru" implementationClass="org.kurulang.plugin.KuruSyntaxHighlighterFactory"/>
+    <completion.contributor language="Kuru" implementationClass="org.kurulang.plugin.KuruCompletionContributor"/>
   </extensions>
 </idea-plugin>

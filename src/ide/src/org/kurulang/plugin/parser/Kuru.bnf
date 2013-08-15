@@ -1,106 +1,273 @@
 {
-  parserClass="org.kurulang.plugin.parser.KuruParser"
-  stubParserClass="org.kurulang.plugin.parser.GeneratedParserUtilBase"
+ parserClass="org.kurulang.plugin.parser.KuruParser"
+ stubParserClass="org.kurulang.plugin.parser.GeneratedParserUtilBase"
 
-  extends="com.intellij.extapi.psi.ASTWrapperPsiElement"
+ extends="com.intellij.extapi.psi.ASTWrapperPsiElement"
 
-  psiClassPrefix="Kuru"
-  psiImplClassSuffix="Impl"
-  psiPackage="org.kurulang.plugin.psi"
-  psiImplPackage="org.kurulang.plugin.psi.impl"
+ psiClassPrefix="Kuru"
+ psiImplClassSuffix="Impl"
+ psiPackage="org.kurulang.plugin.psi"
+ psiImplPackage="org.kurulang.plugin.psi.impl"
 
-  elementTypeHolderClass="org.kurulang.plugin.psi.KuruTypes"
-  elementTypeClass="org.kurulang.plugin.psi.KuruElementType"
-  tokenTypeClass="org.kurulang.plugin.psi.KuruTokenType"
+ elementTypeHolderClass="org.kurulang.plugin.KuruTypes"
+ elementTypeClass="org.kurulang.plugin.psi.KuruElementType"
+ tokenTypeClass="org.kurulang.plugin.psi.KuruTokenType"
+
+ tokens=[
+    WILD = "_"
+    COMMA = ","
+    LBRACE = "{"
+    RBRACE = "}"
+    LBRACKET = "["
+    RBRACKET = "]"
+    SEMICOLON = ";"
+    LPAREN = "("
+    RPAREN = ")"
+    DOTDOTDOT = "..."
+    BAR = "|"
+    COLON = ":"
+    COLONGT = ":>"
+    EQUALOP = "="
+    HASH = "#"
+    ARROW = "->"
+    DARROW = "=>"
+    AND = "and"
+    ABSTYPE = "abstype"
+    AS = "as"
+    CASE = "case"
+    DATATYPE = "datatype"
+    ELSE = "else"
+    END = "end"
+    EQTYPE = "eqtype"
+    EXCEPTION = "exception"
+    DO = "do"
+    FN = "fn"
+    FUN = "fun"
+    FUNCTOR = "functor"
+    HANDLE = "handle"
+    IF = "if"
+    IN = "in"
+    INCLUDE = "include"
+    INFIX = "infix"
+    INFIXR = "infixr"
+    LET = "let"
+    LOCAL = "local"
+    NONFIX = "nonfix"
+    OF = "of"
+    OP = "op"
+    OPEN = "open"
+    RAISE = "raise"
+    REC = "rec"
+    SHARING = "sharing"
+    SIG = "sig"
+    SIGNATURE = "signature"
+    STRUCT = "struct"
+    STRUCTURE = "structure"
+    THEN = "then"
+    TYPE = "type"
+    VAL = "val"
+    WHERE = "where"
+    WHILE = "while"
+    WITH = "with"
+    WITHTYPE = "withtype"
+    ORELSE = "orelse"
+    ANDALSO = "andalso"
+ ]
+
+ name("exp.*")='expression'
+ extends("exp.*")=exp
 }
 
-kuruFile ::= topLevelElem*
+kuruFile    ::= programel ';'  kuruFile
+        |  programel  kuruFile
+        |
 
-private topLevelElem ::= (decl|COMMENT|WHITE_SPACE)
-decl ::= (pvaldec|pfundec|pstructdec|psigdec|pdtdec|ptypedec|fixdef|importdef|plocaldef|popendef)
+private litint ::= '~' NUM | NUM
 
-pvaldec ::= VALDEC binding AND decl | VALDEC binding
+private real   ::= '~'? NUM '.' NUM 'e' '~'? NUM
+        | '~'? NUM '.' NUM
 
-pfundec ::= FUNDEC funclauses AND decl | FUNDEC funclauses
+private bool      ::= 'true'
+        | 'false' 
 
-pstructdec ::= STRUCTDEC IDENTIFIER EQ STRUCT topLevelElem* END
-                     | STRUCTDEC IDENTIFIER EQ IDENTIFIER
+private charconst   ::= '#' string_literal
 
-psigdec ::= SIGDEC IDENTIFIER EQ SIG topLevelElem* END
+con      ::= real | litint | charconst | bool
 
-pdtdec ::= DTDEC IDENTIFIER EQ dtclauses WITHTYPE expr EQ expr AND decl
-                 | DTDEC IDENTIFIER EQ dtclauses WITHTYPE expr EQ expr
-                 | DTDEC IDENTIFIER EQ dtclauses AND decl
-                 | DTDEC IDENTIFIER EQ dtclause
-                 | DTDEC expr EQ dtclauses WITHTYPE expr EQ expr AND decl
-                 | DTDEC expr EQ dtclauses WITHTYPE expr EQ expr
-                 | DTDEC expr EQ dtclauses AND decl
-                 | DTDEC expr EQ dtclauses
+string_literal ::= STRING
 
-ptypedec ::= TYPEDEC expr EQ expr AND decl | TYPEDEC expr EQ expr
+longid     ::= !KEYWORD KIDENT '.' !KEYWORD longid
+        | !KEYWORD KIDENT
 
-fixdef ::= INFIX IDENTIFIER NUM | INFIXR IDENTIFIER NUM | INFIX IDENTIFIER | INFIXR IDENTIFIER
+exp      ::= 'raise'  exp
+        |  expapp 'andalso'  exp 
+        |  expapp 'orelse'  exp
+        |  expapp 'handle'  match
+        |  expapp ':'  typ
+        |  expapp '=' exp
+        |  expapp
+        
+private expel ::= 'op' WHITE_SPACE  longid
+        | 'let' declist 'in' 
+           exp ';' expseq 'end' 
+        | 'let' declist 'in' exp 'end'
+        | con
+        | string_literal
+        | '('  exp ',' explist ')' 
+        | '('  exp ';' expseq ')'
+        | '('  exp ')'
+        | '()' 
+        | '['  exp ','  explist ']' 
+        | '['  exp ']'
+        | '[' ']' 
+        | 'if' exp 'then' exp 'else' exp
+          
+        | 'while' exp 'do' exp 
+        | 'case' exp 'of' match
+        | 'fn' match
+        | longid 
 
-importdef ::= IMPORT IDENTIFIER COLON expr AS IDENTIFIER
+private expapp     ::= expel  expapp
+        |  expel
 
-plocaldef ::= LOCAL topLevelElem* IN topLevelElem* END
+private explist    ::=  exp ',' explist
+        |  exp
 
-popendef ::= OPEN IDENTIFIER
+private expseq     ::=  exp ';' expseq
+        |  exp
 
-expr ::= exprel SEMI expr
-       | exprel COLON expr
-       | exprel EQ expr
-       | exprel HANDLE caseclauses
-       | exprel TARROW expr
-       | exprel expr
-       | exprel
+match     ::=  pat '=>' exp '|' match 
+        |  pat '=>' exp
 
-private exprel ::=
-                literals
-              | tuple
-              | LSQ tupleel RSQ
-              | IF expr THEN expr ELSE expr
-              | WHILE expr DO expr
-              | CASE expr OF caseclauses
-              | ORELSE
-              | ANDALSO
-              | LET topLevelElem IN expr END
-              | RAISE expr
-              | FN caseclauses
-              | LSQ RSQ
-              | LPAR RPAR
-              | TYPEVAR
-              | IDENTIFIER
+pat      ::=  patel 'as' pat
+        |  patel '::'  pat 
+        |  patel ':' typ
+        |  longid  patel 
+        | patel
 
+private patel     ::= '_'
+        | longid 
+        | con 
+        | '('  pat ','  patlist ')' 
+        | '('  pat ')'
+        | '()' 
+        | '['  patlist ']' 
+        | '[' ']' 
+        | '{' implicit '}' 
 
-binding ::= REC pattern EQ expr
-         | pattern EQ expr
+private patlist    ::=  pat ','  patlist
+        |  pat 
 
-pattern ::= patel COLON expr | patel pattern | patel
+private patapp     ::=  patel  patapp
+        |  patel 
 
-private patel ::= literals | WILD | tuplepat | LSQ pattern RSQ | LPAR RPAR | LSQ RSQ | IDENTIFIER | CONS
+private implicit    ::=  longid ':' typ ',' implicit
+        |  longid ':' typ
 
-private tuplepat ::= LPAR tuplepatel RPAR
+typ      ::=  typel '->' typ
+        |  typapp
+        |  typel  typ
+        |  typel
 
-private tuplepatel ::= pattern COMMA tuplepatel
-                     | pattern
+private typel     ::=  tyvar
+        | !'*' longid 
+        | '('  typ ')' 
 
-literals ::= LITERAL | STRING
+private typapp			::= typel '*' typapp
+				  | typel '*' typ
 
-tuple ::= LPAR tupleel RPAR
+private tyannopt    ::= ':'  typ
 
-private tupleel ::= expr COMMA tupleel
-                 | expr
+private declist    ::= dec*
 
-private caseclauses ::= pattern DARROW expr BAR caseclauses
-                     | pattern DARROW expr
+private sdeclist    ::= sdec*
 
-private patterns ::= pattern patterns
-                  | pattern
+dec      ::= 'val' valbind
+        | 'bind'  longid 'to'  longid 
+        | 'type'  typebind
+        | 'datatype'  KIDENT '=' 'datatype' longid
+         
+        | 'datatype'  databind 
+        | 'fun'  funbind
+        | 'structure'  strbind
+        | 'signature' sigbind
+        | 'infixr'  NUM  KIDENT
+        | 'infixr'  KIDENT 
+        | 'infix'  NUM  KIDENT
+        | 'infix'  KIDENT 
+        | 'exception'  KIDENT 'of'  typ 
+        | 'exception'  KIDENT
+        | 'open'  longid 
+        | '_import'  KIDENT ':' typ 'as' KIDENT
 
-private funclauses ::= IDENTIFIER patterns EQ expr BAR funclauses
-                    | IDENTIFIER patterns EQ expr
+sdec      ::= 'val'  valdesc 
+        | 'eqtype'  typedesc 
+        | 'type'  typedesc 
+        | 'datatype'  KIDENT '=' 'datatype' longid
+        | 'datatype'  databind
+        | 'structure'  strdesc
 
-private dtclauses ::= IDENTIFIER OF expr BAR dtclauses
-                    | IDENTIFIER OF expr
+valdesc    ::=  KIDENT ':'  typ 'and'  valdesc 
+        |  KIDENT ':'  typ
+
+typedesc    ::=  tyvars  KIDENT 'and'  typedesc
+         |  tyvars  KIDENT
+
+strdesc    ::=  KIDENT ':'  sign 'and' strdesc
+        |  KIDENT ':'  sign
+
+valbind    ::= 'rec'  valbind 
+        | 'rec'  valbind 
+        | pat '=' exp 'and' valbind
+        | pat '=' exp
+
+tyvarlist   ::=  tyvar ','  tyvarlist
+        |  tyvar
+
+tyvars     ::= '(' tyvarlist ')'
+        |  tyvar
+        | 
+
+typebind    ::= tyvars  KIDENT '=' typ 'and' typebind
+        | tyvars  KIDENT '=' typ
+
+funbind    ::= funmatch 'and'  funbind
+        | funmatch
+
+funmatch    ::= 'op'  KIDENT  patapp tyannopt? '='
+          exp '|' funmatch 
+        | 'op'  KIDENT  patapp  tyannopt? '='
+          exp 
+        | KIDENT patapp tyannopt? '=' exp 
+           '|' funmatch 
+        | KIDENT patapp tyannopt? '=' exp
+
+databind    ::= tyvars  KIDENT '='  conbind 'and' databind
+        |  tyvars  KIDENT '='  conbind 'withtype' typebind
+        | tyvars  KIDENT '='  conbind
+         
+
+conbind    ::=  KIDENT 'of'  typ '|' conbind 
+        |  KIDENT 'of'  typ
+        |  KIDENT '|'  conbind
+        |  KIDENT
+
+private strbind    ::=  KIDENT  sigascopt '='  str 'and' strbind
+        |  KIDENT  sigascopt '='  str
+
+private sigascopt   ::= ':>' sign
+        | ':'  sign 
+        | 
+
+sigbind    ::=  KIDENT '='  sign 'and' sigbind
+        |  KIDENT '='  sign
+
+str      ::= 'struct'  declist 'end'
+         
+        | longid
+
+sign      ::= 'sig'  sdeclist 'end'
+        |  KIDENT
+
+programel   ::= dec | COMMENT
 
