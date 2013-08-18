@@ -10,6 +10,6 @@ signature IMPERATIVE_UNION_FIND =
       val sameSet : 'a set * 'a set -> bool
       val find : 'a set -> 'a
       val isCanonical : 'a set -> bool
-      
+      val toString : ('a -> string) -> 'a set -> string
    end
 

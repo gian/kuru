@@ -167,10 +167,10 @@ struct
 
          (* Stage 5 - Transform to a typed AST *)
          val _ = Debug.startStage 1 "TypeInference"
-         val topLevelEnv : TypeInference.environment ref = ref (SymbolMap.empty ())
-         val envRoot : TypeInference.environment ref = ref (SymbolMap.empty ())
+         val topLevelEnv : TypeInference.environment ref list = 
+            [ref (SymbolMap.empty ())]
          val (envs, typedAst) = 
-            TypeInference.inferTypes (topLevelEnv, envRoot) untypedAst'
+            TypeInference.inferTypes topLevelEnv untypedAst'
          (* val _ = Debug.print Debug.debug (Ast.prettyPrint typedAst) *)
          val _ = Debug.print Debug.debug ("Type Env:\n" ^
                      TypeInference.prettyPrintEnv topLevelEnv)

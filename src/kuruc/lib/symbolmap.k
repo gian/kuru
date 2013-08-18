@@ -37,6 +37,7 @@ sig
    val get : 'a map -> Symbol.t -> (Symbol.t * 'a) option
    val values : 'a map -> (Symbol.t * 'a) list
    val empty : unit -> 'a map
+   val size : 'a map -> int
 end
 
 structure SymbolMap :> SYMBOL_MAP =
@@ -65,6 +66,7 @@ struct
    fun get map key = 
    let
       val index = (Symbol.hash key) mod buckets
+      val _ = Debug.print Debug.debug ("SymbolMap.get: " ^ Int.toString index ^ "\n")
    in
       List.find (fn (s,_) => Symbol.equals(s,key)) (Vector.sub (map, index))
    end
@@ -72,6 +74,8 @@ struct
    fun values map = 
       Vector.foldl (fn (bucket, l) =>
          l @ bucket) [] map
+
+   fun size map = List.length (values map)
 
 end
 

@@ -42,5 +42,6 @@ sig
    val isLong : t -> bool
    val hd : t -> t
    val tl : t -> t
+   val getPos : t -> Position.t
 end
 

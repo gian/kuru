@@ -70,13 +70,19 @@ struct
      | prime _ = 131
 
    fun hash (Short (s, _, _)) =
-      Vector.foldli (fn (i, c, h) => h + prime i * Char.ord c) 0 s
+         Vector.foldli (fn (i, c, h) => h + prime i * Char.ord c) 0 s
+     | hash (Long ([s], _, _)) =
+         Vector.foldli (fn (i, c, h) => h + prime i * Char.ord c) 0 s
+     | hash (Long (h::t, x, y)) = hash (Long (t, x, y))
 
    fun equals (Short (s, _, _), Short (s', _, _)) = s = s'
      | equals (Long (l, _, _), Long (l', _, _)) = l = l'
+     | equals (Short (s, _, _), Long ([s'], _, _)) = s = s'
+     | equals (Long ([s], _, _), Short (s', _, _)) = s = s'
      | equals _ = false
 
-   fun isLong (Long _) = true
+   fun isLong (Long ([i], _, _)) = false
+     | isLong (Long _) = true
      | isLong _ = false
 
    fun hd (Long (l, i, p)) = Short (List.hd l, i, p)
@@ -86,6 +92,9 @@ struct
      | tl (Long ([h], i, p)) = Short (h, i, p)
      | tl (Long (_, _, p)) = Error.bug ("Symbol.tl", "Called tl on empty long-id", p)
      | tl (Short (_, _, p)) = Error.bug ("Symbol.tl", "Called tl on non long-id", p)
+
+   fun getPos (Short (_, _, p)) = p
+     | getPos (Long (_, _, p)) = p
 
 end
 

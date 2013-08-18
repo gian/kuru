@@ -63,4 +63,12 @@ structure IUnionFind :> IMPERATIVE_UNION_FIND
              Root _ => true
            | Child _ => false)
 
+      fun indent 0 = ""
+        | indent i = "   " ^ indent (i-1)
+
+      fun toString' ind ts (Root (a, i)) = 
+            indent ind ^ ts a ^ ": " ^ Int.toString i ^ "\n"
+        | toString' ind ts (Child s) = toString' (ind+1) ts (!s)
+
+      fun toString ts s = toString' 0 ts (!s)
    end

@@ -1,5 +1,6 @@
 BIN=../../bin
-COMPILER=mlton 
+#COMPILER=mlton -const 'Exn.keepHistory true'
+COMPILER=mlton
 KUPEG=$(BIN)/kupeg
 
 SMLDEPS= lib/union-find-imperative.sig lib/union-find-imperative.sml lib/symbolmap.sml \

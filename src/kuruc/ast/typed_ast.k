@@ -151,9 +151,11 @@ struct
      | pplit Unit = "()"
 
    fun ppexp ind (LiteralExpr (l,_)) = pplit l
-     | ppexp ind (IdentifierExpr (symbol, _, _)) = S.toString symbol
-     | ppexp ind (TupleExpr (exprs, _, _)) = 
-         "(" ^ String.concatWith ", " (map (ppexp ind) exprs) ^ ")"
+     | ppexp ind (IdentifierExpr (symbol, ty, _)) = S.toString symbol ^ " : " ^
+         ppty ty
+     | ppexp ind (TupleExpr (exprs, ty, _)) = 
+         "(" ^ String.concatWith ", " (map (ppexp ind) exprs) ^ ") : " ^
+            ppty ty
      | ppexp ind (TupleExtractExpr (i, expr, _, _)) = 
          "#" ^ Int.toString i ^ " " ^ ppexp ind expr
      | ppexp ind (IfExpr (e1, e2, e3, _, _)) =
@@ -178,8 +180,8 @@ struct
                    (map (fn (p,b) => 
                      "\n" ^ indent (ind + 1) ^ "  | " ^
                         pppat p ^ " => " ^ ppexp (ind + 1) b) clauses)
-     | ppexp ind (FnExpr (((p,b)::clauses), _, _)) =
-         "fn " ^ pppat p ^ " => " ^ ppexp ind b
+     | ppexp ind (FnExpr (((p,b)::clauses), t, _)) =
+         "fn " ^ pppat p ^ " => " ^ ppexp ind b ^ " : " ^ ppty t
      | ppexp ind (SeqExpr (exprs, _, _)) = 
          "(" ^ String.concatWith "; " (map (ppexp ind) exprs) ^ ")"
      | ppexp ind (HandleExpr (e, (p,b)::clauses, _, _)) =
@@ -198,7 +200,8 @@ struct
          Error.bug ("Ast.ppexp", "Unknown or invalid AST", (0,""))
 
    and pppat (LiteralPattern (p, _)) = pplit p
-     | pppat (IdentifierPattern (symbol, ty, pos)) = S.toString symbol
+     | pppat (IdentifierPattern (symbol, ty, pos)) = "(" ^ S.toString symbol ^ " : " ^
+     ppty ty ^ ")"
      | pppat (TuplePattern (pats, _, _)) = 
          "(" ^ String.concatWith "," (map pppat pats) ^ ")"
      | pppat (CurriedPattern (pats, _, _)) =
