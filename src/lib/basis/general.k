@@ -35,7 +35,7 @@ datatype 'a option = SOME of 'a | NONE
 fun valOf NONE = raise Match
   | valOf (SOME x) = x
 
-type 'a ref = opaque
+datatype 'a ref = ref of 'a
 
 fun builtin_add {A : 'a Addable} (x : 'a, y : 'a) = A.add (a, b)
 

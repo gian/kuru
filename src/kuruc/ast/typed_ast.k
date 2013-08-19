@@ -45,19 +45,41 @@ struct
     | TyMeta of int
     | TySeq of ty list
     | TyUnion of ty * constructor list
+    | TyLam of ty * ty 
     | TySig of unit
    withtype constructor = symbol * ty option
+
+   fun substInTy (TyApp (t1, t2)) t t' =
+         TyApp (substInTy t1 t t', substInTy t2 t t')
+     | substInTy (TyTuple ts) t t' = 
+         TyTuple (map (fn tx => substInTy tx t t') ts)
+     | substInTy (TyArrow (t1, t2)) t t' =
+         TyApp (substInTy t1 t t', substInTy t2 t t')
+     | substInTy (TySeq ts) t t' = 
+         TySeq (map (fn tx => substInTy tx t t') ts)
+     | substInTy (TyUnion (ty, constrs)) t t' =
+         TyUnion (
+            substInTy ty t t',
+            map (fn (s, SOME tx) => (s, SOME (substInTy tx t t'))) constrs
+         )
+     | substInTy (TyLam (t1, t2)) t t' = 
+         Error.bug ("TypedAst.substInTy", "TyLam encountered", (0, "__fake__"))
+     | substInTy (ot as (TySimple s)) (TySimple t) t' = 
+         if S.equals (s, t) then t' else ot
+     | substInTy (ot as (TyVar i)) (TyVar j) t' = 
+         if i = j then t' else ot
+     | substInTy (ot as (TyMeta i)) (TyMeta j) t' =
+         if i = j then t' else ot
+     | substInTy ot _ _ = ot
 
    val nextTyIndex = ref 0
    fun freshTy () =
          TyMeta (nextTyIndex := 1 + !nextTyIndex; !nextTyIndex)
 
-   fun subt t1 t2 D = false
-
    fun ppty (TySimple s) = S.toString s
      | ppty (TyApp (t1, t2)) = ppty t2 ^ " " ^ ppty t1
      | ppty (TyMeta i) = "?x" ^ Int.toString i
-     | ppty (TyTuple l) = String.concatWith " * " (map ppty l)
+     | ppty (TyTuple l) = "(" ^ String.concatWith " * " (map ppty l) ^ ")"
      | ppty (TyArrow (t1, t2)) = ppty t1 ^ " -> " ^ ppty t2
      | ppty (TyVar i) = "'" ^ (String.str (Char.chr (i + Char.ord(#"a"))))
      | ppty (TySeq [x]) = ppty x
@@ -65,6 +87,7 @@ struct
      | ppty (TyUnion (t, c)) = String.concatWith " | "
          (map (fn (s, NONE) => S.toString s
                | (s, SOME a) => S.toString s ^ " of " ^ ppty a) c)
+     | ppty (TyLam (t1, t2)) = "\206\187" ^ ppty t1 ^ "." ^ ppty t2
      | ppty (TySig _) = "(* SIG TYPE TODO *)"
 
    type constructor_tag = int
@@ -138,6 +161,8 @@ struct
         and functor_clause = declaration * declaration
 
    type program = declaration list
+
+   fun getPos _ = (0, "fake")
 
    fun indent 0 = ""
      | indent n = "   " ^ indent (n - 1)

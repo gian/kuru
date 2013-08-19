@@ -282,20 +282,16 @@ implicit       <-  i: longid _":"_ class: typ _","_ r: implicit ->
 
 typ            <- _ t1: typel _ "->" _ t2: typ ->
                      (P.TyArrow ($t1,$t2,(!pos,!kuruFile)))
-                / _ t1: typapp ->
-                     (P.TyPair ($t1,(!pos,!kuruFile)))
-                / _ t1: typel _ t2: typ ->
-                     (P.TyCon ($t1,$t2,(!pos,!kuruFile)))
+                / _ t1: typel _ "*" _ t2: typ ->
+                     (P.TyPair ([$t1,$t2],(!pos,!kuruFile)))
                 / _ t: typel -> ($t).
 
-typel          <- _ v: var -> ($v)
+typel          <- _ t1: var _ t2: typel -> (P.TyCon ($t1,$t2,(!pos,!kuruFile)))
+                / _ !"*" i: longid _ t2: typel 
+                  -> (P.TyCon (P.TyName ($i,(!pos,!kuruFile)), $t2,(!pos,!kuruFile)))
+                / _ v: var -> ($v)
                 / _ !"*" i: longid -> (P.TyName ($i,(!pos,!kuruFile)))
                 / _ "(" _ t: typ _ ")" -> ($t).
-
-typapp			<- t1: typel _"*"_ t2: typapp ->
-                  ($t1 :: $t2)
-				    / t1: typel _"*"_ t2: typ ->
-                  ([$t1,$t2]).
 
 tyannopt       <- _ ":" _ t: typ -> (SOME ($t))
                 / -> (NONE).
