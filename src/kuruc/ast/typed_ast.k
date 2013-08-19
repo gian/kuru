@@ -60,7 +60,8 @@ struct
      | substInTy (TyUnion (ty, constrs)) t t' =
          TyUnion (
             substInTy ty t t',
-            map (fn (s, SOME tx) => (s, SOME (substInTy tx t t'))) constrs
+            map (fn (s, SOME tx) => (s, SOME (substInTy tx t t'))
+                  | (s, NONE) => (s, NONE)) constrs
          )
      | substInTy (TyLam (t1, t2)) t t' = 
          Error.bug ("TypedAst.substInTy", "TyLam encountered", (0, "__fake__"))

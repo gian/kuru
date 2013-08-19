@@ -27,8 +27,7 @@ struct
 
 end
 
-val true = 1 = 1
-val false = 1 = 0
+datatype bool = true | false
 
 datatype 'a option = SOME of 'a | NONE
 
@@ -37,9 +36,11 @@ fun valOf NONE = raise Match
 
 datatype 'a ref = ref of 'a
 
-fun builtin_add {A : 'a Addable} (x : 'a, y : 'a) = A.add (a, b)
+datatype 'a list = nil | :: of 'a * 'a list
 
-fun + (x, y) = builtin_add (x, y)
+fun internal_print (s : string) = ()
+
+(* fun builtin_add {A : 'a Addable} (x : 'a, y : 'a) = A.add (a, b) *)
 
 fun a before b = a
 

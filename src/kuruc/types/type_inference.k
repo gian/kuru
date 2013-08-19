@@ -142,11 +142,11 @@ struct
    fun newEnv () = ref (M.empty (), M.empty ())
 
    (* Built-in types *)
-   val tyInt = T.TySimple (S.fromString "Int64.int" (0, "__builtin__"))
-   val tyReal = T.TySimple (S.fromString "Real64.real" (0, "__builtin__"))
-   val tyChar = T.TySimple (S.fromString "Char.char" (0, "__builtin__"))
-   val tyString = T.TySimple (S.fromString "String.string" (0, "__builtin__"))
-   val tyBool = T.TySimple (S.fromString "Bool.bool" (0, "__builtin__"))
+   val tyInt = T.TySimple (S.fromString "int" (0, "__builtin__"))
+   val tyReal = T.TySimple (S.fromString "real" (0, "__builtin__"))
+   val tyChar = T.TySimple (S.fromString "char" (0, "__builtin__"))
+   val tyString = T.TySimple (S.fromString "string" (0, "__builtin__"))
+   val tyBool = T.TySimple (S.fromString "bool" (0, "__builtin__"))
    val tyUnit = T.TySimple (S.fromString "unit" (0, "__builtin__"))
    val tyExn = T.TySimple (S.fromString "exn" (0, "__builtin__"))
 
@@ -325,7 +325,50 @@ struct
      | infLiteral (A.Bool _) = tyBool
      | infLiteral (A.Unit) = tyUnit
 
-   fun infExp env (literal as (A.LiteralExpr (l, p))) = 
+   and infPat envs (p as (A.LiteralPattern (l, pos))) = (infLiteral l, p)
+     | infPat (env::envs) (A.IdentifierPattern (symb, _, pos)) =
+         let
+            val t = freshTy ()
+            val _ = putVEnv env symb (CSimp (VDec t))
+         in
+            (t, T.IdentifierPattern (symb, t, pos))
+         end
+     | infPat envs (A.TuplePattern (pats, _, pos)) =
+         let
+            val tpats = map (infPat envs) pats
+            val (ts, pats') = ListPair.unzip tpats
+         in
+            (T.TyTuple ts, T.TuplePattern (pats', T.TyTuple ts, pos))
+         end
+     | infPat envs (A.ConstructorPattern (symb, NONE, _, pos)) =
+         let
+            (* This is ugly :-( *)
+            val cty = case lookup symb envs of
+               (CSimp (VDec t)) => t
+             | _ => Error.fail ("Invalid constructor pattern: " ^ S.toString symb, pos)
+         in
+            (cty, T.ConstructorPattern (symb, NONE, cty, pos))
+         end
+     | infPat envs (A.ConstructorPattern (symb, SOME pat, _, pos)) =
+         let
+            (* This is even uglier :-( :-( :-( *)
+
+            val (t1, t2) = case lookup symb envs of
+               (CSimp (VDec (T.TyArrow (t1, t2)))) => (t1, t2)
+             | _ => Error.fail ("Invalid constructor pattern: " ^ S.toString symb, pos)
+
+            val (pt, pat') = infPat envs pat
+         in
+            (t2, T.ConstructorPattern (symb, SOME pat', t2, pos))
+         end
+     | infPat envs pat = 
+      let
+         val _ = Debug.print Debug.debug ("NOT IMPLEMENTED: " ^ A.pppat pat ^ "\n")
+      in
+         (freshTy (), pat)
+      end
+
+   and infExp env (literal as (A.LiteralExpr (l, p))) = 
       (infLiteral l, literal)
      | infExp envs (A.Struct (decls, _, pos)) =
       let
@@ -386,9 +429,86 @@ struct
          val (_, decls') = inferTypes (env'::envs) decls
          val (t, exp') = infExp (env'::envs) exp
       in
-         (t, A.LetExpr (decls', exp', t, pos))
+         (t, T.LetExpr (decls', exp', t, pos))
       end
-     | infExp envs exp = (tyUnit, T.LiteralExpr(T.Unit, (0, "fake")))
+     | infExp envs (A.CaseExpr (exp, clauses, _, pos)) =
+      let
+         val (t, exp') = infExp envs exp
+
+         val tx = freshTy ()
+
+         val (constraints, clauses') = 
+            List.foldl (fn ((pat, exp), (constr,cl)) => 
+               let
+                  (* FIXME: force pat = t *)
+                  val env' = newEnv ()
+                  val (pt, pat') = infPat (env'::envs) pat
+                  val (et, exp') = infExp (env'::envs) exp
+               in
+                  (constr @ [(pt,t),(et,tx)], cl @ [(pat',exp')])
+               end) ([],[]) clauses
+
+         val _ = solveList envs constraints
+         val tx' = force tx
+      in
+         (tx', T.CaseExpr (exp', clauses', tx', pos))
+      end
+     | infExp envs (A.RaiseExpr (exp, pos)) = 
+      let
+         (* TODO: Verify that exp is of type 'exn' *)
+         val (t, exp') = infExp envs exp
+      in
+         (freshTy (), T.RaiseExpr (exp', pos))
+      end
+     | infExp envs (A.IfExpr (e1, e2, e3, _, pos)) =
+      let
+         val (t1, e1') = infExp envs e1
+
+         val _ = solve envs (tyBool, t1)
+
+         val tx = freshTy ()
+         val (t2, e2') = infExp envs e2
+         val (t3, e3') = infExp envs e3
+
+         val _ = solveList envs [
+            (t2, tx),
+            (t3, tx)
+         ]
+
+         val tx' = force tx
+      in
+         (tx', T.IfExpr (e1', e2', e3', tx', pos))
+      end
+     | infExp envs (A.ConstructorExpr (symb, NONE, _, pos)) =
+      let
+         (* TODO: Verify that this makes sense *)
+         val t = case (lookup symb envs) of
+                  (CSimp (VDec t)) => t
+               | _ => Error.fail ("Symbol not found: " ^ S.toString symb, pos)
+      in
+         (t, T.ConstructorExpr (symb, NONE, t, pos))
+      end
+     | infExp envs (A.SeqExpr (exps, _, pos)) = 
+      let
+         fun seq [] ex = Error.fail ("Empty sequence expression", pos)
+           | seq [s] ex = 
+            let
+               val (t, s') = infExp envs s
+            in
+               (t, T.SeqExpr (ex @ [s'], t, pos))
+            end
+           | seq (s::xs) ex =
+            let
+               val (t, s') = infExp envs s
+            in
+               seq xs (ex @ [s'])
+            end
+      in
+         seq exps []
+      end
+     | infExp envs exp = raise Fail ("Not implemented: " ^ A.ppexp 0 exp)
+     
+     (* (tyUnit, T.LiteralExpr(T.Unit, (0, "fake"))) *)
 
    and mkForwardDec (A.ValDec ((A.IdentifierPattern (symb, _, _), _), _)) = [symb]
      | mkForwardDec (A.ValRecDec ((A.IdentifierPattern (symb, _, _), _), _)) = [symb]
@@ -432,9 +552,7 @@ struct
       end
      | infDec envs (A.MutualDec (decls, pos')) =
       let
-         val _ = ()
-         (* val _ = List.app (fn ((s,t), decl) => 
-                     solve env' (force t, force (T.getDecType decl))) stdecls *)
+         val _ = raise Fail "MutualDec not implemented"
       in
          (envs, A.MutualDec (decls, pos'))
       end
@@ -489,7 +607,15 @@ struct
       in
          (env::envs, A.TypeDec (A.TyApp (A.TySimple symb, t2), td', pos))
       end
+     | infDec (env::envs) (A.StructureAssignMod (symb1, symb2, pos)) =
+      let
+         (* TODO: Make sure it's a struct and not anything else! *)
 
+         val sEntry = lookup symb2 (env::envs)
+         val _ = putVEnv env symb1 sEntry
+      in
+         (env::envs, A.StructureAssignMod (symb1, symb2, pos))
+      end
      | infDec envs exp = (envs, exp)
 
    and inferTypes (envs : environment ref list) decls =
