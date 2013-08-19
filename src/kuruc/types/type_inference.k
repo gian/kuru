@@ -74,6 +74,10 @@ struct
          "\n" ^ prettyPrintEnv envs
      | prettyPrintEnv [] = ""
 
+   fun prettyPrintTEnv (e::envs) = ppenv 0 (M.values (tenv (!e))) ^ 
+         "\n" ^ prettyPrintTEnv envs
+     | prettyPrintTEnv [] = ""
+
    fun lookup (x : S.t) (env::envs) =
       if not (S.isLong x) then
          let
@@ -95,13 +99,13 @@ struct
          lookup t ([cl])
       end
      | lookup x [] = 
-      raise Error.fail ("Undeclared identifier " ^ S.toString x, S.getPos x)  
+       Error.fail ("Undeclared identifier " ^ S.toString x, S.getPos x)  
 
    fun lookupType (x : S.t) (env::envs) =
       if not (S.isLong x) then
          let
             val _ = Debug.print Debug.debug ("Looking up short id: " ^ S.toString x ^ " in:\n" ^
-               prettyPrintEnv (env::envs)^ "\n")
+               prettyPrintTEnv (env::envs)^ "\n")
          in
 	         (case M.get (tenv (!env)) x of
 	            SOME (_, closure) => closure
@@ -110,15 +114,15 @@ struct
       else let
          val (h,t) = (S.hd x, S.tl x)
          val _ = print ("Looking up: " ^ S.toString h ^ " in:\n" ^
-               prettyPrintEnv (env::envs)^ "\n")
-         val (CEnv (VDec _, cl)) = lookup h (env::envs)
+               prettyPrintTEnv (env::envs)^ "\n")
+         val (CEnv (VDec _, cl)) = lookupType h (env::envs)
          val _ = Debug.print Debug.debug ("Found " ^ S.toString h ^ ":\n")
          val _ = Debug.print Debug.debug (prettyPrintEnv (cl::envs)^ "\n")
       in
          lookupType t ([cl])
       end
      | lookupType x [] = 
-      raise Error.fail ("Undeclared identifier " ^ S.toString x, S.getPos x) 
+       Error.fail ("Undeclared identifier " ^ S.toString x, S.getPos x) 
 
 
    fun putTEnv (env as (ref (tenv,venv))) symbol value = 
@@ -225,7 +229,7 @@ struct
       | _ => false)
 
    fun eval envs (ty as (A.TySimple sym)) = 
-         (case lookup sym envs of
+         (case lookupType sym envs of
             (CSimp (TDec)) => (ty, envs)
           | (CSimp (TDef ty')) => (ty', envs)
           | (CEnv (TDef ty', env')) => eval (env'::envs) ty'
@@ -255,10 +259,17 @@ struct
 	      tyImp PM (t11, E1) (t21, E2) andalso tyImp PM (t12, E1) (t22, E2)
       | ((A.TyTuple t1, E1), (A.TyTuple t2, E2)) =>
          List.all (fn (t1',t2') => tyImp PM (t1',E1) (t2',E2)) (ListPair.zip (t1,t2))
+      | ((A.TyLam (t11, t12), E1), (A.TyLam (t21, t22), E2)) =>
+            raise Fail ("TyLam: " ^ A.ppty t1 ^ " =/= " ^ A.ppty t2)
+      | ((A.TyUnion (t1, c1), E1), (A.TyUnion (t2, c2), E2)) =>
+            List.all (fn ((s1,NONE),(s2,NONE)) => S.equals (s1,s2)
+                       | ((s1, SOME t1),(s2, SOME t2)) => 
+                             S.equals (s1,s2)
+                       | _ => false) (ListPair.zip (c1,c2))
 	   | (c, (A.TyVar x, _)) => (case List.find (fn (y, _) => x = y) (!PM) of
 					  SOME (_, c') => tyImp PM c c'
 					| NONE => true before (PM := (x, c) :: (!PM)))
-	   | _ => raise Fail ("Types " ^ A.ppty t1 ^ " and " ^ A.ppty t2 ^ " not equal"))
+	   | ((t1,_),(t2,_)) => raise Fail ("Types " ^ A.ppty t1 ^ " and " ^ A.ppty t2 ^ " not equal"))
 
    fun subt t1 t2 env = tyImp (ref []) (t1, env) (t2, env)
    
@@ -288,8 +299,7 @@ struct
      | solve D (A.TyArrow (t1, t2), A.TyArrow (t3, t4)) =
          (solve D (force t1, force t3); solve D (force t2, force t4))
      | solve D (A.TyTuple ts1, A.TyTuple ts2) =
-      (raise Fail "TyTuple!"; 
-         List.app (solve D) (ListPair.zip (ts1,ts2)))
+         List.app (solve D) (ListPair.zip (ts1,ts2))
      | solve D (t1, t2) = raise Fail ("Type error: " ^ T.ppty t1 ^ " =/= " ^ T.ppty t2)
 
    fun solveList D xs = List.foldl (fn (c, ()) => solve D c) () xs
@@ -442,19 +452,22 @@ struct
       let
          val _ = putTEnv env symb (CSimp (TDef t2))
 
+         val t' = A.TySimple symb
+
          (* Bind the constructors in the value environment *)
          val _ = case t2 of 
             T.TyUnion (_, constrs) =>
                List.map (fn (symb, NONE) => 
-                  putVEnv env symb (CSimp (VDec t2))
+                  putVEnv env symb (CSimp (VDec t'))
                | (symb, SOME t) => 
-                  putVEnv env symb (CSimp (VDec (T.TyArrow (t, t2))))) constrs
+                  putVEnv env symb (CSimp (VDec (T.TyArrow (t, t'))))) constrs
           | _ => []
       in
          (env::envs, A.TypeDec (A.TySimple symb, t2, pos))
       end
      | infDec (env::envs) (A.TypeDec (A.TyApp (A.TySimple symb, t2), td, pos)) =
       let
+
          val (symb', td') = 
             case t2 of
                A.TyVar i => (symb, T.TyLam (A.TyVar i, td))
@@ -462,14 +475,16 @@ struct
              | te => Error.fail ("Invalid type variable: " ^ A.ppty te, A.getPos symb)
 
          val _ = putTEnv env symb' (CSimp (TDef td'))
+         
+         val t' = T.TyApp (T.TySimple symb, t2)
 
          (* Bind the constructors in the value environment *)
          val _ = case td of 
             T.TyUnion (_, constrs) =>
                List.map (fn (symb, NONE) => 
-                  putVEnv env symb (CSimp (VDec td'))
+                  putVEnv env symb (CSimp (VDec t'))
                | (symb, SOME t) => 
-                  putVEnv env symb (CSimp (VDec (T.TyArrow (t, td'))))) constrs
+                  putVEnv env symb (CSimp (VDec (T.TyArrow (t, t'))))) constrs
           | _ => []
       in
          (env::envs, A.TypeDec (A.TyApp (A.TySimple symb, t2), td', pos))

@@ -77,16 +77,16 @@ struct
          TyMeta (nextTyIndex := 1 + !nextTyIndex; !nextTyIndex)
 
    fun ppty (TySimple s) = S.toString s
-     | ppty (TyApp (t1, t2)) = ppty t2 ^ " " ^ ppty t1
+     | ppty (TyApp (t1, t2)) = "[" ^ ppty t2 ^ " " ^ ppty t1 ^ "]"
      | ppty (TyMeta i) = "?x" ^ Int.toString i
      | ppty (TyTuple l) = "(" ^ String.concatWith " * " (map ppty l) ^ ")"
      | ppty (TyArrow (t1, t2)) = ppty t1 ^ " -> " ^ ppty t2
      | ppty (TyVar i) = "'" ^ (String.str (Char.chr (i + Char.ord(#"a"))))
-     | ppty (TySeq [x]) = ppty x
+     | ppty (TySeq [x]) = "(" ^ ppty x ^ ")"
      | ppty (TySeq l) = "(" ^ String.concatWith "," (map ppty l) ^ ")"
-     | ppty (TyUnion (t, c)) = String.concatWith " | "
+     | ppty (TyUnion (t, c)) = "{" ^ String.concatWith " | "
          (map (fn (s, NONE) => S.toString s
-               | (s, SOME a) => S.toString s ^ " of " ^ ppty a) c)
+               | (s, SOME a) => S.toString s ^ " of " ^ ppty a) c) ^ "}"
      | ppty (TyLam (t1, t2)) = "\206\187" ^ ppty t1 ^ "." ^ ppty t2
      | ppty (TySig _) = "(* SIG TYPE TODO *)"
 

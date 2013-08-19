@@ -74,7 +74,7 @@ structure P = ParseTree
 %nonterm typel of P.pt
 %nonterm tyannopt of P.pt option
 %nonterm typairlist of P.pt list
-%nonterm typapp of P.pt list
+%nonterm typtuple of P.pt list
 %nonterm declist of P.pt list
 %nonterm dec of P.pt
 %nonterm valbind of P.pt list
@@ -280,10 +280,10 @@ implicit       <-  i: longid _":"_ class: typ _","_ r: implicit ->
 
 % Types
 
-typ            <- _ t1: typel _ "->" _ t2: typ ->
+typ            <- _ t1: typtuple ->
+                     (P.TyPair ($t1,(!pos,!kuruFile)))
+                / _ t1: typel _ "->" _ t2: typ ->
                      (P.TyArrow ($t1,$t2,(!pos,!kuruFile)))
-                / _ t1: typel _ "*" _ t2: typ ->
-                     (P.TyPair ([$t1,$t2],(!pos,!kuruFile)))
                 / _ t: typel -> ($t).
 
 typel          <- _ t1: var _ t2: typel -> (P.TyCon ($t1,$t2,(!pos,!kuruFile)))
@@ -291,10 +291,16 @@ typel          <- _ t1: var _ t2: typel -> (P.TyCon ($t1,$t2,(!pos,!kuruFile)))
                   -> (P.TyCon (P.TyName ($i,(!pos,!kuruFile)), $t2,(!pos,!kuruFile)))
                 / _ v: var -> ($v)
                 / _ !"*" i: longid -> (P.TyName ($i,(!pos,!kuruFile)))
+                / _ "(" _ t1: typ _ ")" _ t2: typel -> (P.TyCon ($t1,$t2,(!pos,!kuruFile)))
                 / _ "(" _ t: typ _ ")" -> ($t).
 
 tyannopt       <- _ ":" _ t: typ -> (SOME ($t))
                 / -> (NONE).
+
+typtuple       <- _ t1: typel _ "*" _ t2: typtuple ->
+                  ($t1 :: $t2)
+                / _ t1: typel _ "*" _ t2: typel ->
+                  ([$t1, $t2]).
 
 % Declarations
 
