@@ -150,6 +150,27 @@ struct
    val tyUnit = T.TySimple (S.fromString "unit" (0, "__builtin__"))
    val tyExn = T.TySimple (S.fromString "exn" (0, "__builtin__"))
 
+   fun newTopLevel () =
+      let
+         val env = newEnv ()
+         val _ = putTEnv env (S.fromString "int" (0, "__builtin__")) 
+            (CSimp (TDef tyInt))
+         val _ = putTEnv env (S.fromString "string" (0, "__builtin__"))
+            (CSimp (TDef tyString))
+         val _ = putTEnv env (S.fromString "char" (0, "__builtin__"))
+            (CSimp (TDef tyChar))
+         val _ = putTEnv env (S.fromString "real" (0, "__builtin__"))
+            (CSimp (TDef tyReal))
+         val _ = putTEnv env (S.fromString "unit" (0, "__builtin__"))
+            (CSimp (TDef tyUnit))
+         val _ = putTEnv env (S.fromString "bool" (0, "__builtin__"))
+            (CSimp (TDef tyBool))
+         val _ = putVEnv env (S.fromString "=" (0, "__builtin__"))
+            (CSimp (VDec (T.TyArrow (T.TyTuple [T.TyVar 0, T.TyVar 0], tyBool))))
+      in
+         env
+      end
+
    val freshTy = T.freshTy
    type id = int
 
@@ -177,37 +198,55 @@ struct
 			   SOME (_, v) => v
 			 | NONE => raise Fail ("Unbound variable " ^ T.ppty (T.TyMeta k)))
 
-    fun instantiate P (A.TyVar x) =
+   (* The names of these things are confusingly backwards.
+   *
+   *  This basically takes the body of a structure and returns a signature,
+   *  or a set of mutual declarations and returns the "forward" declarations of
+   *  necesssary to make it work.
+   *)
+   fun decsToDef ((A.ValDec ((A.IdentifierPattern (symb, _, _), _), pos)) :: t) =
+         T.ValDef (symb, freshTy (), pos) :: decsToDef t
+     | decsToDef ((A.ValRecDec ((A.IdentifierPattern (symb, _, _), _), pos)) :: t) =
+         T.ValDef (symb, freshTy (), pos) :: decsToDef t
+     | decsToDef (A.MutualDec (decls, pos) :: t) =
+         decsToDef decls @ decsToDef t
+     | decsToDef ((A.TypeDec (ty, _, pos)) :: t) =
+         T.TypeDef (ty, pos) :: decsToDef t
+     | decsToDef (_ :: t) = decsToDef t
+     | decsToDef [] = []
+         
+
+   fun instantiate P (A.TyVar x) =
 	   (plookup (!P) x handle _ => 
          let 
             val t = freshTy () 
          in 
             t before P := (x, t) :: !P 
          end)
-      | instantiate P (A.TyApp (t1, t2)) =
+     | instantiate P (A.TyApp (t1, t2)) =
          let 
             val t1' = instantiate P ( t1)
             val t2' = instantiate P ( t2)
          in 
             A.TyApp (t1', t2')
          end
-      | instantiate P (A.TyArrow (t1, t2)) =
+     | instantiate P (A.TyArrow (t1, t2)) =
          let
             val t1' = instantiate P ( t1)
             val t2' = instantiate P ( t2)
          in
             A.TyArrow (t1', t2')
          end
-      | instantiate P (A.TyTuple ts) = A.TyTuple (map (instantiate P) ts)
-      | instantiate P (A.TyApp (t1,t2)) = 
+     | instantiate P (A.TyTuple ts) = A.TyTuple (map (instantiate P) ts)
+     | instantiate P (A.TyApp (t1,t2)) = 
          A.TyApp (instantiate P t1, instantiate P t2)
-      | instantiate P (A.TyLam (t1,t2)) =
+     | instantiate P (A.TyLam (t1,t2)) =
          let
             val k = freshTy ()
          in
             T.substInTy t2 t1 k
          end
-      | instantiate _ t = t
+     | instantiate _ t = t
 
    fun force (A.TyMeta x) = UF.find (getSet x)
      | force t = t
@@ -260,7 +299,19 @@ struct
       | ((A.TyTuple t1, E1), (A.TyTuple t2, E2)) =>
          List.all (fn (t1',t2') => tyImp PM (t1',E1) (t2',E2)) (ListPair.zip (t1,t2))
       | ((A.TyLam (t11, t12), E1), (A.TyLam (t21, t22), E2)) =>
-            raise Fail ("TyLam: " ^ A.ppty t1 ^ " =/= " ^ A.ppty t2)
+         let
+            (* We just try instantiating these with tyvars and seeing if they
+            * come out the same! *)
+
+            (* FIXME: if t11 happens to be 'TySeq' ('a,'b) we need to do
+            * something different here. *)
+            val var = freshTy ()
+
+            val t12' = T.substInTy t12 t11 var
+            val t22' = T.substInTy t22 t11 var
+         in
+            tyImp PM (t12', E1) (t22', E2)
+         end
       | ((A.TyUnion (t1, c1), E1), (A.TyUnion (t2, c2), E2)) =>
             List.all (fn ((s1,NONE),(s2,NONE)) => S.equals (s1,s2)
                        | ((s1, SOME t1),(s2, SOME t2)) => 
@@ -360,6 +411,21 @@ struct
             val (pt, pat') = infPat envs pat
          in
             (t2, T.ConstructorPattern (symb, SOME pat', t2, pos))
+         end
+     | infPat envs (A.AsPattern (pat1, pat2, _, pos)) =
+         let
+            val (pt1, pat1') = infPat envs pat1
+            val (pt2, pat2') = infPat envs pat2
+
+            val _ = Debug.print Debug.debug
+               ("AsPattern1: " ^ T.pppat pat1' ^ "\n")
+
+            val _ = Debug.print Debug.debug
+               ("AsPattern2: " ^ T.pppat pat2' ^ "\n")
+
+            val _ = solve envs (pt1, pt2)
+         in
+            (pt1, A.AsPattern (pat1', pat2', pt1, pos))
          end
      | infPat envs pat = 
       let
@@ -550,11 +616,17 @@ struct
          (putVEnv env symb (CSimp (VDec t'')) :: envs, 
             T.ValRecDec ((T.IdentifierPattern (symb, t', pos), e'), pos'))
       end
-     | infDec envs (A.MutualDec (decls, pos')) =
+     | infDec (env::envs) (A.MutualDec (decls, pos')) =
       let
-         val _ = raise Fail "MutualDec not implemented"
+         val defs = decsToDef decls
+         val (envs',defs') = inferTypes (env::envs) defs
+
+         val _ = Debug.print Debug.debug ("Defs: " ^ 
+            T.prettyPrint defs' ^ "\n")
+
+         val (env', decls') = inferTypes (env::envs) decls
       in
-         (envs, A.MutualDec (decls, pos'))
+         (env::envs, A.MutualDec (decls', pos'))
       end
      | infDec (env::envs) (A.StructureMod (symb, body, pos)) =
       let

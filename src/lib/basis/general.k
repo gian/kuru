@@ -36,6 +36,8 @@ fun valOf NONE = raise Match
 
 datatype 'a ref = ref of 'a
 
+fun ! (ref x) = x
+
 datatype 'a list = nil | :: of 'a * 'a list
 
 fun internal_print (s : string) = ()
@@ -43,6 +45,8 @@ fun internal_print (s : string) = ()
 (* fun builtin_add {A : 'a Addable} (x : 'a, y : 'a) = A.add (a, b) *)
 
 fun a before b = a
+
+fun := (ref a, b) = ()
 
 _import intSub  : (int * int) -> int as -
 _import intMul : (int * int) -> int as *

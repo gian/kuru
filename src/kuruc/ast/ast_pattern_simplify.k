@@ -106,6 +106,7 @@ struct
    * a (pattern, expression) tuple. *)
    fun simplifyPat (pat as A.IdentifierPattern (s, t, p)) exp = (pat, exp, [])
      | simplifyPat (pat as A.LiteralPattern(A.Unit, _)) exp = (pat, exp, [])
+     | simplifyPat (pat as A.AsPattern _) exp = raise Fail "Implement AsPattern"
      | simplifyPat (A.AnnotationPattern (pat, ty, p)) exp = 
       let
          val (pat', exp', decls) = simplifyPat pat exp

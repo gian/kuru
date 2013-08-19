@@ -290,6 +290,10 @@ struct
          indent ind ^ "in\n" ^
          String.concatWith "\n" (map (ppdec (ind+1)) decls2) ^ "\n" ^
          indent ind ^ "end"
+     | ppdec ind (ValDef (s, t, _)) = 
+         indent ind ^ "val " ^ S.toString s ^ " : " ^ ppty t
+     | ppdec ind (TypeDef (t, pos)) =
+         indent ind ^ "type " ^ ppty t
 
 
    fun prettyPrint [] = ""
