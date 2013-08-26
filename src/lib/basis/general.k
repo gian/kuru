@@ -21,6 +21,7 @@ infix 2 andalso
 infix 0 before
 
 exception Match
+exception Fail of string
 
 structure CommandLine =
 struct
@@ -37,6 +38,12 @@ fun valOf NONE = raise Match
 datatype 'a ref = ref of 'a
 
 fun ! (ref x) = x
+fun ^ (a : string, b : string) : string = ""
+fun - (a, b) = 0
+fun + (a, b) = 0
+fun * (a, b) = 0
+fun / (a, b) = 0.0
+fun div (a, b) = 0
 
 datatype 'a list = nil | :: of 'a * 'a list
 

@@ -208,7 +208,7 @@ struct
          T.ValDef (symb, freshTy (), pos) :: decsToDef t
      | decsToDef ((A.ValRecDec ((A.IdentifierPattern (symb, _, _), _), pos)) :: t) =
          T.ValDef (symb, freshTy (), pos) :: decsToDef t
-     | decsToDef (A.MutualDec (decls, pos) :: t) =
+     | decsToDef ((A.MutualDec (decls, pos)) :: t) =
          decsToDef decls @ decsToDef t
      | decsToDef ((A.TypeDec (ty, _, pos)) :: t) =
          T.TypeDef (ty, pos) :: decsToDef t
@@ -695,6 +695,7 @@ struct
       val tDecls = 
          List.foldl (fn (decl, (envs, decls)) =>
             let
+               val _ = Debug.print Debug.debug ("DECL: " ^ A.prettyPrint [decl] ^ "\n")
                val (envs', decl') = infDec envs decl
             in
                (envs', decls @ [decl'])

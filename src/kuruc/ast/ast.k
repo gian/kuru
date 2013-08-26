@@ -114,43 +114,6 @@ struct
          ppclauses ind symb t
      | ppclauses ind symb [] = ""
 
-   and ppdec ind (StructureMod (symbol, str, _)) =
-         indent ind ^ "structure " ^ S.toString symbol ^ " =\n" ^
-            ppexp ind str
-     | ppdec ind (SignatureMod (symbol, sg, _)) =
-         indent ind ^ "signature " ^ S.toString symbol ^ " =\n" ^
-            ppdec ind sg
-     | ppdec ind (StructureAssignMod (lhs, rhs, pos)) =
-         indent ind ^ "structure " ^ S.toString lhs ^ " = " ^ S.toString rhs
-     | ppdec ind (SigMod (decls, _)) =
-         indent ind ^ "sig\n" ^
-            String.concatWith "\n" (map (ppdef (ind + 1)) decls) ^ "\n" ^
-         indent ind ^ "end"
-     | ppdec ind (RefMod (symbol, _)) = indent ind ^ S.toString symbol 
-     | ppdec ind (FunctorMod (symbol, fclause, body, _)) = indent ind ^
-         "functor " ^ S.toString symbol ^ " (...) =\n" ^
-            ppdec ind body
-     | ppdec ind (ValDec ((pat, expr), pos)) =
-         indent ind ^ "val " ^ pppat pat ^ " = " ^ ppexp ind expr
-     | ppdec ind (ValRecDec ((pat, expr), pos)) =
-         indent ind ^ "val rec " ^ pppat pat ^ " = " ^ ppexp ind expr
-     | ppdec ind (FunDec (symbol, (pat, expr)::t, pos)) =
-         indent ind ^ "fun " ^ S.toString symbol ^ " " ^ pppat pat ^ " = " ^ 
-            ppexp ind expr ^ ppclauses ind symbol t
-     | ppdec ind (TypeDec (ty1, ty2, pos)) =
-         indent ind ^ "type " ^ ppty ty1 ^ " = " ^ ppty ty2
-     | ppdec ind (MutualDec (decls, pos)) = 
-          String.concatWith 
-             ("\n" ^ indent (ind) ^ "and ") 
-                (map (ppdec ind) decls)
-     | ppdec ind (LocalDec (decls1, decls2, pos)) =
-         indent ind ^ "local\n" ^
-         String.concatWith "\n" (map (ppdec (ind+1)) decls1) ^ "\n" ^
-         indent ind ^ "in\n" ^
-         String.concatWith "\n" (map (ppdec (ind+1)) decls2) ^ "\n" ^
-         indent ind ^ "end"
-
-
    fun prettyPrint [] = ""
      | prettyPrint (h::t) = ppdec 0 h ^ "\n\n" ^ prettyPrint t
 end

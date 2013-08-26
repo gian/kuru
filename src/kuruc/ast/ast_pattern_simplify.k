@@ -70,7 +70,7 @@
 *    The goal is that all that remains in declarations is patterns of the form:
 *
 *    IdentifierPattern (_, _, _) or LiteralPattern (Unit, _) or
-*    ConstructorPattern (_, _, _)
+*    ConstructorPattern (_, _, _) or AsPattern (
 *
 ******************************************************************************)
 
@@ -106,7 +106,12 @@ struct
    * a (pattern, expression) tuple. *)
    fun simplifyPat (pat as A.IdentifierPattern (s, t, p)) exp = (pat, exp, [])
      | simplifyPat (pat as A.LiteralPattern(A.Unit, _)) exp = (pat, exp, [])
-     | simplifyPat (pat as A.AsPattern _) exp = raise Fail "Implement AsPattern"
+     | simplifyPat (pat as A.AsPattern (p1, p2, t, pos)) exp = 
+      let
+         val decl = A.ValDec ((p1, exp), pos)
+      in
+         (p2, exp, [decl])
+      end
      | simplifyPat (A.AnnotationPattern (pat, ty, p)) exp = 
       let
          val (pat', exp', decls) = simplifyPat pat exp
