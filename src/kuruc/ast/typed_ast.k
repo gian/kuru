@@ -184,21 +184,21 @@ struct
             ppty ty
      | ppexp ind (TupleExtractExpr (i, expr, _, _)) = 
          "#" ^ Int.toString i ^ " " ^ ppexp ind expr
-     | ppexp ind (IfExpr (e1, e2, e3, _, _)) =
+     | ppexp ind (IfExpr (e1, e2, e3, ty, _)) =
          "if " ^ ppexp ind e1 ^ " then " ^
             ppexp ind e2 ^ " else " ^
-            ppexp ind e3
+            ppexp ind e3 ^ " : " ^ ppty ty
      | ppexp ind (WhileExpr (e1, e2, _, _)) =
          "while " ^ ppexp ind e1 ^ " do " ^
             ppexp ind e2
-     | ppexp ind (ApplyExpr (e1, e2, _, _)) =
-         ppexp ind e1 ^ " " ^ ppexp ind e2
-     | ppexp ind (LetExpr (decls, exp, _, _)) =
+     | ppexp ind (ApplyExpr (e1, e2, ty, _)) =
+         ppexp ind e1 ^ " (" ^ ppexp ind e2 ^ ") : " ^ ppty ty
+     | ppexp ind (LetExpr (decls, exp, ty, _)) =
          "\n" ^ indent ind ^ "let\n" ^
             String.concatWith "\n" (map (ppdec (ind + 1)) decls) ^ "\n" ^
          indent ind ^ "in\n" ^
          indent (ind + 1) ^ ppexp (ind + 1) exp ^ "\n" ^
-         indent ind ^ "end"
+         indent ind ^ "end : " ^ ppty ty
      | ppexp ind (CaseExpr (exp, ((p,b)::clauses), _, _)) =
          "case " ^ ppexp ind exp ^ " of\n" ^
             indent (ind + 1) ^ "   " ^ pppat p ^ " => " ^

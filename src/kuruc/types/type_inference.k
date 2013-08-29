@@ -81,7 +81,7 @@ struct
    fun lookup (x : S.t) (env::envs) =
       if not (S.isLong x) then
          let
-            val _ = Debug.print Debug.debug ("Looking up short id: " ^ S.toString x ^ " in:\n" ^
+            val _ = Debug.print Debug.debugmore ("Looking up short id: " ^ S.toString x ^ " in:\n" ^
                prettyPrintEnv (env::envs)^ "\n")
          in
 	         (case M.get (venv (!env)) x of
@@ -104,7 +104,7 @@ struct
    fun lookupType (x : S.t) (env::envs) =
       if not (S.isLong x) then
          let
-            val _ = Debug.print Debug.debug ("Looking up short id: " ^ S.toString x ^ " in:\n" ^
+            val _ = Debug.print Debug.debugmore ("Looking up short id: " ^ S.toString x ^ " in:\n" ^
                prettyPrintTEnv (env::envs)^ "\n")
          in
 	         (case M.get (tenv (!env)) x of
@@ -113,7 +113,7 @@ struct
          end
       else let
          val (h,t) = (S.hd x, S.tl x)
-         val _ = print ("Looking up: " ^ S.toString h ^ " in:\n" ^
+         val _ = Debug.print Debug.debugmore ("Looking up: " ^ S.toString h ^ " in:\n" ^
                prettyPrintTEnv (env::envs)^ "\n")
          val (CEnv (VDec _, cl)) = lookupType h (env::envs)
          val _ = Debug.print Debug.debug ("Found " ^ S.toString h ^ ":\n")
@@ -357,14 +357,15 @@ struct
 
    fun mkPoly k t =
    let val src = ref 0
-      val map : (int * int) list ref = ref []
-      fun get x = (case List.find (fn (y, _) => x = y) (!map) of
+      val pmap : (int * int) list ref = ref []
+      fun get x = (case List.find (fn (y, _) => x = y) (!pmap) of
              NONE => let val k = !src
-                in k before (src := k + 1; map := (x, k) :: !map) end
+                in k before (src := k + 1; pmap := (x, k) :: !pmap) end
             | SOME (_, k) => k)
       fun aux (t as A.TyMeta x) = if k > x then t else A.TyVar (get x)
         | aux (A.TyApp (t1, t2)) = A.TyApp (aux (force t1), aux (force t2))
         | aux (A.TyArrow (t1, t2)) = A.TyArrow (aux (force t1), aux (force t2))
+        | aux (A.TyTuple ts) = A.TyTuple (map (force o aux) ts)
         | aux t = t
    in aux t end
 
@@ -423,9 +424,9 @@ struct
             val _ = Debug.print Debug.debug
                ("AsPattern2: " ^ T.pppat pat2' ^ "\n")
 
-            val _ = solve envs (pt1, pt2)
+            (* val _ = solve envs (pt1, pt2) *)
          in
-            (pt1, A.AsPattern (pat1', pat2', pt1, pos))
+            (pt2, A.AsPattern (pat1', pat2', pt2, pos))
          end
      | infPat envs pat = 
       let
@@ -583,12 +584,12 @@ struct
 
    and infDec (env::envs) (A.ValDec ((A.IdentifierPattern (symb, _, pos), exp), pos')) =
       let 
-         val _ = Debug.print Debug.debug ("Before:\n" ^ ppTySets () ^ "\n")
+         val _ = Debug.print Debug.debugmore ("Before:\n" ^ ppTySets () ^ "\n")
          val k = !tyvarCounter
          val (t, e') = infExp (env::envs) exp
          val t' = mkPoly k (force t)
-         val _ = Debug.print Debug.debug ("After:\n" ^ ppTySets () ^ "\n")
-         val _ = Debug.print Debug.debug ("ValDec: " ^ T.ppdec 0
+         val _ = Debug.print Debug.debugmore ("After:\n" ^ ppTySets () ^ "\n")
+         val _ = Debug.print Debug.debugmore ("ValDec: " ^ T.ppdec 0
          (A.ValDec((A.IdentifierPattern (symb, t', pos), e'), pos')) ^ "\n")
       in 
          ((putVEnv env symb (CSimp (VDec t'))) :: envs, 
@@ -603,14 +604,14 @@ struct
       end
      | infDec (env::envs) (A.ValRecDec ((A.IdentifierPattern (symb, _, pos), e), pos')) =
       let 
-         val _ = Debug.print Debug.debug ("Before:\n" ^ ppTySets () ^ "\n")
+         val _ = Debug.print Debug.debugmore ("Before:\n" ^ ppTySets () ^ "\n")
          val k = !tyvarCounter
          val t = freshTy ()
          val (t', e') = infExp (putVEnv env symb (CSimp (VDec t)) :: envs) e
          val _ = solve (env::envs) (force t, force t')
          val t'' = mkPoly k (force t')
-         val _ = Debug.print Debug.debug ("After:\n" ^ ppTySets () ^ "\n")
-         val _ = Debug.print Debug.debug ("ValRecDec: " ^ T.ppdec 0
+         val _ = Debug.print Debug.debugmore ("After:\n" ^ ppTySets () ^ "\n")
+         val _ = Debug.print Debug.debugmore ("ValRecDec: " ^ T.ppdec 0
          (A.ValRecDec((A.IdentifierPattern (symb, t'', pos), e'), pos')) ^ "\n")
       in
          (putVEnv env symb (CSimp (VDec t'')) :: envs, 
@@ -697,6 +698,7 @@ struct
             let
                val _ = Debug.print Debug.debug ("DECL: " ^ A.prettyPrint [decl] ^ "\n")
                val (envs', decl') = infDec envs decl
+               val _ = Debug.print Debug.debug ("DECL': " ^ A.prettyPrint [decl'] ^ "\n")
             in
                (envs', decls @ [decl'])
             end) (envs, []) decls

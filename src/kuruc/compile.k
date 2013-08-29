@@ -173,6 +173,8 @@ struct
          (* val _ = Debug.print Debug.debug (Ast.prettyPrint typedAst) *)
          val _ = Debug.print Debug.debug ("Type Env:\n" ^
                      TypeInference.prettyPrintEnv topLevelEnv)
+         val _ = Debug.print Debug.debug ("Typed AST:\n" ^
+                     TypedAst.prettyPrint typedAst ^ "\n")
          val _ = Debug.endStage "TypeInference"
 
 

@@ -66,7 +66,7 @@ struct
    fun get map key = 
    let
       val index = (Symbol.hash key) mod buckets
-      val _ = Debug.print Debug.debug ("SymbolMap.get: " ^ Int.toString index ^ "\n")
+      val _ = Debug.print Debug.debugmore ("SymbolMap.get: " ^ Int.toString index ^ "\n")
    in
       List.find (fn (s,_) => Symbol.equals(s,key)) (Vector.sub (map, index))
    end
