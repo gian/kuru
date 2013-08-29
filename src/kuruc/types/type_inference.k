@@ -50,6 +50,8 @@ struct
 
    type environment = closure M.map * closure M.map
 
+   type constraint = A.ty * A.ty * Position.t
+
    val tyvarCounter = ref 0
 
    fun indent 0 = ""
@@ -92,7 +94,11 @@ struct
          val (h,t) = (S.hd x, S.tl x)
          val _ = print ("Looking up: " ^ S.toString h ^ " in:\n" ^
                prettyPrintEnv (env::envs)^ "\n")
-         val (CEnv (VDec _, cl)) = lookup h (env::envs)
+         val (CEnv (VDec _, cl)) = 
+            case lookup h (env::envs) of
+               (CEnv (VDec b, cl)) => (CEnv (VDec b, cl))
+             | _ => Error.fail ("Undeclared identifier: " ^ S.toString x, S.getPos x)
+
          val _ = Debug.print Debug.debug ("Found " ^ S.toString h ^ ":\n")
          val _ = Debug.print Debug.debug (prettyPrintEnv (cl::envs)^ "\n")
       in
@@ -197,6 +203,20 @@ struct
    fun plookup xs k = (case List.find (fn (j, _) => j = k) xs of
 			   SOME (_, v) => v
 			 | NONE => raise Fail ("Unbound variable " ^ T.ppty (T.TyMeta k)))
+
+   val globalConstraints : constraint list ref = ref []
+
+   fun ppconstr' [] = ""
+     | ppconstr' ((t1, t2, p)::t) = A.ppty t1 ^ " : " ^ A.ppty t2 ^ "\n" ^
+         ppconstr' t
+
+   fun ppconstr () = ppconstr' (!globalConstraints)
+
+   fun addConstr c = globalConstraints := (!globalConstraints) @ [c]
+
+   fun typeMismatch (expected, actual, pos) =
+      Error.fail ("Type mismatch:\n   Expected: " ^ A.ppty expected ^ "\n   " ^
+                  "Actual: " ^ A.ppty actual, pos)
 
    (* The names of these things are confusingly backwards.
    *
@@ -378,10 +398,11 @@ struct
      | infLiteral (A.Unit) = tyUnit
 
    and infPat envs (p as (A.LiteralPattern (l, pos))) = (infLiteral l, p)
-     | infPat (env::envs) (A.IdentifierPattern (symb, _, pos)) =
+     | infPat (env::envs) (A.IdentifierPattern (symb, ty, pos)) =
          let
             val t = freshTy ()
             val _ = putVEnv env symb (CSimp (VDec t))
+            val _ = addConstr (ty, t, pos)
          in
             (t, T.IdentifierPattern (symb, t, pos))
          end
@@ -474,10 +495,12 @@ struct
       let
          val (t1, e1') = infExp envs e1
          val (t2, e2') = infExp envs e2
+         val t1' = instantiate (ref []) t1
          val tr = freshTy ()
-         val _  = solve envs (force t1, T.TyArrow (t2, tr))
+         val _ = addConstr (T.TyArrow (t2, tr), t1', pos)
+         val _ = addConstr (t1', t1, pos)
       in 
-         (tr, T.ApplyExpr (e1', e2', forceAll tr, pos))
+         (tr, T.ApplyExpr (e1', e2', tr, pos))
       end
      | infExp envs (A.IdentifierExpr (s, _, pos)) =
       let 
@@ -486,9 +509,8 @@ struct
                  (CSimp (VDec t')) => t'
                | _ => Error.bug ("TypeInference.tyinfExp",
                   "Symbol not found: " ^ S.toString s, pos)
-         val t' = instantiate (ref []) (force t)
       in 
-         (t', T.IdentifierExpr (s, t', pos))
+         (t, T.IdentifierExpr (s, t, pos))
       end
      | infExp envs (A.LetExpr (decls, exp, _, pos)) = 
       let 
@@ -512,18 +534,17 @@ struct
                   val (pt, pat') = infPat (env'::envs) pat
                   val (et, exp') = infExp (env'::envs) exp
                in
-                  (constr @ [(pt,t),(et,tx)], cl @ [(pat',exp')])
+                  (constr @ [(pt,t,pos),(et,tx,pos)], cl @ [(pat',exp')])
                end) ([],[]) clauses
 
-         val _ = solveList envs constraints
-         val tx' = force tx
+         val _ = List.app addConstr constraints
       in
-         (tx', T.CaseExpr (exp', clauses', tx', pos))
+         (tx, T.CaseExpr (exp', clauses', tx, pos))
       end
      | infExp envs (A.RaiseExpr (exp, pos)) = 
       let
-         (* TODO: Verify that exp is of type 'exn' *)
          val (t, exp') = infExp envs exp
+         val _ = addConstr (t, tyExn, pos)
       in
          (freshTy (), T.RaiseExpr (exp', pos))
       end
@@ -537,14 +558,10 @@ struct
          val (t2, e2') = infExp envs e2
          val (t3, e3') = infExp envs e3
 
-         val _ = solveList envs [
-            (t2, tx),
-            (t3, tx)
-         ]
-
-         val tx' = force tx
+         val _ = addConstr (t2, tx, pos)
+         val _ = addConstr (t3, tx, pos)
       in
-         (tx', T.IfExpr (e1', e2', e3', tx', pos))
+         (tx, T.IfExpr (e1', e2', e3', tx, pos))
       end
      | infExp envs (A.ConstructorExpr (symb, NONE, _, pos)) =
       let
@@ -572,6 +589,26 @@ struct
             end
       in
          seq exps []
+      end
+     | infExp envs (A.TupleExtractExpr (i, exp, _, pos)) =
+      let
+         val (t', exp') = infExp envs exp
+         val elTy =
+            case t' of 
+               T.TyTuple ts => 
+                  if length ts > i then List.nth (ts, i - 1) else
+                     Error.fail ("#" ^ Int.toString i ^ " applied to a tuple of size " ^
+                        Int.toString (length ts), pos)
+             | t' => freshTy ()
+      in
+         (elTy, T.TupleExtractExpr (i, exp', elTy, pos)) 
+      end
+     | infExp envs (A.AnnotationExpr (exp, ty, pos)) =
+      let
+         val (ty', exp') = infExp envs exp
+         val _ = addConstr (ty', ty, pos)
+      in
+         (ty', T.AnnotationExpr (exp', ty', pos))
       end
      | infExp envs exp = raise Fail ("Not implemented: " ^ A.ppexp 0 exp)
      
@@ -699,6 +736,7 @@ struct
                val _ = Debug.print Debug.debug ("DECL: " ^ A.prettyPrint [decl] ^ "\n")
                val (envs', decl') = infDec envs decl
                val _ = Debug.print Debug.debug ("DECL': " ^ A.prettyPrint [decl'] ^ "\n")
+               val _ = print ("Constraints:\n" ^ ppconstr () ^ "\n")
             in
                (envs', decls @ [decl'])
             end) (envs, []) decls

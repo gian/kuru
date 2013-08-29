@@ -8,3 +8,6 @@ vector.k
 text-io.k
 os.k
 unix.k
+time.k
+string-cvt.k
+

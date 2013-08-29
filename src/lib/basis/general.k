@@ -43,7 +43,12 @@ fun - (a, b) = 0
 fun + (a, b) = 0
 fun * (a, b) = 0
 fun / (a, b) = 0.0
+fun @ (a,b) = b
 fun div (a, b) = 0
+fun <= (a, b) = false
+fun >= (a, b) = false
+fun < (a, b) = false
+fun > (a, b) = false
 
 datatype 'a list = nil | :: of 'a * 'a list
 

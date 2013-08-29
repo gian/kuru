@@ -29,8 +29,10 @@ structure IUnionFind :> IMPERATIVE_UNION_FIND
       fun union f set1 set2 =
          let
             (* root always returns a Root state *)
-            val (ancestor1 as (ref (Root (label1, rank1)))) = root set1
-            val (ancestor2 as (ref (Root (label2, rank2)))) = root set2
+            val ancestor1 = root set1
+            val (ref (Root (label1, rank1))) = ancestor1 
+            val ancestor2 = root set2
+            val (ref (Root (label2, rank2))) = ancestor2 
          in
             if ancestor1 = ancestor2 then
                ()

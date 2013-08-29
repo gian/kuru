@@ -15,6 +15,10 @@ struct
 		datatype ac = A_READ | A_WRITE | A_EXEC
 
 		fun access x = false
+
+      fun tmpName () = "tmp"
+
+      fun mkDir "foo" = ()
 	end
 
 	structure Path =
