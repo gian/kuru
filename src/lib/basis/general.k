@@ -44,7 +44,6 @@ fun >= (a, b) = false
 fun < (a, b) = false
 fun > (a, b) = false
 fun <> (a, b) = false
-fun :: (a, b) = b
 
 fun andalso (true, true) = true
   | andalso _ = false
@@ -83,7 +82,7 @@ _import stringStrlen : string -> int as strlen
 
 structure CommandLine =
 struct
-   fun arguments () = [""]
+   fun arguments () = "foo" :: nil
 end
 
 

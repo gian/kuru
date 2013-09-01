@@ -381,27 +381,27 @@ struct
    else raise Fail ("Non-substitution union called on " ^ A.ppty t1 ^ " and " ^ A.ppty t2)
 
 
-   fun solve D (A.TyMeta x, A.TyMeta y) =
+   fun solve D (A.TyMeta x, A.TyMeta y, _) =
          UF.union (pickCanon D) (getSet x) (getSet y)
-     | solve D (A.TyMeta x, tr) =
+     | solve D (A.TyMeta x, tr, pos) =
          if occursUF x tr then
-            raise Fail ("Circular type constraints: " ^ 
-               A.ppty (A.TyMeta x) ^ " in " ^ A.ppty tr)
+            Error.fail ("Circular type constraints: " ^ 
+               A.ppty (A.TyMeta x) ^ " in " ^ A.ppty tr, pos)
          else UF.union (pickCanon D) (getSet x) (UF.new tr)
-     | solve D (tl, tr as A.TyMeta x) = solve D (tr, tl)
-     | solve D (t1 as A.TySimple a, t2 as A.TySimple b) =
+     | solve D (tl, tr as A.TyMeta x, pos) = solve D (tr, tl, pos)
+     | solve D (t1 as A.TySimple a, t2 as A.TySimple b, pos) =
          if subt t1 t2 D then () 
-            else raise Fail ("Type error: " ^ A.ppty t1 ^ " =/= " ^ A.ppty t2)
-     | solve D (A.TyVar a, A.TyVar b) =
-         if a = b then () else raise Fail ("Polymorphic unification")
-     | solve D (A.TyApp (t1, c1), A.TyApp (t2, c2)) =
-         (solve D (force t1, force t2);
-          solve D (force c1, force c2))
-     | solve D (A.TyArrow (t1, t2), A.TyArrow (t3, t4)) =
-         (solve D (force t1, force t3); solve D (force t2, force t4))
-     | solve D (A.TyTuple ts1, A.TyTuple ts2) =
-         List.app (solve D) (ListPair.zip (ts1,ts2))
-     | solve D (t1, t2) = raise Fail ("Type error: " ^ T.ppty t1 ^ " =/= " ^ T.ppty t2)
+            else Error.fail ("Type error: " ^ A.ppty t1 ^ " =/= " ^ A.ppty t2, pos)
+     | solve D (A.TyVar a, A.TyVar b, pos) =
+         if a = b then () else Error.fail ("Polymorphic unification", pos)
+     | solve D (A.TyApp (t1, c1), A.TyApp (t2, c2), pos) =
+         (solve D (force t1, force t2, pos);
+          solve D (force c1, force c2, pos))
+     | solve D (A.TyArrow (t1, t2), A.TyArrow (t3, t4), pos) =
+         (solve D (force t1, force t3, pos); solve D (force t2, force t4, pos))
+     | solve D (A.TyTuple ts1, A.TyTuple ts2, pos) =
+         List.app (fn (x,y) => solve D (x,y,pos)) (ListPair.zip (ts1,ts2))
+     | solve D (t1, t2, pos) = Error.fail ("Type error: " ^ T.ppty t1 ^ " =/= " ^ T.ppty t2, pos)
 
    fun solveList D xs = List.foldl (fn (c, ()) => solve D c) () xs
 
@@ -536,7 +536,7 @@ struct
          val t1' = instantiate (ref []) t1
          val tr = freshTy ()
          val _ = addConstr (T.TyArrow (t2, tr), t1', pos)
-         val _ = addConstr (t1', t1, pos)
+         val _ = addConstr (t1, t1', pos)
       in 
          (tr, T.ApplyExpr (e1', e2', tr, pos))
       end
@@ -590,7 +590,7 @@ struct
       let
          val (t1, e1') = infExp envs e1
 
-         val _ = solve envs (tyBool, t1)
+         (* val _ = solve envs (tyBool, t1) *)
 
          val tx = freshTy ()
          val (t2, e2') = infExp envs e2
@@ -697,7 +697,7 @@ struct
          val k = !tyvarCounter
          val t = freshTy ()
          val (t', e') = infExp (putVEnv env symb (CSimp (VDec t)) :: envs) e
-         val _ = solve (env::envs) (force t, force t')
+         (* val _ = solve (env::envs) (force t, force t') *)
          val t'' = mkPoly k (force t')
          (* val _ = Debug.print Debug.debugmore ("After:\n" ^ ppTySets () ^
          * "\n") 
@@ -840,9 +840,11 @@ struct
             let
                val _ = Debug.print Debug.debug ("DECL: " ^ A.prettyPrint [decl] ^ "\n")
                val (envs', decl') = infDec envs decl
+               val _ = Debug.print Debug.debug ("Constraints:\n" ^ ppconstr () ^ "\n")
+               val _ = solveList envs' (List.rev (!globalConstraints))
+               val _ = globalConstraints := []
+               val _ = T.resetFreshTy ()
                val _ = Debug.print Debug.debug ("DECL': " ^ A.prettyPrint [decl'] ^ "\n")
-               (* val _ = Debug.print Debug.debug ("Constraints:\n" ^ ppconstr
-               * () ^ "\n") *)
             in
                (envs', decls @ [decl'])
             end) (envs, []) decls

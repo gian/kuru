@@ -76,6 +76,7 @@ struct
    val nextTyIndex = ref 0
    fun freshTy () =
          TyMeta (nextTyIndex := 1 + !nextTyIndex; !nextTyIndex)
+   fun resetFreshTy () = nextTyIndex := 0
 
    fun ppty (TySimple s) = S.toString s
      | ppty (TyApp (t1, t2)) = "[" ^ ppty t2 ^ " " ^ ppty t1 ^ "]"
