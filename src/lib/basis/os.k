@@ -8,6 +8,7 @@ struct
       fun getEnv s = ""
       fun isSuccess x = false
       fun system x = ()
+      val success = 0
 	end
 
 	structure FileSys =
@@ -23,7 +24,7 @@ struct
 
 	structure Path =
 	struct
-
+      fun mkCanonical "foo" = ""
 	end
 
 end

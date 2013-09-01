@@ -1,4 +1,3 @@
-open Compiler.Internal
 
 infix 7 *
 infix 7 /
@@ -23,11 +22,6 @@ infix 0 before
 exception Match
 exception Fail of string
 
-structure CommandLine =
-struct
-
-end
-
 datatype bool = true | false
 
 datatype 'a option = SOME of 'a | NONE
@@ -49,6 +43,21 @@ fun <= (a, b) = false
 fun >= (a, b) = false
 fun < (a, b) = false
 fun > (a, b) = false
+fun <> (a, b) = false
+fun :: (a, b) = b
+
+fun andalso (true, true) = true
+  | andalso _ = false
+
+fun orelse (false, false) = false
+  | orelse _ = true
+
+fun not true = false
+  | not false = true
+
+fun mod (0,0) = 0
+
+fun o (g, f) = fn x => g (f x)
 
 datatype 'a list = nil | :: of 'a * 'a list
 
@@ -71,4 +80,10 @@ _import refAssign : ('a ref * 'a) -> unit as :=
 _import listCons : ('a * 'a list) -> 'a list as ::
 _import stringStrlen : string -> int as strlen
 (*_import k_string_strcat : string * string -> string as ^ *)
+
+structure CommandLine =
+struct
+   fun arguments () = [""]
+end
+
 

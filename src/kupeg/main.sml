@@ -212,7 +212,7 @@ fun main () =
      "   in\n" ^
      "      SOME (fx())\n" ^
      "   end\n"
-     | gen _ = "*****Unimplemented!*******"
+     | gen _ = "*****Unimplemented!*******" 
 
       val chlitdefs = 
       "fun $ f = valOf f\n\n" ^

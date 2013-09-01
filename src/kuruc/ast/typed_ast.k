@@ -103,6 +103,7 @@ struct
     | Char of int
     | String of int vector
     | Bool of bool
+    | Word of string
     | Unit
 
    (* A note on desugaring patterns:
@@ -174,6 +175,7 @@ struct
      | pplit (String s) = "\"" ^ (Vector.map Char.chr s) ^ "\""
      | pplit (Bool true) = "true"
      | pplit (Bool false) = "false"
+     | pplit (Word s) = "0w" ^ s
      | pplit Unit = "()"
 
    fun ppexp ind (LiteralExpr (l,_)) = pplit l
@@ -294,6 +296,8 @@ struct
          indent ind ^ "val " ^ S.toString s ^ " : " ^ ppty t
      | ppdec ind (TypeDef (t, pos)) =
          indent ind ^ "type " ^ ppty t
+     | ppdec ind (OpenDec (s, _)) = 
+         indent ind ^ "open " ^ S.toString s
 
 
    fun prettyPrint [] = ""

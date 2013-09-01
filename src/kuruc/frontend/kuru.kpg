@@ -45,6 +45,9 @@ structure P = ParseTree
 %nonterm num of string
 %nonterm numdig of string
 %nonterm int of P.pt
+%nonterm word of P.pt
+%nonterm wds of string
+%nonterm wd of string
 %nonterm real of P.pt
 %nonterm negat of bool
 %nonterm charconst of P.pt
@@ -137,6 +140,14 @@ real           <- n1: negat d1: num "." d2: num "e" n2: negat d3: num ->
                 / n1: negat d1: num "." d2: num ->
                   (P.Real ($n1,$d1,$d2,NONE,(!pos,!kuruFile))).
 
+word           <- "0w" w: wds -> (P.Word ($w,(!pos,!kuruFile))).
+
+wds            <- d: wd w: wds -> ($d ^ $w)
+                / wd.
+
+wd             <- "0" / "1" / "2" / "3" / "4" / "5" / "6" / "7" / "8" / "9" /
+                  "a" / "b" / "c" / "d" / "e" / "f".
+
 negat          <- "~" -> (true)
                 /     -> (false).
 
@@ -148,7 +159,7 @@ stringcont     <- !"\\" !"\"" c: char s: stringcont -> ((strOrd ($c)) :: $s)
                 / b: "\\" c: char s: stringcont -> ((escape (strOrd ($c))) @ $s)
                 / -> ([]).
 
-con            <- real / int / charconst / string.
+con            <- word / real / int / charconst / string.
 
 % Identifiers
 
@@ -377,10 +388,10 @@ funbind        <- _ f: funmatch _ "and" _ l: funbind ->
                  ($f :: $l)
                 / _ f: funmatch -> ([$f]).
 
-funmatch       <- "op" _ i: id _ l: patapp _ t: tyannopt _"="_
+funmatch       <- "op" sp _ i: id _ l: patapp _ t: tyannopt _"="_
                    e: exp _ "|"_ f: funmatch ->
                      (P.FunMatch (P.OpExp ($i,(!pos,!kuruFile)),$l,$t,$e,(!pos,!kuruFile)) :: $f)
-                / "op" _ i: id _ l: patapp _ t: tyannopt _"="_
+                / "op" sp _ i: id _ l: patapp _ t: tyannopt _"="_
                    e: exp -> ([P.FunMatch(P.OpExp ($i,(!pos,!kuruFile)),$l,$t,$e,(!pos,!kuruFile))])
                 / i: id l: patapp t: tyannopt _"="_ e: exp _
                      "|"_ f: funmatch -> 

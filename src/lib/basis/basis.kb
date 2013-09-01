@@ -10,4 +10,6 @@ os.k
 unix.k
 time.k
 string-cvt.k
+int-inf.k
+list-pair.k
 

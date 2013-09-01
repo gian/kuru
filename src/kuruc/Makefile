@@ -1,5 +1,6 @@
 BIN=../../bin
-COMPILER=mlton -const 'Exn.keepHistory true'
+COMPILER=mlton -const 'Exn.keepHistory true' 
+#COMPILER=mlton -profile time
 #COMPILER=mlton
 KUPEG=$(BIN)/kupeg
 

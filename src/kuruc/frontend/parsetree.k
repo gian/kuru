@@ -47,6 +47,7 @@ struct
     | Char of int * pos
     | String of int list * pos
     | Bool of bool * pos
+    | Word of string * pos
     | Ident of string * pos
     | LongId of pt * pt * pos
 	 | TyId of pt * pos
@@ -124,7 +125,8 @@ struct
    fun istr [] = ""
      | istr (h::t) = String.str (Char.chr h) ^ istr t
 
-   fun pp (Int (b,s,_)) = "Int [" ^ (if b then "~" else "") ^ s ^ "]" 
+   fun pp (Int (b,s,_)) = "Int [" ^ (if b then "~" else "") ^ s ^ "]"
+     | pp (Word (w,_)) = "Word [0w" ^ w ^ "]"
      | pp (Real (b,s1,s2,NONE,_)) = 
       "Real [" ^ (if b then "~" else "") ^ s1 ^ "." ^ s2 ^ "]" 
      | pp (Real (b,s1,s2,SOME (b2,s3),_)) = 
@@ -265,6 +267,7 @@ struct
    fun prettyPrintAll l = String.concatWith "\n\n" (map prettyPrint l)
 
    fun getPos (Int (_, _, pos)) = pos
+     | getPos (Word (_, pos)) = pos
      | getPos (Real (_, _, _, _, pos)) = pos
      | getPos (Char (_, pos)) = pos
      | getPos (String (_, pos)) = pos

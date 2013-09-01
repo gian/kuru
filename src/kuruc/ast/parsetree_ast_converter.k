@@ -171,6 +171,7 @@ struct
      | toLit (P.String (l, _)) = A.String (Vector.fromList l)
      | toLit (P.UnitExp _) = A.Unit
      | toLit (P.Bool (tf, _)) = A.Bool tf
+     | toLit (P.Word (s, _)) = A.Word s
      | toLit p = Error.bug ("ParseTreeAstConverter",
                               "Malformed literal expression", P.getPos p)
 
@@ -205,6 +206,7 @@ struct
      | toExp (l as (P.Char _)) = A.LiteralExpr (toLit l, P.getPos l)
      | toExp (l as (P.String _)) = A.LiteralExpr (toLit l, P.getPos l)
      | toExp (l as (P.Bool _)) = A.LiteralExpr (toLit l, P.getPos l)
+     | toExp (l as (P.Word _)) = A.LiteralExpr (toLit l, P.getPos l)
      | toExp (P.Var (P.Ident (symbol, pos), pos')) =
          A.IdentifierExpr (
             S.fromString symbol pos,
@@ -307,6 +309,9 @@ struct
                   Error.fail ("Function clauses with different names", pos)
             else (bindingName := i; upd t)
            | upd [] = !bindingName
+           | upd (p::_) = Error.bug ("ParsetreeAstConverter.getBindingName",
+                                 "Invalid pattern remains: " ^ P.prettyPrint p,
+                                 P.getPos p)
       in
          upd bindings
       end
@@ -403,7 +408,12 @@ struct
                      ("Invalid datatype binding", P.getPos p)) bindings,
             pos
          ) :: toDecl t
-     | toDecl (p::t) = toDecl t
+     | toDecl ((P.OpenDec (id, pos))::t) =
+         A.OpenDec (S.fromString (idToSymbol id) pos, pos) :: toDecl t
+     | toDecl ((P.InfixDec _)::t) = toDecl t
+     | toDecl ((P.InfixrDec _)::t) = toDecl t
+     | toDecl ((P.ExnDec _)::t) = toDecl t
+     | toDecl ((P.Import _)::t) = toDecl t
      | toDecl (p::_) = 
          Error.bug ("ParseTreeAstConverter", P.prettyPrint p, P.getPos p)
 

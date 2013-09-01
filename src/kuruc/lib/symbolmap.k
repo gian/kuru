@@ -42,7 +42,7 @@ end
 
 structure SymbolMap :> SYMBOL_MAP =
 struct
-   val buckets = 31
+   val buckets = 79
 
    type 'a map = (Symbol.t * 'a) list vector
 
