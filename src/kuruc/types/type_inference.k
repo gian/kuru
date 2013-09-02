@@ -915,13 +915,14 @@ struct
                val (envs', decl') = infDec envs decl
                val _ = Debug.print Debug.debug ("Constraints:\n" ^ ppconstr () ^ "\n")
                val _ = Debug.print Debug.debug ("DECL': " ^ A.prettyPrint [decl'] ^ "\n")
-               val _ = solveList envs' (List.rev (!globalConstraints))
+               val substs = solveList envs' (List.rev (!globalConstraints))
                val _ = globalConstraints := []
                (* val _ = T.resetFreshTy () *)
                val _ = tysets := []
                val _ = Debug.print Debug.debug ("DECL'': " ^ A.prettyPrint [decl'] ^ "\n")
+               val decl'' = List.foldl (fn ((sl,sr), dec) => T.substInDecl dec sl sr) decl' substs
             in
-               (envs', decls @ [decl'])
+               (envs', decls @ [decl''])
             end) (envs, []) decls
    in
       tDecls

@@ -303,4 +303,196 @@ struct
 
    fun prettyPrint [] = ""
      | prettyPrint (h::t) = ppdec 0 h ^ "\n\n" ^ prettyPrint t
+
+   fun substInPattern (TuplePattern (pats, ty, pos)) t t' =
+         TuplePattern (
+            map (fn p => substInPattern p t t') pats,
+            substInTy ty t t',
+            pos
+         )
+     | substInPattern (ConstructorPattern (symb, NONE, ty, pos)) t t' =
+         ConstructorPattern (
+            symb,
+            NONE,
+            substInTy ty t t',
+            pos
+         )
+     | substInPattern (ConstructorPattern (symb, SOME pat, ty, pos)) t t' =
+         ConstructorPattern (
+            symb,
+            SOME (substInPattern pat t t'),
+            substInTy ty t t',
+            pos
+         )
+
+     | substInPattern (IdentifierPattern (symb, ty, pos)) t t' =
+         IdentifierPattern (
+            symb,
+            substInTy ty t t',
+            pos
+         )
+     | substInPattern (AsPattern (p1, p2, ty, pos)) t t' =
+         AsPattern (
+            substInPattern p1 t t',
+            substInPattern p2 t t',
+            substInTy ty t t',
+            pos
+         )
+     | substInPattern (AnnotationPattern (pat,ty,pos)) t t' =
+         AnnotationPattern (substInPattern pat t t', substInTy ty t t', pos)
+     | substInPattern (ImplicitPattern _) _ _ = raise Fail ("substInPattern ImplicitPattern not impl")
+     | substInPattern pat _ _ = pat
+
+   fun substInExpr (IdentifierExpr (symb, ty, pos)) t t' =
+         IdentifierExpr (
+            symb,
+            substInTy ty t t',
+            pos
+         )
+     | substInExpr (TupleExpr (exps, ty, pos)) t t' =
+         TupleExpr (
+            map (fn e => substInExpr e t t') exps,
+            substInTy ty t t',
+            pos
+         )
+     | substInExpr (TupleExtractExpr (i,exp,ty,pos)) t t' =
+         TupleExtractExpr (
+            i,
+            substInExpr exp t t',
+            substInTy ty t t',
+            pos
+         )
+     | substInExpr (IfExpr (e1, e2, e3, ty, pos)) t t' =
+         IfExpr (
+            substInExpr e1 t t',
+            substInExpr e2 t t',
+            substInExpr e3 t t',
+            substInTy ty t t',
+            pos
+         )
+     | substInExpr (WhileExpr (e1, e2, ty, pos)) t t' =
+         WhileExpr (
+            substInExpr e1 t t',
+            substInExpr e2 t t',
+            substInTy ty t t',
+            pos
+         )
+     | substInExpr (FnExpr (clauses, ty, pos)) t t' =
+         FnExpr (
+            map (fn (p,e) => (
+               substInPattern p t t',
+               substInExpr e t t'
+            )) clauses,
+            substInTy ty t t',
+            pos
+         )
+     | substInExpr (CaseExpr (exp, clauses, ty, pos)) t t' =
+         CaseExpr (
+            substInExpr exp t t',
+            map (fn (p,e) => (
+               substInPattern p t t',
+               substInExpr e t t'
+            )) clauses,
+            substInTy ty t t',
+            pos
+         )
+     | substInExpr (ApplyExpr (e1, e2, ty, pos)) t t' =
+         ApplyExpr (
+            substInExpr e1 t t',
+            substInExpr e2 t t',
+            substInTy ty t t',
+            pos
+         )
+
+     | substInExpr (RaiseExpr (exp, pos)) t t' =
+         RaiseExpr (
+            substInExpr exp t t',
+            pos
+         )  
+     | substInExpr (HandleExpr (exp, clauses, ty, pos)) t t' = 
+         HandleExpr (
+            substInExpr exp t t',
+            map (fn (p,e) => (
+               substInPattern p t t',
+               substInExpr e t t'
+            )) clauses,
+            substInTy ty t t',
+            pos
+         )
+     | substInExpr (SeqExpr (exps, ty, pos)) t t' =
+         SeqExpr (
+            map (fn e => substInExpr e t t') exps,
+            substInTy ty t t',
+            pos
+         )
+     | substInExpr (LetExpr (decls, exp, ty, pos)) t t' =
+         LetExpr (
+            map (fn d => substInDecl d t t') decls,
+            substInExpr exp t t',
+            substInTy ty t t',
+            pos
+         )
+     | substInExpr (AnnotationExpr (exp, ty, pos)) t t' =
+         AnnotationExpr (
+            substInExpr exp t t',
+            substInTy ty t t',
+            pos
+         )
+     | substInExpr (ConstructorExpr (symb, NONE, ty, pos)) t t' =
+         ConstructorExpr (
+            symb,
+            NONE,
+            substInTy ty t t',
+            pos
+         )
+     | substInExpr (ConstructorExpr (symb, SOME exp, ty, pos)) t t' =
+         ConstructorExpr (
+            symb,
+            SOME (substInExpr exp t t'),
+            substInTy ty t t',
+            pos
+         )
+     | substInExpr (Struct (decls, ty, pos)) t t' =
+         Struct (
+            map (fn d => substInDecl d t t') decls,
+            substInTy ty t t',
+            pos
+         )
+     | substInExpr e _ _ = e
+
+   and substInDecl (ValDec ((pat,exp), pos)) t t' =
+         ValDec (
+            (
+               substInPattern pat t t',
+               substInExpr exp t t'
+            ),
+            pos
+         )
+     | substInDecl (ValRecDec ((pat,exp), pos)) t t' =
+         ValRecDec (
+            (
+               substInPattern pat t t',
+               substInExpr exp t t'
+            ),
+            pos
+         )
+     | substInDecl (MutualDec (decls, pos)) t t' =
+         MutualDec (
+            map (fn d => substInDecl d t t') decls,
+            pos
+         )
+     | substInDecl (LocalDec (decls1, decls2, pos)) t t' =
+         LocalDec (
+            map (fn d => substInDecl d t t') decls1,
+            map (fn d => substInDecl d t t') decls2,
+            pos
+         )
+     | substInDecl (StructureMod (symb, exp, pos)) t t' =
+         StructureMod (
+            symb,
+            substInExpr exp t t',
+            pos
+         )
+     | substInDecl d _ _ = d
+
 end
