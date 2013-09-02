@@ -229,7 +229,6 @@ struct
             in ns before tysets := (i, ns) :: (!tysets)
             end)
 
-
    fun plookup xs k = (case List.find (fn (j, _) => j = k) xs of
 			   SOME (_, v) => v
 			 | NONE => raise Fail ("Unbound variable " ^ T.ppty (T.TyMeta k)))
@@ -237,7 +236,7 @@ struct
    val globalConstraints : constraint list ref = ref []
 
    fun ppconstr' [] = ""
-     | ppconstr' ((t1, t2, p)::t) = A.ppty t1 ^ " : " ^ A.ppty t2 ^ "\n" ^
+     | ppconstr' ((t1, t2, p)::t) = Error.resolveErrorPos p ^ ": " ^ A.ppty t1 ^ " : " ^ A.ppty t2 ^ "\n" ^
          ppconstr' t
 
    fun ppconstr () = ppconstr' (!globalConstraints)
@@ -288,9 +287,7 @@ struct
             A.TyArrow (t1', t2')
          end
      | instantiate P (A.TyTuple ts) = A.TyTuple (map (instantiate P) ts)
-     | instantiate P (A.TyApp (t1,t2)) = 
-         A.TyApp (instantiate P t1, instantiate P t2)
-     | instantiate P (A.TyLam (t1,t2)) =
+     | instantiate P (t as (A.TyLam (t1,t2))) =
          let
             val k = freshTy ()
          in
@@ -301,21 +298,14 @@ struct
    fun force (A.TyMeta x) = UF.find (getSet x)
      | force t = t
 
-   fun forceAll t =
-   let fun aux (A.TyApp (t1, t2)) = A.TyApp (forceAll t1, forceAll t2)
-        | aux (A.TyArrow (t1, t2)) = A.TyArrow (forceAll t1, forceAll t2)
-        | aux (A.TyTuple ts) = A.TyTuple (map forceAll ts)
-        | aux t = t
-   in aux (force t)
-   end
-
-   fun occursUF i t =
+   fun occursUF i t = (print ("occursUF: " ^ Int.toString i ^ " " ^ T.ppty t
+      ^"\n");
    (case t of
-        A.TyArrow (t1, t2) => occursUF i (force t1) orelse occursUF i (force t2)
-      | A.TyApp   (t1, t2) => occursUF i (force t1) orelse occursUF i (force t2)
+        A.TyArrow (t1, t2) => occursUF i (t1) orelse occursUF i (t2)
+      | A.TyApp   (t1, t2) => occursUF i (t1) orelse occursUF i (t2)
       | A.TyTuple ts => List.exists (occursUF i) ts
       | A.TyMeta j => i = j
-      | _ => false)
+      | _ => false))
 
    fun eval envs (ty as (A.TySimple sym)) = 
          (case lookupType sym envs of
@@ -330,10 +320,13 @@ struct
               (T.TyLam (tv,tx), envs') =>
                   let
                      val (t2', env) = eval envs t2
+                     val _ = Debug.print Debug.debug ("Instantiating TyLam: " ^ 
+                        T.ppty (T.TyLam (tv, tx)) ^ " with " ^ T.ppty t2' ^
+                        "\n")
                   in
                      (T.substInTy tx tv t2', envs)
                   end
-            | _ => (ty, envs))
+            | (t1', envs') => (T.TyApp (t1', (fn (x,_) => x) (eval envs t2)), envs'))
      | eval envs ty = (ty, envs)
 
    fun tyImp PM (t1, E1) (t2, E2) =
@@ -341,7 +334,8 @@ struct
 	     ((A.TySimple x, _), (A.TySimple y, _)) => 
          S.equals(S.fromString "exn" (0, "__builtin__"), x) orelse 
             S.equals(S.fromString "exn" (0, "__builtin__"), y) orelse S.equals (x, y)
-	   | ((A.TyMeta x, _), (A.TyMeta y, _)) => x = y
+	   | ((A.TyMeta x, _), (A.TyMeta y, _)) => (print ("CASE 2: " ^ Int.toString
+      x ^ " / " ^ Int.toString y ^ "\n"); x = y)
 	   | ((A.TyApp (t11, t12), E1), (A.TyApp (t21, t22), E2)) =>
 	      tyImp PM (t11, E1) (t21, E2) andalso tyImp PM (t12, E1) (t22, E2)
 	   | ((A.TyArrow (t11, t12), E1), (A.TyArrow (t21, t22), E2)) =>
@@ -381,29 +375,71 @@ struct
    else raise Fail ("Non-substitution union called on " ^ A.ppty t1 ^ " and " ^ A.ppty t2)
 
 
+   (** Returns a set of substitutions to apply to the constraint set. *)
    fun solve D (A.TyMeta x, A.TyMeta y, _) =
-         UF.union (pickCanon D) (getSet x) (getSet y)
+       (UF.union (pickCanon D) (getSet x) (getSet y); [(A.TyMeta x, A.TyMeta y)])
      | solve D (A.TyMeta x, tr, pos) =
          if occursUF x tr then
             Error.fail ("Circular type constraints: " ^ 
                A.ppty (A.TyMeta x) ^ " in " ^ A.ppty tr, pos)
-         else UF.union (pickCanon D) (getSet x) (UF.new tr)
+         else 
+            (UF.union (pickCanon D) (getSet x) (UF.new tr); [(A.TyMeta x, tr)])
      | solve D (tl, tr as A.TyMeta x, pos) = solve D (tr, tl, pos)
      | solve D (t1 as A.TySimple a, t2 as A.TySimple b, pos) =
-         if subt t1 t2 D then () 
+         if subt t1 t2 D then []
             else Error.fail ("Type error: " ^ A.ppty t1 ^ " =/= " ^ A.ppty t2, pos)
      | solve D (A.TyVar a, A.TyVar b, pos) =
-         if a = b then () else Error.fail ("Polymorphic unification", pos)
+         if a = b then [] else Error.fail ("Polymorphic unification", pos)
      | solve D (A.TyApp (t1, c1), A.TyApp (t2, c2), pos) =
-         (solve D (force t1, force t2, pos);
-          solve D (force c1, force c2, pos))
+         let
+            val _ = Debug.print Debug.debug (
+               "solve: TyApp: " ^ T.ppty (A.TyApp (t1, c1)) ^ " with " ^ 
+                  T.ppty (A.TyApp (t2, c2)) ^ "\n"
+            )
+
+            val sb1 = solve D (force t1, force t2, pos)
+            val _ = List.app (fn (a,b) => print ("sb1: " ^ T.ppty a ^ " -> " ^ T.ppty b ^ "\n")) sb1
+            val sb2 = solve D (force c1, force c2, pos)
+            val _ = List.app (fn (a,b) => print ("sb2: " ^ T.ppty a ^ " -> " ^ T.ppty b ^ "\n")) sb2
+         in
+            sb2 @ sb1
+         end
      | solve D (A.TyArrow (t1, t2), A.TyArrow (t3, t4), pos) =
-         (solve D (force t1, force t3, pos); solve D (force t2, force t4, pos))
+         solve D (force t2, force t4, pos) @ solve D (force t1, force t3, pos)
      | solve D (A.TyTuple ts1, A.TyTuple ts2, pos) =
-         List.app (fn (x,y) => solve D (x,y,pos)) (ListPair.zip (ts1,ts2))
+         List.foldr (fn ((x,y),sb) => sb @ solve D (x,y,pos)) [] (ListPair.zip (ts1,ts2))
      | solve D (t1, t2, pos) = Error.fail ("Type error: " ^ T.ppty t1 ^ " =/= " ^ T.ppty t2, pos)
 
-   fun solveList D xs = List.foldl (fn (c, ()) => solve D c) () xs
+   fun applySubst [] c = c
+     | applySubst ((p,q)::t) (ty1,ty2,pos) = 
+         let
+            val (ty1',ty2',pos') = applySubst t (T.substInTy ty1 p q, T.substInTy ty2 p q, pos)
+            val _ = Debug.print Debug.debug ("applySubst: [" ^
+               T.ppty p ^ "/" ^ T.ppty q ^ "] to (" ^ T.ppty ty1 ^ ", " ^
+                  T.ppty ty2 ^ ") (from " ^ Error.resolveErrorPos pos ^ ")\n")
+
+            val _ = Debug.print Debug.debug ("Result: " ^
+               T.ppty ty1' ^ ", " ^ T.ppty ty2' ^ "\n")
+         in
+            (ty1',ty2',pos')
+         end
+
+   fun solveList D xs = 
+      List.foldl (fn (c, sb) => 
+         let
+            val _ = print ("Substitutions:\n" ^ 
+               String.concatWith "\n" (
+                  map (fn (x,y) => T.ppty x ^ " --> " ^ T.ppty y) sb
+               ) ^ "\n")
+            val c' = applySubst sb c
+            val _ = print ("solveList: " ^ 
+               (fn (x,y,_) => T.ppty x ^ " : " ^ T.ppty y) c ^ " became " ^
+               (fn (x,y,_) => T.ppty x ^ " : " ^ T.ppty y) c' ^ "\n")
+
+            val subst = solve D c'
+         in
+            sb @ subst
+         end) [] xs
 
    fun mkPoly k t =
    let val src = ref 0
@@ -431,11 +467,9 @@ struct
    and infPat envs (p as (A.LiteralPattern (l, pos))) = (infLiteral l, p)
      | infPat (env::envs) (A.IdentifierPattern (symb, ty, pos)) =
          let
-            val t = freshTy ()
-            val _ = putVEnv env symb (CSimp (VDec t))
-            val _ = addConstr (ty, t, pos)
+            val _ = putVEnv env symb (CSimp (VDec ty))
          in
-            (t, T.IdentifierPattern (symb, t, pos))
+            (ty, T.IdentifierPattern (symb, ty, pos))
          end
      | infPat envs (A.TuplePattern (pats, _, pos)) =
          let
@@ -450,18 +484,31 @@ struct
             val cty = case lookup symb envs of
                (CSimp (VDec t)) => t
              | _ => Error.fail ("Invalid constructor pattern: " ^ S.toString symb, pos)
+            val cty' = instantiate (ref []) cty
+            val _ = Debug.print Debug.debug ("ConstructorPattern: " ^
+               T.ppty cty' ^ "\n")
          in
-            (cty, T.ConstructorPattern (symb, NONE, cty, pos))
+            (cty', T.ConstructorPattern (symb, NONE, cty', pos))
          end
      | infPat envs (A.ConstructorPattern (symb, SOME pat, _, pos)) =
          let
             (* This is even uglier :-( :-( :-( *)
 
             val (t1, t2) = case lookup symb envs of
-               (CSimp (VDec (T.TyArrow (t1, t2)))) => (t1, t2)
+               (CSimp (VDec (t as (T.TyArrow (t1, t2))))) => 
+                  let
+                     val t' = instantiate (ref []) t
+                     val (T.TyArrow (t1',t2')) = t'
+                  in
+                     (t1', t2')
+                  end
              | _ => Error.fail ("Invalid constructor pattern: " ^ S.toString symb, pos)
 
+
             val (pt, pat') = infPat envs pat
+            
+            val _ = addConstr (t1, pt, pos)
+            val _ = print ("addConstr511: " ^ T.ppty t1 ^ " -> " ^ T.ppty pt ^ "\n")
          in
             (t2, T.ConstructorPattern (symb, SOME pat', t2, pos))
          end
@@ -531,14 +578,15 @@ struct
       end
      | infExp envs (A.ApplyExpr (e1, e2, _, pos)) =
       let
-         val (t1, e1') = infExp envs e1
          val (t2, e2') = infExp envs e2
-         val t1' = instantiate (ref []) t1
-         val tr = freshTy ()
-         val _ = addConstr (T.TyArrow (t2, tr), t1', pos)
-         val _ = addConstr (t1, t1', pos)
+         val (t1, e1') = infExp envs e1
+         val tx = freshTy ()
+         val _ = addConstr (t1, T.TyArrow (t2, tx), pos)
+
+         val _ = print ("addConstr586: " ^ T.ppty t1 ^ " -> " ^ T.ppty
+         (T.TyArrow (t2, tx)) ^ "\n")
       in 
-         (tr, T.ApplyExpr (e1', e2', tr, pos))
+         (tx, T.ApplyExpr (e1', e2', tx, pos))
       end
      | infExp envs (A.IdentifierExpr (s, _, pos)) =
       let 
@@ -547,57 +595,67 @@ struct
                  (CSimp (VDec t')) => t'
                | _ => Error.bug ("TypeInference.tyinfExp",
                   "Symbol not found: " ^ S.toString s, pos)
+         val t' = instantiate (ref []) t
       in 
-         (t, T.IdentifierExpr (s, t, pos))
+         (t', T.IdentifierExpr (s, t', pos))
       end
      | infExp envs (A.LetExpr (decls, exp, _, pos)) = 
       let 
          val env' : environment ref = newEnv () 
-         val (_, decls') = inferTypes (env'::envs) decls
+         val (_, decls') = inferTypes' (env'::envs) decls
          val (t, exp') = infExp (env'::envs) exp
       in
          (t, T.LetExpr (decls', exp', t, pos))
       end
      | infExp envs (A.CaseExpr (exp, clauses, _, pos)) =
       let
+
+         val ti = freshTy ()
+         val tx = freshTy ()
+         
          val (t, exp') = infExp envs exp
 
-         val tx = freshTy ()
-
-         val (constraints, clauses') = 
-            List.foldl (fn ((pat, exp), (constr,cl)) => 
+         val _ = addConstr (ti, t, pos)
+         val _ = Debug.print Debug.debug ("addConstr1: " ^ T.ppty ti ^ " -> " ^ T.ppty t ^ "\n")
+         val (_, clauses') = 
+            List.foldl (fn ((pat, exp), (tp, cl)) => 
                let
                   (* FIXME: force pat = t *)
                   val env' = newEnv ()
                   val (pt, pat') = infPat (env'::envs) pat
                   val (et, exp') = infExp (env'::envs) exp
+                  val _ = addConstr (ti, pt, pos)
+         val _ = Debug.print Debug.debug ("addConstr2: " ^ T.ppty ti ^ " -> " ^
+         T.ppty pt ^ "\n")
+                  val _ = addConstr (tx, et, pos)
+         val _ = Debug.print Debug.debug ("addConstr3: " ^ T.ppty tx ^ " -> " ^
+         T.ppty et ^ "\n")
                in
-                  ((pt,t,pos) :: (et,tx,pos) :: constr, cl @ [(pat',exp')])
-               end) ([],[]) clauses
-
-         val _ = List.app addConstr constraints
+                  (pt, cl @ [(pat',exp')])
+               end) (ti, []) clauses
       in
          (tx, T.CaseExpr (exp', clauses', tx, pos))
       end
      | infExp envs (A.RaiseExpr (exp, pos)) = 
       let
          val (t, exp') = infExp envs exp
-         val _ = addConstr (t, tyExn, pos)
+         (* TODO: Check that this is an exn *)
       in
          (freshTy (), T.RaiseExpr (exp', pos))
       end
      | infExp envs (A.IfExpr (e1, e2, e3, _, pos)) =
       let
          val (t1, e1') = infExp envs e1
-
-         (* val _ = solve envs (tyBool, t1) *)
-
-         val tx = freshTy ()
          val (t2, e2') = infExp envs e2
          val (t3, e3') = infExp envs e3
+         val tx = freshTy ()
 
-         val _ = addConstr (t2, tx, pos)
-         val _ = addConstr (t3, tx, pos)
+         val _ = addConstr (tx, t2, pos)
+         val _ = Debug.print Debug.debug ("addConstr655" ^ T.ppty tx ^ " -> " ^ T.ppty t2 ^ "\n")
+         val _ = addConstr (tx, t3, pos)
+         val _ = Debug.print Debug.debug ("addConstr657" ^ T.ppty tx ^ " -> " ^ T.ppty t3 ^ "\n")
+         val _ = addConstr (t1, tyBool, pos)
+         val _ = Debug.print Debug.debug ("addConstr659" ^ T.ppty t1 ^ " -> bool\n")
       in
          (tx, T.IfExpr (e1', e2', e3', tx, pos))
       end
@@ -645,6 +703,7 @@ struct
       let
          val (ty', exp') = infExp envs exp
          val _ = addConstr (ty', ty, pos)
+         val _ = Debug.print Debug.debug ("addConstr707" ^ T.ppty ty' ^ " -> " ^ T.ppty ty ^ "\n")
       in
          (ty', T.AnnotationExpr (exp', ty', pos))
       end
@@ -673,8 +732,8 @@ struct
          (* val _ = Debug.print Debug.debugmore ("Before:\n" ^ ppTySets () ^
          * "\n") *)
          val k = !tyvarCounter
-         val (t, e') = infExp (env::envs) exp
-         val t' = mkPoly k (force t)
+         val (t', e') = infExp (env::envs) exp
+         (* val t' = mkPoly k (force t) *)
          (*val _ = Debug.print Debug.debugmore ("After:\n" ^ ppTySets () ^ "\n")
          val _ = Debug.print Debug.debugmore ("ValDec: " ^ T.ppdec 0 
          (A.ValDec((A.IdentifierPattern (symb, t', pos), e'), pos')) ^ "\n") *)
@@ -697,17 +756,12 @@ struct
          val k = !tyvarCounter
          val t = freshTy ()
          val (t', e') = infExp (putVEnv env symb (CSimp (VDec t)) :: envs) e
-         (* val _ = solve (env::envs) (force t, force t') *)
-         val t'' = mkPoly k (force t')
-         (* val _ = Debug.print Debug.debugmore ("After:\n" ^ ppTySets () ^
-         * "\n") 
-
-         val _ = Debug.print Debug.debugmore ("ValRecDec: " ^ T.ppdec 0 
-         (A.ValRecDec((A.IdentifierPattern (symb, t'', pos), e'), pos')) ^ "\n")
-         *)
+         val _ = addConstr (t,t',pos)
+         val _ = Debug.print Debug.debug 
+            ("addConstr761" ^ T.ppty t ^ " -> " ^ T.ppty t' ^ "\n")
+         val _ = putVEnv env symb (CSimp (VDec t'))
       in
-         (putVEnv env symb (CSimp (VDec t'')) :: envs, 
-            T.ValRecDec ((T.IdentifierPattern (symb, t', pos), e'), pos'))
+         (env::envs, T.ValRecDec ((T.IdentifierPattern (symb, t', pos), e'), pos'))
       end
      | infDec (env::envs) (A.MutualDec (decls, pos')) =
       let
@@ -750,6 +804,8 @@ struct
       end
      | infDec (env::envs) (A.TypeDec (A.TyApp (A.TySimple symb, t2), td, pos)) =
       let
+         val _ = Debug.print Debug.debug ("TypeDec: " ^ S.toString symb ^ " (" ^
+         T.ppty t2 ^ ") = " ^ T.ppty td ^ "\n")
          val (symb', td') = 
             case t2 of
                A.TyVar i => (symb, T.TyLam (A.TyVar i, td))
@@ -833,6 +889,23 @@ struct
      | infDec envs exp = Error.bug ("TypeInference", "not implemented: " ^
                            A.ppdec 0 exp, (0, "__fake__"))
 
+   and inferTypes' (envs : environment ref list) decls =
+   let
+      val tDecls = 
+         List.foldl (fn (decl, (envs, decls)) =>
+            let
+               val _ = Debug.print Debug.debug ("innerDECL: " ^ A.prettyPrint [decl] ^ "\n")
+               val (envs', decl') = infDec envs decl
+               val _ = Debug.print Debug.debug ("Constraints:\n" ^ ppconstr () ^ "\n")
+               val _ = solveList envs' (List.rev (!globalConstraints))
+               val _ = Debug.print Debug.debug ("innerDECL': " ^ A.prettyPrint [decl'] ^ "\n")
+            in
+               (envs', decls @ [decl'])
+            end) (envs, []) decls
+   in
+      tDecls
+   end
+
    and inferTypes (envs : environment ref list) decls =
    let
       val tDecls = 
@@ -841,10 +914,12 @@ struct
                val _ = Debug.print Debug.debug ("DECL: " ^ A.prettyPrint [decl] ^ "\n")
                val (envs', decl') = infDec envs decl
                val _ = Debug.print Debug.debug ("Constraints:\n" ^ ppconstr () ^ "\n")
+               val _ = Debug.print Debug.debug ("DECL': " ^ A.prettyPrint [decl'] ^ "\n")
                val _ = solveList envs' (List.rev (!globalConstraints))
                val _ = globalConstraints := []
-               val _ = T.resetFreshTy ()
-               val _ = Debug.print Debug.debug ("DECL': " ^ A.prettyPrint [decl'] ^ "\n")
+               (* val _ = T.resetFreshTy () *)
+               val _ = tysets := []
+               val _ = Debug.print Debug.debug ("DECL'': " ^ A.prettyPrint [decl'] ^ "\n")
             in
                (envs', decls @ [decl'])
             end) (envs, []) decls

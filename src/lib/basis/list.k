@@ -5,7 +5,7 @@ struct
 	  | find f (h::t) = if f h then SOME h else find f t
 
 	fun map f [] = []
-	  | map f (h::t) = f h :: map t
+	  | map f (h::t) = f h :: map f t
 
    fun length [] = 0
 

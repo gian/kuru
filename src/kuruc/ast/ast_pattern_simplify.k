@@ -239,7 +239,7 @@ struct
  (*    | simplifyExpr' (A.TupleExtractExpr (i, exp', ty, pos)) =
          A.TupleExtractExpr (i, simplifyExpr exp', ty, pos) *)
      | simplifyExpr' (A.IfExpr (e1, e2, e3, ty, pos)) =
-         A.IfExpr (simplifyExpr e1, simplifyExpr e2, simplifyExpr e2, ty, pos)
+         A.IfExpr (simplifyExpr e1, simplifyExpr e2, simplifyExpr e3, ty, pos)
      | simplifyExpr' (A.WhileExpr (e1, e2, ty, pos)) =
          A.WhileExpr (simplifyExpr e1, simplifyExpr e2, ty, pos) 
      | simplifyExpr' (A.FnExpr (clauses, ty, pos)) =

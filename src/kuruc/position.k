@@ -33,5 +33,6 @@ structure Position =
 struct
    (** Has the format: (offset, filename). **)
    type t = int * string
+   fun toString (i,s) = s ^ ":" ^ Int.toString i
 end
 

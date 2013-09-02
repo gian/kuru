@@ -54,7 +54,7 @@ struct
      | substInTy (TyTuple ts) t t' = 
          TyTuple (map (fn tx => substInTy tx t t') ts)
      | substInTy (TyArrow (t1, t2)) t t' =
-         TyApp (substInTy t1 t t', substInTy t2 t t')
+         TyArrow (substInTy t1 t t', substInTy t2 t t')
      | substInTy (TySeq ts) t t' = 
          TySeq (map (fn tx => substInTy tx t t') ts)
      | substInTy (TyUnion (ty, constrs)) t t' =
@@ -231,15 +231,15 @@ struct
    and pppat (LiteralPattern (p, _)) = pplit p
      | pppat (IdentifierPattern (symbol, ty, pos)) = "(" ^ S.toString symbol ^ " : " ^
      ppty ty ^ ")"
-     | pppat (TuplePattern (pats, _, _)) = 
-         "(" ^ String.concatWith "," (map pppat pats) ^ ")"
+     | pppat (TuplePattern (pats, ty, _)) = 
+         "(" ^ String.concatWith "," (map pppat pats) ^ ") : " ^ ppty ty
      | pppat (CurriedPattern (pats, _, _)) =
          String.concatWith " " (map pppat pats)
      | pppat (AnnotationPattern (pat, ty, pos)) =
          "(" ^ pppat pat ^ " : " ^ ppty ty ^ ")"
-     | pppat (ConstructorPattern (symbol, NONE, _, _)) = S.toString symbol
-     | pppat (ConstructorPattern (symbol, SOME pat, _, _)) = 
-         "(" ^ S.toString symbol ^ " " ^ pppat pat ^ ")"
+     | pppat (ConstructorPattern (symbol, NONE, t, _)) = S.toString symbol ^ " : " ^ ppty t
+     | pppat (ConstructorPattern (symbol, SOME pat, t, _)) = 
+         "(" ^ S.toString symbol ^ " " ^ pppat pat ^ " : " ^ ppty t ^ ")"
      | pppat (AsPattern (pat1, pat2, _, _)) = 
          pppat pat1 ^ " as " ^ pppat pat2
      | pppat (ImplicitPattern ([(pat,ty)], pos)) =
