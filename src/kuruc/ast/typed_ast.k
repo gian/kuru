@@ -63,8 +63,6 @@ struct
             map (fn (s, SOME tx) => (s, SOME (substInTy tx t t'))
                   | (s, NONE) => (s, NONE)) constrs
          )
-     | substInTy (TyLam (t1, t2)) t t' = 
-         Error.bug ("TypedAst.substInTy", "TyLam encountered", (0, "__fake__"))
      | substInTy (ot as (TySimple s)) (TySimple t) t' = 
          if S.equals (s, t) then t' else ot
      | substInTy (ot as (TyVar i)) (TyVar j) t' = 

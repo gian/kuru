@@ -38,6 +38,7 @@ sig
    val values : 'a map -> (Symbol.t * 'a) list
    val empty : unit -> 'a map
    val size : 'a map -> int
+   val map : ('a -> 'b) -> 'a map -> 'b map
 end
 
 structure SymbolMap :> SYMBOL_MAP =
@@ -77,5 +78,7 @@ struct
 
    fun size map = List.length (values map)
 
+   fun map f vec =
+      Vector.map (fn v => List.map (fn (s,e) => (s, f e)) v) vec
 end
 

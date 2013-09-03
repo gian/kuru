@@ -64,6 +64,27 @@ struct
 
    fun senv (_,_,s) = s
 
+   fun substInEnv (tenv, venv, senv) t t' =
+      let
+         fun substInCDecl (VDec ty) = VDec (T.substInTy ty t t')
+           | substInCDecl (TDef ty) = TDef (T.substInTy ty t t')
+           | substInCDecl d = d
+
+         fun substInClosure (CSimp d) = CSimp (substInCDecl d)
+           | substInClosure (CEnv (d, env)) = 
+            let
+               val _ = env := (substInEnv (!env) t t')
+            in
+               CEnv (substInCDecl d, env)
+            end
+
+         val tenv' = M.map substInClosure tenv
+         val venv' = M.map substInClosure venv
+         val senv' = M.map substInClosure senv
+      in
+         (tenv', venv', senv')
+      end
+
    fun ppenv ind ((symb, CEnv (VDec ty, ref (cl,_,_))) :: t) =
          indent ind ^ S.toString symb ^ " : " ^ T.ppty ty ^ "\n" ^
             ppenv (ind+1) (M.values cl) ^ "\n" ^ ppenv ind t
@@ -315,18 +336,10 @@ struct
           | (CEnv (TDec, _)) => (ty, envs)
           | _ =>  Error.fail 
                ("Type '" ^ S.toString sym ^ "' is not found", S.getPos sym))
+     | eval envs (A.TyLam (tx, tb)) = (instantiate (ref []) tb, envs)
      | eval envs (ty as (A.TyApp (t1, t2))) =
          (case eval envs t1 of
-              (T.TyLam (tv,tx), envs') =>
-                  let
-                     val (t2', env) = eval envs t2
-                     val _ = Debug.print Debug.debug ("Instantiating TyLam: " ^ 
-                        T.ppty (T.TyLam (tv, tx)) ^ " with " ^ T.ppty t2' ^
-                        "\n")
-                  in
-                     (T.substInTy tx tv t2', envs)
-                  end
-            | (t1', envs') => (T.TyApp (t1', (fn (x,_) => x) (eval envs t2)), envs'))
+            (t1', envs') => (T.TyApp (t1', (fn (x,_) => x) (eval envs t2)), envs'))
      | eval envs ty = (ty, envs)
 
    fun tyImp PM (t1, E1) (t2, E2) =
@@ -455,6 +468,22 @@ struct
         | aux t = t
    in aux t end
 
+   fun generalize (env::envs) (A.ValRecDec ((A.IdentifierPattern (symb, ty, pos), e), pos')) =
+      let
+         val ty' = mkPoly 0 ty
+         val _ = putVEnv env symb (CSimp (VDec ty'))
+      in
+         (A.ValRecDec ((A.IdentifierPattern (symb, ty', pos), e), pos'))
+      end
+     | generalize (env::envs) (A.ValDec ((A.IdentifierPattern (symb, ty, pos), e), pos')) = 
+      let
+         val ty' = mkPoly 0 ty
+         (* TODO: Value restriction? *)
+         val _ = putVEnv env symb (CSimp (VDec ty'))
+      in
+         (A.ValDec ((A.IdentifierPattern (symb, ty', pos), e), pos'))
+      end
+     | generalize envs d = d
 
    fun infLiteral (A.Int _) = tyInt
      | infLiteral (A.Real _) = tyReal
@@ -787,7 +816,7 @@ struct
       end
      | infDec (env::envs) (A.TypeDec (A.TySimple symb, t2, pos)) =
       let
-         val _ = putTEnv env symb (CSimp (TDef t2))
+         val _ = putTEnv env symb (CSimp (TDef (A.TySimple symb)))
 
          val t' = A.TySimple symb
 
@@ -806,15 +835,12 @@ struct
       let
          val _ = Debug.print Debug.debug ("TypeDec: " ^ S.toString symb ^ " (" ^
          T.ppty t2 ^ ") = " ^ T.ppty td ^ "\n")
-         val (symb', td') = 
-            case t2 of
-               A.TyVar i => (symb, T.TyLam (A.TyVar i, td))
-             | A.TySeq ts => (symb, T.TyLam (T.TySeq ts, td))
-             | te => Error.fail ("Invalid type variable: " ^ A.ppty te, A.getPos symb)
-
-         val _ = putTEnv env symb' (CSimp (TDef td'))
          
-         val t' = T.TyApp (T.TySimple symb, t2)
+         val (symb', td') = (symb, T.TyLam (t2, A.TyApp (A.TySimple symb, t2))) 
+
+         val _ = putTEnv env symb' (CSimp (TDef (A.TySimple symb')))
+         
+         val t' = A.TyApp (A.TySimple symb, t2)
 
          (* Bind the constructors in the value environment *)
          val _ = case td of 
@@ -897,10 +923,17 @@ struct
                val _ = Debug.print Debug.debug ("innerDECL: " ^ A.prettyPrint [decl] ^ "\n")
                val (envs', decl') = infDec envs decl
                val _ = Debug.print Debug.debug ("Constraints:\n" ^ ppconstr () ^ "\n")
-               val _ = solveList envs' (List.rev (!globalConstraints))
+               val substs = solveList envs' (List.rev (!globalConstraints))
                val _ = Debug.print Debug.debug ("innerDECL': " ^ A.prettyPrint [decl'] ^ "\n")
+               val decl'' = List.foldl (fn ((sl,sr), dec) => T.substInDecl dec sl sr) decl' substs
+               val _ = map (fn env =>
+                  List.foldl (fn ((sl,sr),()) => env := substInEnv (!env) sl sr) () substs) envs'
+               val _ = Debug.print Debug.debug ("innerDECL'': " ^ A.prettyPrint [decl''] ^ "\n")
+               val decl''' = generalize envs decl''
+               val _ = Debug.print Debug.debug ("DECL''': " ^ A.prettyPrint
+               [decl'''] ^ "\n")
             in
-               (envs', decls @ [decl'])
+               (envs', decls @ [decl'''])
             end) (envs, []) decls
    in
       tDecls
@@ -919,10 +952,15 @@ struct
                val _ = globalConstraints := []
                (* val _ = T.resetFreshTy () *)
                val _ = tysets := []
-               val _ = Debug.print Debug.debug ("DECL'': " ^ A.prettyPrint [decl'] ^ "\n")
                val decl'' = List.foldl (fn ((sl,sr), dec) => T.substInDecl dec sl sr) decl' substs
+               val _ = map (fn env =>
+                  List.foldl (fn ((sl,sr),()) => env := substInEnv (!env) sl sr) () substs) envs'
+               val _ = Debug.print Debug.debug ("DECL'': " ^ A.prettyPrint [decl''] ^ "\n")
+               val decl''' = generalize envs decl''
+               val _ = Debug.print Debug.debug ("DECL''': " ^ A.prettyPrint
+               [decl'''] ^ "\n")
             in
-               (envs', decls @ [decl''])
+               (envs', decls @ [decl'''])
             end) (envs, []) decls
    in
       tDecls

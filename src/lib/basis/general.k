@@ -66,7 +66,7 @@ fun internal_print (s : string) = ()
 
 fun a before b = a
 
-fun := (ref a, b) = ()
+fun := ((ref a) : 'a ref, b : 'a) = () 
 
 _import intSub  : (int * int) -> int as -
 _import intMul : (int * int) -> int as *
