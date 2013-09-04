@@ -107,8 +107,8 @@ struct
    fun lookupStruct (x : S.t) (env::envs) =
       if not (S.isLong x) then
          (case M.get (senv (!env)) x of
-	            SOME (_, closure) => closure
-	         |  NONE => lookupStruct x envs)
+               SOME (_, closure) => closure
+            |  NONE => lookupStruct x envs)
       else
       let
          val (h,t) = (S.hd x, S.tl x)
@@ -128,9 +128,9 @@ struct
             (* val _ = Debug.print Debug.debugmore ("Looking up short id: " ^ S.toString x ^ " in:\n" ^
                prettyPrintEnv (env::envs)^ "\n") *)
          in
-	         (case M.get (venv (!env)) x of
-	            SOME (_, closure) => closure
-	         |  NONE => lookup x envs)
+            (case M.get (venv (!env)) x of
+               SOME (_, closure) => closure
+            |  NONE => lookup x envs)
          end
       else let
          val (h,t) = (S.hd x, S.tl x)
@@ -155,9 +155,9 @@ struct
             (* val _ = Debug.print Debug.debugmore ("Looking up short id: " ^ S.toString x ^ " in:\n" ^
                prettyPrintTEnv (env::envs)^ "\n") *)
          in
-	         (case M.get (tenv (!env)) x of
-	            SOME (_, closure) => closure
-	         |  NONE => lookupType x envs)
+            (case M.get (tenv (!env)) x of
+               SOME (_, closure) => closure
+            |  NONE => lookupType x envs)
          end
       else let
          val (h,t) = (S.hd x, S.tl x)
@@ -194,7 +194,6 @@ struct
       env
    end
 
-
    fun newEnv () = ref (M.empty (), M.empty (), M.empty ())
 
    (* Built-in types *)
@@ -211,17 +210,17 @@ struct
       let
          val env = newEnv ()
          val _ = putTEnv env (S.fromString "int" (0, "__builtin__")) 
-            (CSimp (TDef tyInt))
+            (CSimp (TDec))
          val _ = putTEnv env (S.fromString "string" (0, "__builtin__"))
-            (CSimp (TDef tyString))
+            (CSimp (TDec))
          val _ = putTEnv env (S.fromString "char" (0, "__builtin__"))
-            (CSimp (TDef tyChar))
+            (CSimp (TDec))
          val _ = putTEnv env (S.fromString "real" (0, "__builtin__"))
-            (CSimp (TDef tyReal))
+            (CSimp (TDec))
          val _ = putTEnv env (S.fromString "unit" (0, "__builtin__"))
-            (CSimp (TDef tyUnit))
+            (CSimp (TDec))
          val _ = putTEnv env (S.fromString "bool" (0, "__builtin__"))
-            (CSimp (TDef tyBool))
+            (CSimp (TDec))
          val _ = putVEnv env (S.fromString "=" (0, "__builtin__"))
             (CSimp (VDec (T.TyArrow (T.TyTuple [T.TyVar 0, T.TyVar 0], tyBool))))
       in
@@ -251,8 +250,8 @@ struct
             end)
 
    fun plookup xs k = (case List.find (fn (j, _) => j = k) xs of
-			   SOME (_, v) => v
-			 | NONE => raise Fail ("Unbound variable " ^ T.ppty (T.TyMeta k)))
+            SOME (_, v) => v
+          | NONE => raise Fail ("Unbound variable " ^ T.ppty (T.TyMeta k)))
 
    val globalConstraints : constraint list ref = ref []
 
@@ -287,7 +286,7 @@ struct
          
 
    fun instantiate P (A.TyVar x) =
-	   (plookup (!P) x handle _ => 
+      (plookup (!P) x handle _ => 
          let 
             val t = freshTy () 
          in 
@@ -308,12 +307,6 @@ struct
             A.TyArrow (t1', t2')
          end
      | instantiate P (A.TyTuple ts) = A.TyTuple (map (instantiate P) ts)
-     | instantiate P (t as (A.TyLam (t1,t2))) =
-         let
-            val k = freshTy ()
-         in
-            T.substInTy t2 t1 k
-         end
      | instantiate _ t = t
 
    fun force (A.TyMeta x) = UF.find (getSet x)
@@ -329,30 +322,46 @@ struct
       | _ => false))
 
    fun eval envs (ty as (A.TySimple sym)) = 
-         (case lookupType sym envs of
+         (print ("EVAL: " ^ S.toString sym ^ "\n"); case lookupType sym envs of
             (CSimp (TDec)) => (ty, envs)
-          | (CSimp (TDef ty')) => (ty', envs)
+          | (CSimp (TDef ty')) => eval envs ty'
           | (CEnv (TDef ty', env')) => eval (env'::envs) ty'
           | (CEnv (TDec, _)) => (ty, envs)
           | _ =>  Error.fail 
                ("Type '" ^ S.toString sym ^ "' is not found", S.getPos sym))
-     | eval envs (A.TyLam (tx, tb)) = (instantiate (ref []) tb, envs)
+     | eval envs (ty as (A.TyApp (A.TyLam (tx, t1), t2))) =
+         let
+            val (t2',_) = eval envs t2
+            val t1' = T.substInTy t1 tx t2'
+         in
+            (t1', envs)
+         end
      | eval envs (ty as (A.TyApp (t1, t2))) =
-         (case eval envs t1 of
-            (t1', envs') => (T.TyApp (t1', (fn (x,_) => x) (eval envs t2)), envs'))
-     | eval envs ty = (ty, envs)
+         let
+            val (t1',envs') = eval envs t1
+            val (t2',envs') = eval envs t2
+            val (tx,envs') = (A.TyApp (t1', t2'), envs)
+
+            val _ = print ("evalR TyAppLam: " ^ T.ppty tx ^ "\n")
+         in
+            (tx, envs')
+         end
+     | eval envs ty = (print ("Fell off the end of eval: " ^ T.ppty ty ^ "\n");
+     (ty, envs))
 
    fun tyImp PM (t1, E1) (t2, E2) =
-	(case (eval E1 t1, eval E2 t2) of
-	     ((A.TySimple x, _), (A.TySimple y, _)) => 
+   (print ("tyImp: " ^ T.ppty t1 ^ " == " ^ T.ppty t2 ^ "\n"); case (eval E1 t1, eval E2 t2) of
+        ((A.TySimple x, _), (A.TySimple y, _)) => 
          S.equals(S.fromString "exn" (0, "__builtin__"), x) orelse 
             S.equals(S.fromString "exn" (0, "__builtin__"), y) orelse S.equals (x, y)
-	   | ((A.TyMeta x, _), (A.TyMeta y, _)) => (print ("CASE 2: " ^ Int.toString
+      | ((A.TyMeta x, _), (A.TyMeta y, _)) => (print ("CASE 2: " ^ Int.toString
       x ^ " / " ^ Int.toString y ^ "\n"); x = y)
-	   | ((A.TyApp (t11, t12), E1), (A.TyApp (t21, t22), E2)) =>
-	      tyImp PM (t11, E1) (t21, E2) andalso tyImp PM (t12, E1) (t22, E2)
-	   | ((A.TyArrow (t11, t12), E1), (A.TyArrow (t21, t22), E2)) =>
-	      tyImp PM (t11, E1) (t21, E2) andalso tyImp PM (t12, E1) (t22, E2)
+      | ((A.TyApp (t11, t12), E1), (A.TyApp (t21, t22), E2)) =>
+         (print ("TYAPP: " ^ T.ppty t11 ^ " with " ^ T.ppty t21 ^ " and " ^
+               T.ppty t12 ^ " with " ^ T.ppty t22 ^ "\n");
+         tyImp PM (t11, E1) (t21, E2) andalso tyImp PM (t12, E1) (t22, E2))
+      | ((A.TyArrow (t11, t12), E1), (A.TyArrow (t21, t22), E2)) =>
+         tyImp PM (t11, E1) (t21, E2) andalso tyImp PM (t12, E1) (t22, E2)
       | ((A.TyTuple t1, E1), (A.TyTuple t2, E2)) =>
          List.all (fn (t1',t2') => tyImp PM (t1',E1) (t2',E2)) (ListPair.zip (t1,t2))
       | ((A.TyLam (t11, t12), E1), (A.TyLam (t21, t22), E2)) =>
@@ -362,22 +371,31 @@ struct
 
             (* FIXME: if t11 happens to be 'TySeq' ('a,'b) we need to do
             * something different here. *)
+            val _ = print ("TYLAM: " ^ T.ppty (A.TyLam (t11, t12)) ^ " ----> " ^
+            T.ppty (A.TyLam (t21, t22)) ^ "\n")
             val var = freshTy ()
 
-            val t12' = T.substInTy t12 t11 var
-            val t22' = T.substInTy t22 t11 var
+            val (t12', _) = eval E1 t12
+            val (t22', _) = eval E2 t22
+
+            val _ = print ("TYLAM': " ^ T.ppty t12' ^ " ----> " ^
+            T.ppty t22' ^ "\n")
+
+
+            val t12'' = T.substInTy t12' t11 var
+            val t22'' = T.substInTy t22' t21 var
          in
-            tyImp PM (t12', E1) (t22', E2)
+            tyImp PM (t12'', E1) (t22'', E2)
          end
-      | ((A.TyUnion (t1, c1), E1), (A.TyUnion (t2, c2), E2)) =>
+      | ((A.TyUnion (t1, c1), E1), (A.TyUnion (t2, c2), E2)) => 
             List.all (fn ((s1,NONE),(s2,NONE)) => S.equals (s1,s2)
                        | ((s1, SOME t1),(s2, SOME t2)) => 
                              S.equals (s1,s2)
                        | _ => false) (ListPair.zip (c1,c2))
-	   | (c, (A.TyVar x, _)) => (case List.find (fn (y, _) => x = y) (!PM) of
-					  SOME (_, c') => tyImp PM c c'
-					| NONE => true before (PM := (x, c) :: (!PM)))
-	   | ((t1,_),(t2,_)) => raise Fail ("Types " ^ A.ppty t1 ^ " and " ^ A.ppty t2 ^ " not equal"))
+      | (c, (A.TyVar x, _)) => (case List.find (fn (y, _) => x = y) (!PM) of
+                 SOME (_, c') => tyImp PM c c'
+               | NONE => true before (PM := (x, c) :: (!PM)))
+      | ((t1,_),(t2,_)) => raise Fail ("Types " ^ A.ppty t1 ^ " and " ^ A.ppty t2 ^ " not equal"))
 
    fun subt t1 t2 env = tyImp (ref []) (t1, env) (t2, env)
    
@@ -816,7 +834,7 @@ struct
       end
      | infDec (env::envs) (A.TypeDec (A.TySimple symb, t2, pos)) =
       let
-         val _ = putTEnv env symb (CSimp (TDef (A.TySimple symb)))
+         val _ = putTEnv env symb (CSimp (TDec))
 
          val t' = A.TySimple symb
 
@@ -836,11 +854,13 @@ struct
          val _ = Debug.print Debug.debug ("TypeDec: " ^ S.toString symb ^ " (" ^
          T.ppty t2 ^ ") = " ^ T.ppty td ^ "\n")
          
-         val (symb', td') = (symb, T.TyLam (t2, A.TyApp (A.TySimple symb, t2))) 
+         val (symb', td') = (symb, T.TyLam (t2, td)) 
 
-         val _ = putTEnv env symb' (CSimp (TDef (A.TySimple symb')))
          
          val t' = A.TyApp (A.TySimple symb, t2)
+         val t'' = freshTy ()
+         
+         val _ = putTEnv env symb' (CSimp (TDef (A.TyLam (t2, td))))
 
          (* Bind the constructors in the value environment *)
          val _ = case td of 

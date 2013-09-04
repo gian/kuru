@@ -5,15 +5,15 @@ structure IUnionFind :> IMPERATIVE_UNION_FIND
 
       datatype 'a state =
          Root of 'a * int
-       | Child of 'a set
+       | Child of 'a state ref 
 
-      withtype 'a set = 'a state ref
+      type 'a set = 'a state ref
 
       fun new label = ref (Root (label, 0))
 
       val eq = (fn (x, y) => x = y)
 
-      fun root set =
+      fun root (set : 'a set) =
          (case !set of
              Root _ =>
                 set
