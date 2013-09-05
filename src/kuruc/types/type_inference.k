@@ -324,19 +324,25 @@ struct
    fun eval envs (ty as (A.TySimple sym)) = 
          (print ("EVAL: " ^ S.toString sym ^ "\n"); case lookupType sym envs of
             (CSimp (TDec)) => (ty, envs)
+          | (CSimp (TDef (A.TyLam _))) => (ty, envs)
           | (CSimp (TDef ty')) => eval envs ty'
           | (CEnv (TDef ty', env')) => eval (env'::envs) ty'
           | (CEnv (TDec, _)) => (ty, envs)
           | _ =>  Error.fail 
                ("Type '" ^ S.toString sym ^ "' is not found", S.getPos sym))
-     | eval envs (ty as (A.TyApp (A.TyLam (tx, t1), t2))) =
-         let
-            val (t2',_) = eval envs t2
-            val t1' = T.substInTy t1 tx t2'
-         in
-            (t1', envs)
-         end
-     | eval envs (ty as (A.TyApp (t1, t2))) =
+     | eval envs (ty as (A.TyApp (A.TySimple sym, t2))) =
+         (case lookupType sym envs of
+            (CSimp TDec) => (ty, envs)
+          | (CSimp (TDef (A.TyLam (tx, ty')))) =>
+               let
+                  val (t2', _) = eval envs t2
+               in
+                  (T.substInTy ty' tx t2', envs)
+               end
+          | (CSimp (TDef ty')) => Error.bug ("eval", "Unsure what to do here... invalid: " ^
+                     T.ppty ty', (0, "__fake__"))
+          | _ => Error.fail ("Invalid type", (0, "__fake__")))
+(*     | eval envs (ty as (A.TyApp (t1, t2))) =
          let
             val (t1',envs') = eval envs t1
             val (t2',envs') = eval envs t2
@@ -345,7 +351,7 @@ struct
             val _ = print ("evalR TyAppLam: " ^ T.ppty tx ^ "\n")
          in
             (tx, envs')
-         end
+         end *)
      | eval envs ty = (print ("Fell off the end of eval: " ^ T.ppty ty ^ "\n");
      (ty, envs))
 
@@ -375,17 +381,10 @@ struct
             T.ppty (A.TyLam (t21, t22)) ^ "\n")
             val var = freshTy ()
 
-            val (t12', _) = eval E1 t12
-            val (t22', _) = eval E2 t22
-
-            val _ = print ("TYLAM': " ^ T.ppty t12' ^ " ----> " ^
-            T.ppty t22' ^ "\n")
-
-
-            val t12'' = T.substInTy t12' t11 var
-            val t22'' = T.substInTy t22' t21 var
+            val t12' = T.substInTy t12 t11 var
+            val t22' = T.substInTy t22 t21 var
          in
-            tyImp PM (t12'', E1) (t22'', E2)
+            tyImp PM (t12', E1) (t22', E2)
          end
       | ((A.TyUnion (t1, c1), E1), (A.TyUnion (t2, c2), E2)) => 
             List.all (fn ((s1,NONE),(s2,NONE)) => S.equals (s1,s2)
@@ -856,11 +855,12 @@ struct
          
          val (symb', td') = (symb, T.TyLam (t2, td)) 
 
-         
          val t' = A.TyApp (A.TySimple symb, t2)
          val t'' = freshTy ()
          
-         val _ = putTEnv env symb' (CSimp (TDef (A.TyLam (t2, td))))
+         val _ = case td of 
+               T.TyUnion _ => putTEnv env symb' (CSimp (TDef (A.TyLam (t2, A.TyApp (A.TySimple symb, t2)))))
+             | _ => putTEnv env symb' (CSimp (TDef td'))
 
          (* Bind the constructors in the value environment *)
          val _ = case td of 
@@ -967,6 +967,7 @@ struct
                val _ = Debug.print Debug.debug ("DECL: " ^ A.prettyPrint [decl] ^ "\n")
                val (envs', decl') = infDec envs decl
                val _ = Debug.print Debug.debug ("Constraints:\n" ^ ppconstr () ^ "\n")
+               val _ = Debug.print Debug.debug ("Env: " ^ prettyPrintEnv envs ^ "\n")
                val _ = Debug.print Debug.debug ("DECL': " ^ A.prettyPrint [decl'] ^ "\n")
                val substs = solveList envs' (List.rev (!globalConstraints))
                val _ = globalConstraints := []

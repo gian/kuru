@@ -50,6 +50,10 @@ struct
          A.TyArrow (toType t1, toType t2)
      | toType (P.TyPair (types, pos)) =
          A.TyTuple (map toType types)
+     | toType (P.TyCon (t1, P.TyCon (t2, t3, pos'), pos)) =
+         A.TyApp (toType t3, A.TyApp (toType t2, toType t1))
+     | toType (P.TyCon (P.TyCon (t1, t2, pos'), t3, pos)) =
+         A.TyApp (toType t3, A.TyApp (toType t2, toType t1))
      | toType (P.TyCon (t1, t2, pos)) =
          A.TyApp (toType t2, toType t1)
      | toType (P.Var (P.Ident (s, p), pos)) =
